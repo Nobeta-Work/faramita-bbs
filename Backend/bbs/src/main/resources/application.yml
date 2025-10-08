@@ -1,0 +1,55 @@
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /bbs
+
+spring:
+  # 运行环境配置
+  profiles:
+    active: dev
+  # 数据库配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/faramita_bbs?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+
+# MyBatis-Plus配置
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: online.faramita.bbs.entity
+  configuration:
+    map-underscore-to-camel-case: true  # 开启驼峰命名
+
+# jwt配置
+jwt: 
+  secret: ${faramita.dev.jwt.secret}
+  expire: ${faramita.dev.jwt.expire}
+  header: ${faramita.dev.jwt.header}
+
+# PageHelper配置
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  default-count: true
+  support-methods-arguments: true
+
+# Swagger3配置
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html  # 设置Swagger UI的访问路径
+    disable-swagger-default-url: true 
+    display-request-duration: true  # 显示请求持续时间
+  packages-to-scan: online.faramita.bbs.controller  # 指定要扫描的包
+
+# 文件存储位置
+faramita:
+  file:
+    avatar:
+      root-path: ${faramita.dev.file.avatar.root-path}
+      max-size: ${faramita.dev.file.avatar.max-size}
+      expire: ${faramita.dev.file.avatar.expire}
