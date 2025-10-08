@@ -1,0 +1,17 @@
+faramita:
+  prod:
+    jwt:
+      secret: ${生产环境密钥}
+      expire: 86400000
+      header: Authorization
+    file:
+      avatar:
+        root-path: ${生产环境路径}  # 生产环境存储路径
+        max-size: 10485760
+        expire: 2
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

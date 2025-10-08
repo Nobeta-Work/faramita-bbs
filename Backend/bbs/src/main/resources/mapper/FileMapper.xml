@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="online.faramita.bbs.mapper.FileMapper">
+
+
+
+    <!-- insertAvatar --> 
+
+    <insert id="insertAvatar">
+        insert into avatar_info
+        (file_uuid, is_referenced, user_id, expire_time)
+        values
+        (#{fileUuid}, #{isReferenced}, #{uid}, #{expireTime})
+    </insert>      
+
+    <!-- updateAvator --> 
+
+    <update id="updateAvator">
+        update avatar_info
+        <set>
+            <if test="uid != null">user_id = #{uid},</if>
+            <if test="fileUuid != null">file_uuid = #{fileUuid},</if>
+            <if test="isReferenced != null">is_referenced = #{isReferenced},</if>
+            <if test="expireTime != null">expire_time = #{expireTime},</if>
+        </set>
+        where file_uuid = #{fileUuid}
+    </update>
+
+    <!-- batchDeleteByIds --> 
+
+    <delete id="batchDeleteByIds">
+        delete from avatar_info where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

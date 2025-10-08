@@ -1,0 +1,11 @@
+faramita:
+  dev:
+    jwt:
+      secret: thisIsASecure256BitKeyForHmacSha256Algorithm
+      expire: 86400000 # 1天
+      header: Authorization
+    file:
+      avatar:
+        root-path: D:\Education\Project\Faramita\Backend\resources\static\images\avator\
+        max-size: 10485760  # 最大上传10MB
+        expire: 2  # 过期时间2h

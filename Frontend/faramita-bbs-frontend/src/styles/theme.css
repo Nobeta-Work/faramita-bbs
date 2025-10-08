@@ -1,0 +1,27 @@
+/* # 主题色 */
+:root {
+    /* 背景色 */
+  --bg-color: #1a1a1a;
+  --bg-color-secondary: #2d2d2d;
+  --bg-color-tertiary: #3a3a3a;
+  
+  /* 文字颜色 */
+  --text-color: #e0e0e0;
+  --text-color-secondary: #b0b0b0;
+  --text-color-tertiary: #808080;
+  
+  /* 边框颜色 */
+  --border-color: #3a3a3a;
+  --border-color-light: #4a4a4a;
+  
+  /* 主要颜色 */
+  --primary-color: #409eff;
+  --primary-color-light: #2d5a8e;
+  
+  /* 阴影 */
+  --box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.5);
+  
+  /* 其他 */
+  --card-bg: #2d2d2d;
+  --hover-bg: #3a3a3a;
+}

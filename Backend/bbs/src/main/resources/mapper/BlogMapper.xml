@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="online.faramita.bbs.mapper.BlogMapper">
+
+
+
+    <!-- findBlogs --> 
+
+    <select id="findBlogs" resultType="online.faramita.bbs.entity.Blog">
+        SELECT
+            id, bloguid, title, summary, author_id, author_name, big_category_id, little_category_name,
+            category_id, is_published, create_time, update_time
+        FROM
+            blog
+        <where>
+            <if test="authorId != null and authorId != 0">
+                AND author_id = #{authorId}
+            </if>
+            <if test="authorName != null and authorName != ''">
+                AND author_name LIKE CONCAT('%', #{authorName}, '%')
+            </if>
+            <if test="categoryId != null">
+                AND category_id = #{categoryId}
+            </if>
+            <if test="bigCategoryId != null and bigCategoryId != 0">
+                AND big_category_id = #{bigCategoryId}
+            </if>
+            <if test="littleCategoryName != null and littleCategoryName != ''">
+                AND little_category_name = #{littleCategoryName}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%') OR summary LIKE CONCAT('%', #{keyword}, '%') OR author_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="queryUid == null or queryUid != authorId">
+                AND is_published = 1
+            </if>
+        </where>
+
+        <choose>
+            <when test="orderBy != null and orderBy != '' and sortOrder != null and sortOrder != ''">
+                ORDER BY #{orderBy} #{sortOrder}
+            </when>
+            <otherwise>
+                ORDER BY create_time DESC
+            </otherwise>
+        </choose>
+    </select>  
+
+    <!-- createCategoryByDTO --> 
+
+    <insert id="createCategoryByDTO" useGeneratedKeys="true" keyProperty="categoryId">
+        insert into blog_category
+        (name, big_category_id, user_id)
+        values
+        (#{littleCategoryName}, #{bigCategoryId}, #{authorId})
+    </insert>
+
+    <!-- insertBlog --> 
+
+    <insert id="insertBlog">
+        insert into blog
+        (bloguid, title, content, summary, author_id, author_name, category_id, big_category_id, little_category_name, is_published)
+        values
+        (#{bloguid}, #{title}, #{content}, #{summary}, #{authorId}, #{authorName}, #{categoryId}, #{bigCategoryId}, #{littleCategoryName} , #{isPublished})
+    </insert>
+
+    <!-- countCategoryByBigIdAndName --> 
+
+    <select id="findCategoryByBigIdAndName" resultType="online.faramita.bbs.entity.BlogCategory">
+    select 
+        id, name, big_category_id, user_id
+    from
+        blog_category
+    <where>
+        <if test="authorId != null">AND user_id = #{authorId}</if>
+        <if test="bigCategoryId != null">AND big_category_id = #{bigCategoryId}</if>
+        <if test="littleCategoryName != null and littleCategoryName != ''">AND name = #{littleCategoryName}</if>
+    </where>
+</select>
+
+    <!-- getBlogByDTO --> 
+
+    <select id="getBlogByDTO">
+        SELECT
+            bloguid, title,
+            <if test="needContent">
+                content,
+            </if>
+            summary, author_id,author_name, category_id,
+            big_category_id, little_category_name,
+            is_published, create_time, update_time
+        FROM
+            blog
+        <where>
+            <if test="bloguid != null and bloguid != ''">
+                AND bloguid = #{bloguid}
+            </if>
+            <if test="title != null and title != ''">
+                AND title = #{title}
+            </if>
+            <if test="authorId != null and authorId != 0">
+                AND author_id = #{authorId}
+            </if>
+            <if test="authorName != null and authorName != ''">
+                AND author_name = #{authorName}
+            </if>
+            <if test="categoryId != null">
+                AND category_id = #{categoryId}
+            </if>
+            <if test="bigCategoryId != null">
+                AND big_category_id = #{bigCategoryId}
+            </if>
+            <if test="littleCategoryName != null and littleCategoryName != ''">
+                AND little_category_name = #{littleCategoryName}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%') OR summary LIKE CONCAT('%', #{keyword}, '%') OR author_name LIKE CONCAT('%', #{keyword}, '%')) 
+            </if>
+            <!-- 权限控制 -->
+            <if test="queryUid != null">
+                AND (author_id = #{queryUid} OR is_published = 1)
+            </if>
+            <if test="queryUid == null">
+                AND is_published = 1
+            </if>
+        </where>
+        
+        <!-- 排序 -->
+        <if test="orderBy != null and orderBy != '' and sortOrder != null and sortOrder != ''">
+            ORDER BY #{orderBy} #{sortOrder}
+        </if>
+    </select>
+
+    <!-- createCategory --> 
+
+    <insert id="createCategory" useGeneratedKeys="true" keyProperty="id">
+        insert into blog_category
+        (name, big_category_id, user_id)
+        values
+        (#{name}, #{bigCategoryId}, #{userId})
+    </insert>
+
+    <!-- updateBlog --> 
+
+    <update id="updateBlog">
+        update blog
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="summary != null">summary = #{summary},</if>
+            <if test="authorName != null">author_name = #{authorName},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="isPublished != null">is_published = #{isPublished},</if>
+            <!-- update_time 由数据库自动更新，无需在此处处理 -->
+        </set>
+        where bloguid = #{bloguid}
+    </update>
+
+</mapper>
