@@ -24,6 +24,7 @@ public class WebMvcConfiguration implements WebMvcConfigurer{
                 .addPathPatterns("/api/{uid}/*")
                 .addPathPatterns("/api/{uid}/**/*")
                 .addPathPatterns("/api/{uid}/blog/*")
+                .addPathPatterns("/api/blog/**")
                 .addPathPatterns("/api/0/current")
                 .excludePathPatterns("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**");
     }

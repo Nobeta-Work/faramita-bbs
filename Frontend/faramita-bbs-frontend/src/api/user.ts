@@ -1,5 +1,5 @@
 // # 登录相关API
-import type { ProfileRespose, UserInfo } from '@/types';
+import type { ProfileResponse, UserInfo } from '@/types';
 import request from '@/utils/request';
 
 // 登录API
@@ -32,7 +32,7 @@ export function register(data: {
 
 // 获取个人资料API
 export function getProfileByUid(uid: number)
-:Promise<ProfileRespose>{
+:Promise<ProfileResponse>{
     return request({
         url: `/${uid}`,
         method: 'get',

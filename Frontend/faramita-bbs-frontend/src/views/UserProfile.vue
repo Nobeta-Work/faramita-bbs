@@ -1,983 +1,1222 @@
-<template>
-    <div class="profile-container">
-        <!-- 背景层 -->
-        <div class="background-layer">
-
-        </div>
-
-        <!-- 内容层 -->
-        <div class="content-layer">
-            <div class="user-profile-container">
-                <div class="avatar-container">
-                    <div class="avatar-square" />
-                    <div class="avatar-square" />
-                    <div class="avatar-circle" />
-                    <el-upload
-                        class="avatar-uploader"
-                        v-if="validateUser()"
-                        :show-file-list="false"
-                        :before-upload="beforeAvatarUpload"
-                        :http-request="handleAvatarUpload"
-                        accept="images/*"
-                    >
-                        <el-avatar :src="avatarUrl" :size="200" style="cursor: pointer;"/>
-                    </el-upload>
-                    <el-avatar v-else :src="avatarUrl" :size="200"/>
-                </div>
-                <div class="user-info-container">
-                    <div class="show-nickname">>> Here is <span>{{ user.nickname }}</span> <<</div>
-                    <el-descriptions title="个人资料" column="2">
-                        <template #extra v-if="validateUser()">
-                            <span @click="openUpdateUserProfileDialog">修改个人资料</span>
-                        </template>
-                        <el-descriptions-item label="昵称:">{{ user.nickname }}</el-descriptions-item>
-                        <el-descriptions-item label="uid:">{{ user.id }}</el-descriptions-item>
-                        <el-descriptions-item label="性别:">{{ explainSex(user.sex) }}</el-descriptions-item>
-                        <el-descriptions-item label="种族:">{{ user.race }}</el-descriptions-item>
-                        <el-descriptions-item label="个性签名">
-                            <template #default>
-                                <div class="signature-content">
-                                    {{ user.signature }}
-                                </div>
-                            </template>
-                        </el-descriptions-item>
-                    </el-descriptions>
-                </div>
-            </div>
-            <div class="blog-list-container">
-                <button class="more-btn" @click="router.push(`${uid}/blog`)">+更多</button>
-                <div class="blog-list-item" v-for="blog in blogList" :key="blog.bloguid"
-                :class="BlogUtils.getCategoryClass(blog.bigCategoryId)">
-                    <div class="blog-header" @click="openBlog(blog.bloguid)">
-                        <div class="blog-title">
-                           [ {{ blog.title }} ]
-                        </div>
-                        <div class="blog-category">
-                            <span :class="BlogUtils.getCategoryClass(blog.bigCategoryId)">{{ BlogUtils.bigIdToString(blog.bigCategoryId) }}</span>
-                            >
-                            <span>{{ blog.littleCategoryName }}</span>
-                        </div>
-                        <div class="blog-time">
-                            {{ DateUtils.isoToDateOnly(blog.updateTime) }}
-                        </div>
-                    </div>
-                    <div class="blog-body">
-                        <div class="blog-summary">
-                            {{ blog.summary ? blog.summary : '暂无描述' }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div>
-                <el-dialog v-model="showUpdateUserProfileDialog" title="修改个人资料" width="500px"
-                :before-close="handleDialogClose" custom-class="profile-dialog" class="update-profile-dialog">
-                    <el-form ref="profileFormRef" :model="profileForm" :rules="profileFormRules" label-width="80px" label-position="right" class="update-profile-form">
-                        <el-form-item label="昵称" prop="nickname">
-                            <el-input v-model="profileForm.nickname" placeholder="请输入昵称" clearable/>
-                        </el-form-item>
-                        <el-form-item label="密码" prop="password">
-                            <el-input v-model="profileForm.password" type="password" show-password="true" placeholder="请输入密码" clearable/>
-                        </el-form-item>
-                        <el-form-item label="确认密码" prop="password2" v-show="profileForm.password">
-                            <el-input v-model="profileForm.password2" type="password" show-password="true" placeholder="请输入密码" clearable/>
-                        </el-form-item>
-                        <el-form-item label="性别" prop="sex">
-                            <el-radio-group v-model="profileForm.sex">
-                                <el-radio :label="0">女</el-radio>
-                                <el-radio :label="1">男</el-radio>
-                                <el-radio :label="2">神秘</el-radio>
-                            </el-radio-group>
-                        </el-form-item>
-                        <el-form-item label="种族" prop="race">
-                            <el-input
-                                v-model="profileForm.race"
-                                placeholder="请输入种族"
-                                clearable
-                            />
-                        </el-form-item>
-                        <el-form-item label="个性签名" prop="signature">
-                            <el-input
-                                v-model="profileForm.signature"
-                                type="textarea"
-                                :rows="3"
-                                placeholder="请输入个性签名"
-                                maxlength="300"
-                                show-word-limit
-                            />
-                        </el-form-item>
-                    </el-form>
-                    <template #footer>
-                        <span class="dialog-footer">
-                            <el-button @click="handleDialogClose" class="cancel-btn">取消</el-button>
-                            <el-button type="primary" @click="handleProfileSubmit" class="confirm-btn">确认修改</el-button>
-                        </span>
-                    </template>
-                </el-dialog>
-            </div>
-        </div>
-    </div>
-</template>
-
 <script setup lang="ts">
-import { downloadAvatar } from '@/api/file';
-import { getProfileByUid, updateAvatar, updateProfile } from '@/api/user';
-import { type Blog, type ProfileRespose, type User, DateUtils, BlogUtils } from '@/types';
-import { nextTick, onMounted, onUnmounted, reactive, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useUserStore } from '@/stores/user';
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadRequestOptions } from 'element-plus';
+import { ref, onMounted, computed, onUnmounted, h } from 'vue'
+import { useRoute } from 'vue-router'
+import {
+  NUpload, NIcon, useMessage, NSpin, NModal, NForm, NFormItem, NInput, NRadioGroup, NRadio, NAvatar
+} from 'naive-ui'
+import {
+  ArrowForwardOutline, LogoGithub, LogoTwitter, PencilOutline, CloseOutline, CameraOutline, Person
+} from '@vicons/ionicons5'
+import { getProfileByUid, updateAvatar, updateProfile } from '@/api/user'
+import { downloadAvatar } from '@/api/file'
+import { useUserStore } from '@/stores/user'
+import type { User, Blog } from '@/types'
+import { DateUtils } from '@/types/date'
+import { BlogUtils } from '@/types/blog'
+import router from '@/router'
+
+// Fonts
+const fontLink = document.createElement('link')
+fontLink.href = 'https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap'
+fontLink.rel = 'stylesheet'
+document.head.appendChild(fontLink)
+
 const route = useRoute()
-const router = useRouter()
 const userStore = useUserStore()
-const uid = Number(route.params.uid)
+const message = useMessage()
 
-const user: User = reactive({
-    id: 0,
-    nickname: '',
-    username: '',
-    password: '',
-    avatar: '',
-    sex: 0,
-    race: '',
-    signature: '',
-    createTime: '',
-    updateTime: ''
+const uid = computed(() => Number(route.params.uid))
+const isCurrentUser = computed(() => userStore.userInfo?.id === uid.value)
+
+const user = ref<User | null>(null)
+const userAvatarUrl = ref<string | undefined>(undefined)
+const blogList = ref<Blog[]>([])
+
+const renderDefaultAvatar = () => h(NIcon, null, { default: () => h(Person) })
+const loading = ref(false)
+const pageLoaded = ref(false)
+
+// Edit Profile Logic
+const showEditModal = ref(false)
+const editForm = ref({
+  id: 0, nickname: '', avatar: '', sex: 0, race: '', signature: '', password: '', passwordConfirm: ''
 })
-const blogList: Array<Blog> = reactive([])
-const profile: ProfileRespose = reactive({
-    user,
-    blogList
-})
-// # avatarAPI => 根据avatar: string调用api获得头像数据
-const avatarUrl = ref('')
-const fetchAvatar = async () => {
-    if (!user.avatar) {
-        avatarUrl.value = ''
-        return
+const saving = ref(false)
+
+// Avatar Crop Logic (Native Implementation)
+const showCropModal = ref(false)
+const tempAvatarUrl = ref('')
+const croppingAvatar = ref(false)
+const nativeCropImgRef = ref<HTMLImageElement | null>(null)
+const cropContainerRef = ref<HTMLDivElement | null>(null)
+
+// Native Crop State
+const scale = ref(1)
+const offset = ref({ x: 0, y: 0 })
+const isDragging = ref(false)
+const lastMousePos = ref({ x: 0, y: 0 })
+
+const handleAvatarChange = (options: any) => {
+  const file = options.file?.file
+  if (file) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      tempAvatarUrl.value = e.target?.result as string
+      // Reset crop state
+      scale.value = 1
+      offset.value = { x: 0, y: 0 }
+      showCropModal.value = true
     }
-
-    try {
-        // 调用downloadAvatar API
-        const blob = await downloadAvatar(user.avatar)
-
-        // 将blob数据转换为URL
-        const url = URL.createObjectURL(blob)
-
-        // 更新avatarUrl
-        avatarUrl.value = url
-    } catch (error) {
-        console.error('>获取头像失败:', error)
-        avatarUrl.value = ''
-    }
+    reader.readAsDataURL(file)
+  }
 }
-onUnmounted(() => {
-    // 释放临时URL
-    if (avatarUrl.value) {
-        URL.revokeObjectURL(avatarUrl.value)
-    }
-})
-// # 发起请求，获得个人资料页数据
-const fetchProfile = async () => {
-    try {
-        // 调用查询资料API
-        const response = await getProfileByUid(uid)
-        
-        Object.assign(profile.user, response.user)
 
-        blogList.splice(0, blogList.length, ...response.blogList)
-
-        await nextTick()    // 使用nextTick确保视图更新后输出日志
-
-        console.log('>查询个人资料成功 => user:', user)
-        console.log('>查询个人资料成功 => blogList:', blogList)
-
-        // 获取头像
-        await fetchAvatar()
-    } catch (error) {
-        console.log('>查询个人资料失败',uid)
-    }
+const handleCropMouseDown = (e: MouseEvent) => {
+  isDragging.value = true
+  lastMousePos.value = { x: e.clientX, y: e.clientY }
+  e.preventDefault()
 }
-// 在访问页面，页面加载时调用
-onMounted(() => {
+
+const handleCropMouseMove = (e: MouseEvent) => {
+  if (!isDragging.value) return
+  const dx = e.clientX - lastMousePos.value.x
+  const dy = e.clientY - lastMousePos.value.y
+  offset.value.x += dx
+  offset.value.y += dy
+  lastMousePos.value = { x: e.clientX, y: e.clientY }
+}
+
+const handleCropMouseUp = () => {
+  isDragging.value = false
+}
+
+const handleCropWheel = (e: WheelEvent) => {
+  const zoomSpeed = 0.001
+  const delta = -e.deltaY
+  const newScale = Math.max(0.1, Math.min(5, scale.value + delta * zoomSpeed))
+  scale.value = newScale
+  e.preventDefault()
+}
+
+const confirmCrop = async () => {
+  if (!nativeCropImgRef.value || !cropContainerRef.value) return
+  
+  croppingAvatar.value = true
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = 400
+    canvas.height = 400
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const img = nativeCropImgRef.value
+    const container = cropContainerRef.value
+    
+    // 背景填黑
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, 400, 400)
+    
+    // 计算比例：Canvas(400) 与 容器物理尺寸 的比例
+    const containerSize = container.offsetWidth
+    const drawScale = 400 / containerSize
+    
+    // 计算图片在容器中的实际渲染尺寸
+    const renderWidth = img.offsetWidth * scale.value
+    const renderHeight = img.offsetHeight * scale.value
+    
+    // 映射到 Canvas 上的尺寸
+    const canvasDrawWidth = renderWidth * drawScale
+    const canvasDrawHeight = renderHeight * drawScale
+    
+    // 映射到 Canvas 上的偏移（以中心为原点）
+    const canvasOffsetX = offset.value.x * drawScale
+    const canvasOffsetY = offset.value.y * drawScale
+    
+    // 绘制图片：Canvas 中心点为 (200, 200)
+    ctx.drawImage(
+      img,
+      200 + canvasOffsetX - canvasDrawWidth / 2,
+      200 + canvasOffsetY - canvasDrawHeight / 2,
+      canvasDrawWidth,
+      canvasDrawHeight
+    )
+    
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))
+    
+    if (blob) {
+      const file = new File([blob], 'avatar.png', { type: 'image/png' })
+      await updateAvatar(uid.value, file)
+      message.success('头像更新成功')
+      showCropModal.value = false
+      fetchProfile()
+    }
+  } catch (error) {
+    message.error('上传失败')
+  } finally {
+    croppingAvatar.value = false
+  }
+}
+
+const openEditModal = () => {
+  if (!user.value) return
+  editForm.value = { ...user.value, password: '', passwordConfirm: '' }
+  showEditModal.value = true
+}
+
+const handleSaveProfile = async () => {
+  if (!editForm.value.nickname) {
+    message.warning('Nickname is required')
+    return
+  }
+  saving.value = true
+  try {
+    const { id, nickname, sex, race, signature } = editForm.value
+    // Assuming updateProfile takes User object.
+    // If backend requires partial update, we send what we have.
+    // Construct a user object to update
+    const userToUpdate = { ...user.value, nickname, sex, race, signature } as User
+
+    await updateProfile(userToUpdate.id, userToUpdate)
+    message.success('Profile Updated')
+    showEditModal.value = false
     fetchProfile()
-})
 
-// # 修改头像
-
-// 上传校验
-const beforeAvatarUpload = (file: any) => {
-    // 身份校验
-    if (!validateUser()) {
-        return false
+    // Update store if current user
+    if (userStore.userInfo && userStore.userInfo.id === id) {
+       userStore.userInfo = { ...userStore.userInfo, nickname }
     }
-
-    // 文件类型校验
-    const isImage = file.type.startsWith('image/')
-    if (!isImage) {
-        ElMessage.error('请选择文件图片!')
-        return false
-    }
-
-    // 文件大小校验
-    const isLt10M = file.size / 1024 / 1024 < 10
-    if (!isLt10M) {
-        ElMessage.error('头像大小不超过10MB')
-        return false
-    }
+  } catch (error) {
+    message.error('Failed to update profile')
+  } finally {
+    saving.value = false
+  }
 }
 
-// 处理头像上传
-const handleAvatarUpload = async (options: UploadRequestOptions) => {
-    const { file } = options
 
-    try {
+// Canvas Refs
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+let ctx: CanvasRenderingContext2D | null = null
+let animationFrameId: number
+let mouseX = -1000
+let mouseY = -1000
 
-        // 启用预览
-        const confirmUpload = await previewAvatar(file)
-        if (!confirmUpload) {
-            return
+// Fetch Data
+const fetchProfile = async () => {
+  loading.value = true
+  try {
+    const res = await getProfileByUid(uid.value)
+    user.value = res.user
+    blogList.value = res.blogList
+    document.title = `${res.user.nickname} - Estetica`
+
+    if (res.user.avatar) {
+        try {
+            const blob = await downloadAvatar(res.user.avatar)
+            userAvatarUrl.value = URL.createObjectURL(blob)
+        } catch (e) {
+            console.error(e)
+            userAvatarUrl.value = undefined
         }
-
-        // 本地预览URL
-        const localPreviewURL = URL.createObjectURL(file)
-
-        // 调用头像上传API
-        const response = await updateAvatar(uid, file)
-
-        // 更新本地头像显示
-        avatarUrl.value = localPreviewURL
-
-        // 更新用户信息中的avatar
-        user.avatar = response as unknown as string
-
-        ElMessage.success('头像更新成功')
-
-        // 清理临时URL
-        onUnmounted(() => {
-            if (avatarUrl.value) {
-                URL.revokeObjectURL(avatarUrl.value)
-            }
-        })
-    } catch (error) {
-        console.error('>头像上传失败:', error)
-    }
-}
-
-// 头像预览功能
-const previewAvatar = (file : File): Promise<boolean> => {
-    return new Promise((resolve) => {
-        const reader = new FileReader()
-
-        reader.onload = (e) => {
-            const result = e.target?.result as string
-
-            // 预览确认弹窗
-            ElMessageBox.confirm('确认使用此图片作为头像吗？', '头像预览', {
-                confirmButtonText: '确认',
-                cancelButtonText: '取消',
-                type: 'info',
-                dangerouslyUseHTMLString: true,
-                customClass: 'avatar-preview-dialog',
-                confirmButtonClass: 'confirm-btn',
-                cancelButtonClass: 'cancel-btn',
-                message: `
-                <div style="text-align: center;">
-                    <img src="${result}" style="width: 200px; height: 200px; border-radius: 50%; object-fit:cover;" />
-                    <p style="margin-top: 10px; color: white;">预览效果</p>
-                </div>
-                `
-            }).then(() => {
-                resolve(true)
-            }).catch(() => {
-                resolve(false)
-            })
-        }
-
-        reader.onerror = () => {
-            ElMessage.error('图片读取失败')
-            resolve(false)
-        }
-
-        reader.readAsDataURL(file)
-    })
-}
-
-// # 修改个人资料
-
-// 相关变量
-const showUpdateUserProfileDialog = ref(false)
-const profileFormRef = ref<FormInstance>()
-const profileForm = reactive({
-    nickname: '',
-    password: '',
-    password2: '',
-    sex: 0,
-    race: '',
-    signature: ''
-})
-
-// 表单验证规则
-const profileFormRules: FormRules = {
-    nickname: [
-        { required: true, message: '请输入昵称', trigger: 'blur' },
-        { min: 1, max: 20, message: '昵称长度应在1到20个字符之间', trigger: 'blur' }
-    ],
-    password: [
-        { required: false, message: '请输入密码', trigger: 'blur' },
-        { min: 6, max: 30, message: '密码长度应在6到30个字符之间', trigger: 'blur' }
-    ],
-    password2: [
-        { 
-            required: false,
-            validator: (rule, value, callback) => {
-                if (!profileForm.password) {
-                    callback()
-                }
-                if (!value) {
-                    callback(new Error('请再次输入密码'))
-                } else if (value !== profileForm.password) {
-                    callback(new Error('两次输入的密码不一致'))
-                } else {
-                    callback()
-                }
-                if (rule) {
-                    
-                }
-            }, 
-            trigger: ['blur', 'change'] 
-        }
-    ],
-    sex: [
-        { required: true, message: '请选择性别', trigger: 'change' }
-    ],
-    race: [
-        { required: true, message: '请输入种族', trigger: 'blur' },
-        { min: 1, max: 20, message: '种族长度应在1到20个字符之间', trigger: 'blur' }
-    ],
-    signature: [
-        { max: 100, message: '个性签名长度不能超过100个字符', trigger: 'blur' }
-    ],
-}
-// 对话框开关方法
-const openUpdateUserProfileDialog = () => {
-    // 填充表单数据
-    profileForm.nickname = user.nickname
-    profileForm.sex = user.sex
-    profileForm.race = user.race
-    profileForm.signature = user.signature
-    profileForm.password = ''
-    profileForm.password2 = ''
-    // 显示对话框
-    showUpdateUserProfileDialog.value = true
-}
-const handleDialogClose = () => {
-    showUpdateUserProfileDialog.value = false
-    // 重置表单
-    if (profileFormRef.value) {
-        profileFormRef.value.resetFields()
-    }
-}
-
-// * 提交个人资料修改
-const handleProfileSubmit = async () => {
-    if (!profileFormRef.value) return
-
-    try {
-        // 验证表单
-        await profileFormRef.value.validate()
-
-        // 准备请求数据
-        const updateData: any = {
-            id: user.id,
-            nickname: profileForm.nickname,
-            avatar: user.avatar,
-            sex: profileForm.sex,
-            race: profileForm.race,
-            signature: profileForm.signature
-        }
-
-        // 密码修改特化
-        if (profileForm.password) {
-            updateData.password = profileForm.password
-        }
-
-        // 调用更新个人资料api
-        console.log('>发起更新请求:', updateData)
-        await updateProfile(uid, updateData)
-
-        // 更新本地数据
-        Object.assign(user, updateData)
-
-        ElMessage.success('个人资料更新成功！')
-
-        // 关闭对话框
-        showUpdateUserProfileDialog.value = false
-
-        // 重新获取资料同步数据
-        await fetchProfile()
-    } catch (error) {
-        if (error instanceof Error) {
-            console.error('>修改个人资料失败:', error)
-        }
-    }
-}
-// # blog相关跳转
-// 跳转到特定blog
-const openBlog = (bloguid: string) => {
-    router.push(`/${uid}/blog/${bloguid}`)
-}
-// ? 功能方法
-// 根据sex返回string性别
-const explainSex = (sex: number) => {
-    if (sex === 0) {
-        return '女'
-    } else if (sex === 1) {
-        return '男'
     } else {
-        return '神秘'
+        userAvatarUrl.value = undefined
     }
+  } catch (error) {
+    message.error('无法加载用户信息')
+  } finally {
+    loading.value = false
+    // Trigger page animation after loading
+    setTimeout(() => {
+      pageLoaded.value = true
+    }, 100)
+  }
 }
-// 校验访问用户与被访问用户是否一致
-const validateUser = () => {
-    const id = userStore.$state.userInfo?.id
-    console.log('>校验用户=>','被访用户:',uid,',访问用户:',id)
-    return id === uid
+
+const sexText = (sex: number) => {
+  switch(sex) {
+    case 1: return 'MALE'
+    case 0: return 'FEMALE'
+    default: return 'MYSTERY'
+  }
 }
+
+// Canvas Animation Logic
+const initCanvas = () => {
+  if (!canvasRef.value) return
+  const canvas = canvasRef.value
+  ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const resize = () => {
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+  }
+  window.addEventListener('resize', resize)
+  resize()
+
+  const gap = 30 // Grid gap
+  const pointSize = 1.5
+  
+  const animate = () => {
+    if (!ctx || !canvas) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    
+    // Theme colors
+    const isDark = document.documentElement.classList.contains('dark')
+    ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'
+    
+    const time = Date.now() * 0.001
+
+    for (let x = 0; x <= canvas.width; x += gap) {
+      for (let y = 0; y <= canvas.height; y += gap) {
+        // Distance to mouse
+        const dx = x - mouseX
+        const dy = y - mouseY
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        
+        // Wave effect params
+        const maxDist = 250
+        let offsetX = 0
+        let offsetY = 0
+        let scale = 1
+
+        if (dist < maxDist) {
+          const force = (maxDist - dist) / maxDist
+          // Repulsion + Wave
+          const angle = Math.atan2(dy, dx)
+          const wave = Math.sin(dist * 0.05 - time * 2) * 5 * force
+          
+          offsetX = Math.cos(angle) * (force * 20 + wave)
+          offsetY = Math.sin(angle) * (force * 20 + wave)
+          scale = 1 + force * 1.5
+        }
+
+        ctx.beginPath()
+        ctx.arc(x + offsetX, y + offsetY, pointSize * scale, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+    
+    animationFrameId = requestAnimationFrame(animate)
+  }
+  animate()
+  
+  return resize
+}
+
+const handleMouseMove = (e: MouseEvent) => {
+  mouseX = e.clientX
+  mouseY = e.clientY
+}
+
+let resizeHandler: (() => void) | undefined
+
+onMounted(() => {
+  fetchProfile()
+  resizeHandler = initCanvas()
+  window.addEventListener('mousemove', handleMouseMove)
+})
+
+onUnmounted(() => {
+  cancelAnimationFrame(animationFrameId)
+  window.removeEventListener('mousemove', handleMouseMove)
+  if (resizeHandler) window.removeEventListener('resize', resizeHandler)
+})
+
+// Canvas loop handles theme change naturally by checking document.documentElement class
 
 </script>
 
+<template>
+  <div class="profile-page" :class="{ 'loaded': pageLoaded }">
+    <canvas ref="canvasRef" class="bg-canvas"></canvas>
+
+    <n-spin :show="loading">
+      <div class="container" v-if="user">
+
+        <!-- Header Section: Asymmetric Grid -->
+        <header class="header-grid animate-section">
+          <div class="info-col">
+            <div class="meta-line animate-fade-in" style="animation-delay: 0.1s">
+              <span class="uid">UID — {{ user.id.toString().padStart(6, '0') }}</span>
+              <span class="date">JOINED {{ DateUtils.isoToDateOnly(user.createTime) }}</span>
+              <!-- Edit Button (Only for Owner) -->
+              <button v-if="isCurrentUser" class="edit-btn" @click="openEditModal">
+                <n-icon size="14"><PencilOutline /></n-icon> EDIT
+              </button>
+            </div>
+
+            <h1 class="nickname animate-slide-in" style="animation-delay: 0.2s">{{ user.nickname }}</h1>
+
+            <div class="bio-block animate-fade-in" style="animation-delay: 0.3s">
+              <p class="signature">{{ user.signature || 'No signature provided yet.' }}</p>
+            </div>
+
+            <div class="tags-line animate-fade-in" style="animation-delay: 0.4s">
+              <span class="tag">{{ user.race || 'HUMAN' }}</span>
+              <span class="divider">/</span>
+              <span class="tag">{{ sexText(user.sex) }}</span>
+            </div>
+
+            <div class="social-links" v-if="false">
+              <!-- Placeholder for social links if needed -->
+              <n-icon size="20"><LogoGithub /></n-icon>
+              <n-icon size="20"><LogoTwitter /></n-icon>
+            </div>
+          </div>
+
+          <div class="avatar-col animate-scale-in" style="animation-delay: 0.3s">
+            <div class="avatar-wrapper">
+               <n-upload
+                  v-if="isCurrentUser"
+                  class="avatar-uploader"
+                  :show-file-list="false"
+                  :custom-request="handleAvatarChange"
+                  accept="image/*"
+                  trigger-style="height: 100%; width: 100%;"
+                >
+                  <div class="avatar-container-inner">
+                    <n-avatar
+                      :src="userAvatarUrl"
+                      :render-icon="renderDefaultAvatar"
+                      class="avatar-img"
+                    />
+                    <div class="change-btn">
+                      <n-icon size="18"><CameraOutline /></n-icon>
+                      <span>CHANGE</span>
+                    </div>
+                  </div>
+                </n-upload>
+                <!-- Visitor View -->
+                <n-avatar
+                  v-else
+                  :src="userAvatarUrl"
+                  :render-icon="renderDefaultAvatar"
+                  class="avatar-img"
+                />
+            </div>
+          </div>
+        </header>
+
+        <div class="divider-line animate-expand" style="animation-delay: 0.5s"></div>
+
+        <!-- Content Section -->
+        <section class="content-section">
+          <div class="section-head animate-fade-in" style="animation-delay: 0.6s">
+            <h2>Publications</h2>
+            <span class="count">({{ blogList.length }})</span>
+          </div>
+
+          <div class="blog-grid">
+            <div
+              v-for="(blog, index) in blogList"
+              :key="blog.bloguid"
+              class="blog-card animate-card-in"
+              :style="{ animationDelay: `${0.7 + index * 0.1}s` }"
+              @click="router.push(`/blog/${blog.bloguid}`)"
+            >
+              <div class="card-meta">
+                <span class="cat-tag">{{ BlogUtils.bigIdToString(blog.bigCategoryId) }}</span>
+                <span class="time">{{ DateUtils.isoToDateOnly(blog.createTime) }}</span>
+              </div>
+              <h3 class="card-title">{{ blog.title }}</h3>
+              <p class="card-summary">{{ blog.summary }}</p>
+              <div class="card-footer">
+                <span class="read-more">READ ENTRY</span>
+                <n-icon><ArrowForwardOutline /></n-icon>
+              </div>
+            </div>
+
+            <div v-if="blogList.length === 0" class="empty-state">
+              <span class="void-text">VOID</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </n-spin>
+
+    <!-- Edit Modal -->
+    <n-modal v-model:show="showEditModal" :mask-closable="true">
+      <div class="edit-modal-content">
+        <div class="modal-header">
+          <h3>EDIT PROFILE</h3>
+          <button class="close-btn" @click="showEditModal = false">
+            <n-icon size="24"><CloseOutline /></n-icon>
+          </button>
+        </div>
+        
+        <n-form :model="editForm" label-placement="top" class="edit-form">
+          <n-form-item label="NICKNAME">
+            <n-input v-model:value="editForm.nickname" placeholder="Your persona name" />
+          </n-form-item>
+          
+          <n-form-item label="SIGNATURE">
+             <n-input 
+               v-model:value="editForm.signature" 
+               type="textarea" 
+               placeholder="A brief bio..." 
+               :autosize="{ minRows: 3, maxRows: 5 }"
+             />
+          </n-form-item>
+          
+          <n-form-item label="IDENTITY">
+            <n-radio-group v-model:value="editForm.sex" name="sex">
+              <n-radio :value="1">MALE</n-radio>
+              <n-radio :value="0">FEMALE</n-radio>
+              <n-radio :value="2">MYSTERY</n-radio>
+            </n-radio-group>
+          </n-form-item>
+          
+          <div class="modal-actions">
+            <button class="save-btn" @click="handleSaveProfile" :disabled="saving">
+              {{ saving ? 'SAVING...' : 'SAVE CHANGES' }}
+            </button>
+          </div>
+        </n-form>
+      </div>
+    </n-modal>
+
+    <!-- Avatar Crop Modal -->
+    <n-modal v-model:show="showCropModal" :mask-closable="false">
+      <div class="crop-modal-content">
+      <div class="modal-header">
+        <h3>CROP AVATAR</h3>
+        <button class="close-btn" @click="showCropModal = false">
+          <n-icon size="24"><CloseOutline /></n-icon>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div 
+          class="native-cropper-wrapper" 
+          ref="cropContainerRef"
+          @mousedown="handleCropMouseDown"
+          @mousemove="handleCropMouseMove"
+          @mouseup="handleCropMouseUp"
+          @mouseleave="handleCropMouseUp"
+          @wheel="handleCropWheel"
+        >
+          <img 
+            ref="nativeCropImgRef"
+            :src="tempAvatarUrl" 
+            class="native-crop-image"
+            :style="{
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`
+            }"
+          />
+          <div class="crop-overlay">
+            <div class="crop-viewport"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="save-btn" @click="confirmCrop" :disabled="croppingAvatar">
+          {{ croppingAvatar ? 'UPLOADING...' : 'CONFIRM UPLOAD' }}
+        </button>
+      </div>
+    </div>
+    </n-modal>
+  </div>
+</template>
+
 <style scoped>
-.profile-container {
-    height: 100%;
-    width: 100%;
-    background-image: url('@/assets/images/bg/dust.jpg');
-    position: relative;
-}
-/* #region 背景层 */
-.background-layer{
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    background-color: rgba(0, 0, 0, 0.4);
-}
-/*  #endregion */
-/* #region 内容层 */
-.content-layer {
-    margin-top: 3%;
-    position: relative;
-    z-index: 5;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+/*
+  Theme System
+  Defining CSS Variables for Light/Dark modes
+*/
+/* Variables are now defined globally in src/styles/global.scss */
+
+/* Page Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-.user-profile-container {
-    width: 50%;
-    display: flex;
-    margin-top: 2%;
-    overflow: visible;
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-.avatar-container {
-    margin-left: 10%;
-    position: relative;
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) rotate(-5deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes expandWidth {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes cardSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Animation Classes */
+.animate-fade-in {
+  opacity: 0;
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+.animate-slide-in {
+  opacity: 0;
+  animation: slideInLeft 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-scale-in {
+  opacity: 0;
+  animation: scaleIn 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-expand {
+  width: 0;
+  opacity: 0;
+  animation: expandWidth 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-card-in {
+  opacity: 0;
+  animation: cardSlideUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.profile-page {
+  position: relative;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Lato', sans-serif;
+  transition: background-color 0.5s ease, color 0.5s ease;
+  overflow-x: hidden;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+.profile-page.loaded .bg-canvas {
+  opacity: 1;
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 70px 40px 60px;
+}
+
+/* Header Grid */
+.header-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 60px;
+  margin-bottom: 60px;
+  align-items: center;
+  perspective: 1000px;
+}
+
+.info-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-line {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  color: var(--text-tertiary);
+  margin-bottom: 20px;
+  font-family: 'Lato', sans-serif;
+}
+
+.edit-btn {
+  background: transparent;
+  border: 1px solid var(--text-tertiary);
+  color: var(--text-secondary);
+  padding: 4px 12px;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s;
+  border-radius: 20px;
+}
+
+.edit-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.nickname {
+  font-family: 'Playfair Display', serif;
+  font-size: 4.5rem;
+  font-weight: 400;
+  line-height: 1.1;
+  margin: 0 0 30px;
+  letter-spacing: -1px;
+  color: var(--text-primary);
+  position: relative;
+  display: inline-block;
+}
+
+.nickname::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-color), var(--accent-highlight));
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.5s;
+}
+
+.profile-page.loaded .nickname::after {
+  width: 100%;
+}
+
+.bio-block {
+  max-width: 500px;
+  margin-bottom: 40px;
+}
+
+.signature {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.tags-line {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-primary);
+}
+
+.tag {
+  color: var(--accent-color);
+  font-weight: 700;
+}
+
+.divider {
+  margin: 0 10px;
+  color: var(--text-tertiary);
+}
+
+/* Avatar */
+.avatar-wrapper {
+  width: 260px;
+  height: 340px;
+  position: relative;
+  box-shadow: 20px 20px 0px var(--line-color);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.avatar-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+  transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  transition: transform 0.8s;
+}
+
+.avatar-wrapper:hover::before {
+  transform: translateX(100%) translateY(100%) rotate(45deg);
+}
+
+.avatar-wrapper:hover {
+  transform: translate(-8px, -8px) scale(1.02);
+  box-shadow: 28px 28px 0px var(--accent-color);
+}
+
+.avatar-img {
+  width: 100% !important;
+  height: 100% !important;
+  transition: all 0.5s ease;
+  border-radius: 0;
+  --n-border-radius: 0;
+}
+
+.avatar-img :deep(img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-img :deep(.n-icon) {
+  font-size: 80px;
+}
+
+.avatar-wrapper:hover .avatar-img {
+  transform: scale(1.05);
+}
+
+/* Ensure NAvatar fills the container */
+:deep(.n-avatar) {
+  width: 100%;
+  height: 100%;
+}
+
+
+.avatar-container-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.avatar-uploader {
+  width: 100%; height: 100%;
+  cursor: pointer;
+  display: block;
+}
+
+/* New Floating Change Button */
+.change-btn {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50px;
+  background: rgba(26, 26, 26, 0.8); /* Dark semi-transparent */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: white;
+  letter-spacing: 2px;
+  font-size: 0.8rem;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(4px);
+}
+
+:global(html.dark) .change-btn {
+  background: rgba(230, 230, 230, 0.8);
+  color: #1a1a1a;
+}
+
+.avatar-wrapper:hover .change-btn {
+  transform: translateY(0);
+}
+
+/* Deprecated Overlay Style Removal */
+/* .overlay { ... } */
+
+
+/* Divider */
+.divider-line {
+  height: 1px;
+  background: var(--line-color);
+  margin: 0 0 60px;
+}
+
+/* Content */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 15px;
+  margin-bottom: 40px;
+}
+
+.section-head h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+.section-head .count {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  color: var(--text-tertiary);
+  font-size: 1.2rem;
+}
+
+/* Blog Grid */
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.blog-card {
+  background: transparent;
+  border: 1px solid var(--line-color);
+  padding: 30px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  height: 280px;
+  position: relative;
+  overflow: hidden;
+}
+
+.blog-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--card-hover), transparent);
+  transition: left 0.6s;
+}
+
+.blog-card:hover::before {
+  left: 100%;
+}
+
+.blog-card:hover {
+  background: var(--card-hover);
+  border-color: var(--accent-color);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.cat-tag {
+  color: var(--accent-color);
+}
+
+.card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  margin: 0 0 15px;
+  font-weight: 400;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.blog-card:hover .card-title {
+  color: var(--accent-color);
+  transform: translateX(5px);
+}
+
+.card-summary {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  flex-grow: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 20px;
+  transition: color 0.3s;
+}
+
+.blog-card:hover .card-summary {
+  color: var(--text-primary);
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  color: var(--text-primary);
+  opacity: 0.6;
+  transition: all 0.3s;
+}
+
+.blog-card:hover .card-footer {
+  opacity: 1;
+  color: var(--accent-color);
+  transform: translateX(5px);
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 100px 0;
+}
+
+.void-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem;
+  color: var(--line-color);
+  letter-spacing: 10px;
+}
+
+/* Modal Styles */
+.edit-modal-content {
+  background: var(--modal-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 40px;
+  width: 90%;
+  max-width: 500px;
+  border: 1px solid var(--line-color);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+}
+
+.crop-modal-content {
+  background: var(--modal-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 24px;
+  width: 90vw;
+  max-width: 600px;
+  height: 70vh; /* 降低高度占比，确保在小屏幕也安全 */
+  max-height: 600px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line-color);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+  border-radius: 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.modal-header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-color);
+}
+
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  margin: 16px 0;
+  background: #111;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.native-cropper-wrapper {
+  width: 100%;
+  max-width: 360px; /* 限制最大宽度 */
+  aspect-ratio: 1 / 1; /* 严格限制 1:1 */
+  position: relative;
+  cursor: move;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.native-crop-image {
+  max-width: none;
+  max-height: none;
+  user-select: none;
+  pointer-events: none;
+  transition: transform 0.05s linear;
+}
+
+.crop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.crop-viewport {
+  width: 100%; /* 铺满 1:1 的 wrapper */
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%; /* 圆形遮罩 */
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* 通过阴影实现视口外的变暗效果 */
+.crop-viewport::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header h3 {
+  font-family: 'Playfair Display', serif;
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: 2px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: color 0.3s;
+}
+
+.close-btn:hover {
+  color: var(--accent-color);
+}
+
+.edit-form :deep(.n-form-item-label) {
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  color: var(--text-tertiary);
+}
+
+.modal-actions {
+  flex-shrink: 0;
+  padding-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--line-color);
+}
+
+.save-btn {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border: none;
+  padding: 12px 30px;
+  font-family: 'Lato', sans-serif;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.save-btn:hover {
+  background: var(--accent-color);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    text-align: center;
+  }
+  
+  .info-col {
+    order: 2;
+  }
+  
+  .avatar-col {
+    order: 1;
     display: flex;
     justify-content: center;
-    align-items: center;
-    overflow: visible;
-}
-.avatar-container .active {
-    cursor: pointer;
-}
-
-.avatar-square {
-    position: absolute;
-    z-index: 100;
-    overflow: visible;
-
-    width: 180px;
-    height: 180px;
-    border: 3px solid white;
-    animation: rotateBorder 10s linear infinite;
-}
-.avatar-square:nth-child(2) {
-    animation: rotateBorder 15s linear infinite;
-}
-.avatar-circle {
-    position: absolute;
-    z-index: 100;
-    overflow: visible;
-
-    border-radius: 50%;
-    width: 210px;
-    height: 210px;
-    /* border: 1px solid black; */
-    /* border-top: 3px dashed white; */
-    border-bottom: 3px solid white;
-    animation: rotateBorder 5s linear infinite;
-}
-@keyframes rotateBorder {
-    0% {
-        transform: rotate(0deg);
-        border-color: #4d9de0;
-        box-shadow: 0 0 10px #4d9de0;
-    }
-    25% {
-        border-color: #e74c3c;
-        box-shadow: 0 0 15px #e74c3c;
-    }
-    50% {
-        border-color: #2ecc71;
-        box-shadow: 0 0 20px #2ecc71;
-    }
-    75% {
-        border-color: #f39c12;
-        box-shadow: 0 0 15px #f39c12;
-    }
-    100% {
-        transform: rotate(360deg);
-        border-color: #4d9de0;
-        box-shadow: 0 0 10px #4d9de0;
-    }
-}
-
-.el-avatar {
-    z-index: 1001;
-    position: relative;
-    
-}
-
-.user-info-container {
+  }
+  
+  .meta-line {
+    justify-content: center;
+  }
+  
+  .tags-line {
+    justify-content: center;
+  }
+  
+  .bio-block {
     margin-left: auto;
-    margin-right: 10%;
-    width: 50%;
-    display: flex;
-    flex-direction: column;
-}
+    margin-right: auto;
+  }
 
-.show-nickname {
-    color: rgb(249, 180, 215);
-    font-size: 30px;
-    font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-    margin-left: 10%;
-    margin-bottom: 3%;
-}
-.show-nickname>span {
-    font-family: 'Times New Roman', Times, serif;
-    background: linear-gradient(to right, rgb(255, 225, 0), rgb(0, 195, 255));
-    background-size: 150% 150%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    animation: gradientText 3s ease infinite;
-}
-@keyframes gradientText {
-    0% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-    100% {
-        background-position: 0% 50%;
-    }
-}
+  .nickname {
+    font-size: 3rem;
+  }
 
-.user-info-container :deep(.el-descriptions) {
-    border-left: 3px solid rgb(124, 102, 235);
-    border-right: 3px solid rgb(52, 131, 221);
-    width: 100%;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 15px;
-    padding-top: 2%;
-}
-.user-info-container :deep(.el-descriptions__body) {
-    background-color: transparent;
-    margin-left: 5%;
-}
-.user-info-container :deep(.el-descriptions__title) {
-    color: rgb(183, 121, 241);
-    margin-left: 10%;
-    margin-bottom: 10px;
-    font-size: large;
-}
-.user-info-container :deep(.el-descriptions__header) {
-    border-bottom: 2px solid rgb(53, 238, 204);
-}
-.user-info-container :deep(.el-descriptions__extra) {
-    color: rgba(77, 207, 216, 0.511);
-    margin-right: 5%;
-    font-size: small;
-    cursor: pointer;
-}
-.user-info-container :deep(.el-descriptions__extra:hover) {
-    color: rgb(48, 223, 235);
-    text-decoration: underline;
-}
-.user-info-container :deep(.el-descriptions__label) {
-    color: rgb(199, 164, 231);
-    font-size: larger;
-}
-.user-info-container :deep(.el-descriptions__content) {
-    color: #eee;
-    font-size: larger;
-}
-
-.signature-content {
-    color: #ccc;
-    font-size: smaller;
-}
-
-
-.blog-list-container {
-    width: 50%;
-    height: auto;
-    overflow: visible;
-}
-.blog-list-item {
-    width: 100%;
-    min-height: 100px;
-    margin-top: 1%;
-    border-top: 3px solid rgb(249, 149, 245);
-    
-    border-radius: 10px;
-    background-color: rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-.blog-list-item.category-project {
-    border-top: 3px solid rgb(248, 116, 0);
-}
-.blog-list-item.category-tech {
-    border-top: 3px solid rgb(0, 161, 248);
-}
-.blog-list-item.category-algo {
-    border-top: 3px solid rgb(0, 248, 83);
-}
-.blog-list-item.category-game {
-    border-top: 3px solid rgb(248, 244, 0);
-}
-.blog-list-item.category-other {
-    border-top: 3px solid rgb(248, 0, 194);
-}
-.blog-header {
-    width: 100%;
-    height: 30px;
-    display: flex;
-    border-bottom: 1px solid black;
-    align-items: center;
-    cursor: pointer;
-}
-.blog-title {
-    margin-left: 3%;
-    color: rgb(253, 202, 0);
-    font-size: 17px;
-}
-.blog-category {
-    margin-left: auto;
-    color: white;
-    margin-right: 5%;
-}
-.blog-category>span {
-    color: rgb(38, 181, 209);
-}
-.blog-category>span.category-project {
-    color: rgb(255, 183, 0);
-}
-.blog-category>span.category-tech {
-    color: rgb(0, 132, 255);
-}
-.blog-category>span.category-algo {
-    color: rgb(2, 186, 35);
-}
-.blog-category>span.category-game {
-    color: rgb(216, 201, 32);
-}
-.blog-category>span.category-other {
-    color: rgb(155, 112, 255);
-}
-.blog-category>span:last-child {
-    color: rgb(1, 215, 208);
-}
-.blog-time {
-    color: rgba(2, 198, 198, 0.466);
-    font-size: 14px;
-    margin-right: 1%;
-}
-.blog-body {
-    width: 95%;
-    flex: 1;
-    display: flex;
-    align-items: center;
-}
-.blog-summary {
-    display: flex;
-    align-items: center;
-    color: #ccc;
-}
-
-:deep(.update-profile-dialog) {
-    background-color: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(4px);
-}
-:deep(.update-profile-dialog .el-dialog__title) {
-    color: rgb(248, 124, 232);
-    border-bottom: 3px solid pink;
-}
-:deep(.update-profile-form .el-form-item__label) {
-    color: pink;
-    font-size: 15px;
-}
-
-/* 修改个人资料对话框样式 - 暗色系紫色系 */
-:deep(.update-profile-dialog) {
-    background-color: rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(138, 43, 226, 0.3);
-}
-
-
-:deep(.update-profile-dialog .el-dialog__title) {
-    color: #fd52e7;
-    font-size: 20px;
-    font-weight: 600;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-:deep(.update-profile-dialog .el-dialog__body) {
-    background-color: transparent;
-    padding: 30px;
-}
-
-:deep(.update-profile-dialog .el-dialog__footer .el-dialog__body) {
-    background: linear-gradient(90deg, rgba(138, 43, 226, 0.1), rgba(147, 112, 219, 0.1));
-    border-top: 1px solid rgba(138, 43, 226, 0.2);
-    border-radius: 0 0 16px 16px;
-    padding: 20px;
-    margin: 0;
-}
-
-/* 表单样式 */
-:deep(.update-profile-form .el-form-item__label) {
-    color: #ffffff;
-    font-size: 16px;
-    font-weight: 500;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-:deep(.update-profile-form .el-input__wrapper) {
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    box-shadow: none;
-    transition: all 0.3s ease;
-}
-
-:deep(.update-profile-form .el-input__wrapper:hover) {
-    border-color: rgba(255, 255, 255, 0.4);
-    background-color: rgba(255, 255, 255, 0.15);
-}
-
-:deep(.update-profile-form .el-input__wrapper.is-focus) {
-    border-color: #8a2be2;
-    background-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 0 2px rgba(138, 43, 226, 0.2);
-}
-
-:deep(.update-profile-form .el-input__inner) {
-    color: #ffffff;
-}
-
-:deep(.update-profile-form .el-input__inner::placeholder) {
-    color: rgba(255, 255, 255, 0.6);
-}
-
-/* 性别选择器样式 */
-:deep(.update-profile-form .el-radio-group) {
-    display: flex;
-    width: 100%;
-    gap: 10px;
-}
-
-:deep(.update-profile-form .el-radio) {
-    margin-right: 0;
-    padding: 6px 12px;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-}
-
-:deep(.update-profile-form .el-radio__label) {
-    color: #739efb;
-    font-size: 14px;
-    font-weight: 500;
-    padding-left: 6px;
-}
-
-:deep(.update-profile-form .el-radio:hover .el-radio__label) {
-    color: #f748d1;
-}
-
-:deep(.update-profile-form .el-radio.is-checked .el-radio__label) {
-    color: #fd52e7;
-}
-
-:deep(.update-profile-form .el-radio__inner) {
-    border-color: rgba(138, 43, 226, 0.5);
-    transition: all 0.2s ease;
-}
-
-:deep(.update-profile-form .el-radio.is-checked .el-radio__inner) {
-    background-color: #8a2be2;
-    border-color: #8a2be2;
-}
-
-:deep(.update-profile-form .el-radio__inner:hover) {
-    border-color: #9370db;
-}
-
-/* 按钮样式 */
-:deep(.update-profile-dialog .cancel-btn) {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.2));
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #ffffff;
-    font-weight: 500;
-    padding: 10px 20px;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-:deep(.update-profile-dialog .cancel-btn:hover) {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.3));
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
-}
-
-:deep(.update-profile-dialog .confirm-btn) {
-    background: linear-gradient(90deg, #8a2be2, #9370db);
-    border: none;
-    color: white;
-    font-weight: 500;
-    padding: 10px 20px;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
-}
-
-:deep(.update-profile-dialog .confirm-btn:hover) {
-    background: linear-gradient(90deg, #9370db, #8a2be2);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(138, 43, 226, 0.4);
-}
-
-:deep(.update-profile-dialog .confirm-btn:active) {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(138, 43, 226, 0.3);
-}
-
-/* 个性签名文本区域样式 */
-:deep(.update-profile-form .el-textarea__inner) {
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    color: #ffffff;
-    font-size: 14px;
-    resize: vertical;
-    transition: all 0.3s ease;
-}
-
-:deep(.update-profile-form .el-textarea__inner:hover) {
-    border-color: rgba(255, 255, 255, 0.4);
-    background-color: rgba(255, 255, 255, 0.15);
-}
-
-:deep(.update-profile-form .el-textarea__inner:focus) {
-    border-color: #8a2be2;
-    background-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 0 2px rgba(138, 43, 226, 0.2);
-    outline: none;
-}
-
-:deep(.update-profile-form .el-textarea__inner::placeholder) {
-    color: rgba(255, 255, 255, 0.6);
-}
-
-/* 字数统计样式 */
-:deep(.update-profile-form .el-input__count) {
-    background-color: rgba(138, 43, 226, 0.3);
-    color: #ffffff;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 12px;
-}
-
-:deep(.update-profile-form .el-input__count .el-input__count-inner) {
-    color: #fd52e7;
-    font-weight: 500;
-}
-
-.more-btn {
-    background-color: transparent;
-    border: none;
-    color:#f092e8;
-    font-size: 15px;
-    margin: 0;
-    padding: 0;
-    cursor: pointer;
-}
-
-/*  #endregion */
-</style>
-
-<style>
-.avatar-preview-dialog {
-    background-color: rgba(0, 0, 0, 0.5);
-}
-.avatar-preview-dialog .el-message-box__title {
-    color: rgb(250, 131, 232);
-    font-weight: 500;
-    
-}
-.confirm-btn {
-    background: linear-gradient(45deg, #b4228d, #1d86c3);
-    color: rgb(0, 0, 0);
-    font-size: 15px;
-    border-radius: 12px;
-    transition: all 0.3 ease;
-    padding: 12px 30px;
-    box-shadow: 0 4px 20px rgba(193, 0, 211, 0.587);
-    border: none;
-}
-.confirm-btn:hover {
-    background: linear-gradient(45deg, #f009b2, #01a2ff);
-    /* transform: translateY(-2px); */
-    color: black;
-    font-weight: bold;
-}
-.cancel-btn {
-    background: linear-gradient(45deg, #fdbeb7, #4c56b4);
-    border: none;
-    color: black;
-    border-radius: 12px;
-    padding: 12px 30px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 20px rgba(202, 168, 164, 0.4);
-}
-
-.cancel-btn:hover {
-    background: linear-gradient(45deg, #ee857a, #828deb);
-    /* transform: translateY(-2px); */
-    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.6);
-    color: black;
+  .container {
+    padding: 80px 20px;
+  }
 }
 </style>

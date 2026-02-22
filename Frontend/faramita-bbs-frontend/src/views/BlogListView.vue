@@ -1,712 +1,846 @@
-<template>
-    <div class="blog-list-container">
-        <!-- 背景层 -->
-        <div class="background-layer"></div>
-
-        <!-- 内容层 -->
-        <div class="content-layer">
-            <div class="blog-list-wrapper">
-                <div class="blog-list-header">
-                    <h2>博客列表</h2>
-                    <div class="search-box">
-                    <el-input
-                        v-model="searchForm.keyword"
-                        placeholder="搜索博客..."
-                        class="search-input"
-                        @keyup.enter="handleSearch"
-                    >
-                        <template #prefix>
-                            <el-icon><Search /></el-icon>
-                        </template>
-                    </el-input>
-                    <el-button type="primary" @click="handleSearch">搜索</el-button>
-                    <el-button class="add-btn" @click="showCreateDialog = true">+创建博客</el-button>
-                </div>
-                    <div class="sort-options">
-                        <FRSelector
-                            v-model="searchForm.orderBy"
-                            :options="orderOptions"
-                            placeholder="排序方式"
-                            style="width: 120px;"
-                        />
-                        <FRSelector
-                            v-model="searchForm.sortOrder"
-                            :options="sortOrderOptions"
-                            placeholder="排序顺序"
-                            style="width: 120px;"
-                        />
-                    </div>
-                </div>
-
-                <div class="blog-list-content">
-                    <div 
-                        class="blog-list-item" 
-                        v-for="blog in blogList" 
-                        :key="blog.bloguid"
-                        :class="BlogUtils.getCategoryClass(blog.bigCategoryId)"
-                        @click="openBlog(blog.bloguid)"
-                    >
-                        <div class="blog-header">
-                            <div class="blog-title">
-                                [ {{ blog.title }} ]
-                            </div>
-                            <div class="blog-category">
-                                <span>{{ BlogUtils.bigIdToString(blog.bigCategoryId) }}</span>
-                                >
-                                <span>{{ blog.littleCategoryName }}</span>
-                            </div>
-                            <div class="blog-time">
-                                {{ DateUtils.isoToDateOnly(blog.updateTime) }}
-                            </div>
-                        </div>
-                        <div class="blog-body">
-                            <div class="blog-summary">
-                                {{ blog.summary ? blog.summary : '暂无描述' }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pagination-container" v-if="total > 0">
-                    <el-pagination
-                        v-model:current-page="searchForm.page"
-                        v-model:page-size="searchForm.pageSize"
-                        :total="total"
-                        layout="total, prev, pager, next, jumper"
-                        @current-change="handleCurrentChange"
-                    />
-                </div>
-            </div>
-        </div>
-
-        <el-dialog
-            v-model="showCreateDialog"
-            title="创建博客"
-            width="500px"
-            custom-class="create-blog-dialog"
-            :before-close="handleCreateDialogClose"
-        >
-            <el-form :model="createForm" ref="createFormRef" label-width="100px" label-position="right" class="create-blog-form">
-                <el-form-item label="大类" prop="bigCategoryId">
-                    <div class="dialog-row">
-                        <FRSelector
-                            v-model="createForm.bigCategoryId"
-                            :options="bigCategoryOptions"
-                            placeholder="选择大类"
-                            style="width: 160px;"
-                        />
-                    </div>
-                </el-form-item>
-                <el-form-item label="小类名称" prop="littleCategoryName">
-                    <el-input v-model="createForm.littleCategoryName" placeholder="请输入小类名称" clearable />
-                </el-form-item>
-                <el-form-item label="标题" prop="title">
-                    <el-input v-model="createForm.title" placeholder="请输入标题" clearable />
-                </el-form-item>
-            </el-form>
-            <template #footer>
-                <span class="dialog-footer">
-                    <el-button @click="handleCreateDialogClose" class="cancel-btn">取消</el-button>
-                    <el-button type="primary" @click="handleCreateBlog" class="confirm-btn">提交</el-button>
-                </span>
-            </template>
-        </el-dialog>
-    </div>
-</template>
-
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { Search } from '@element-plus/icons-vue'
+import { ref, onMounted, h, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import {
+  NInput, NSelect, NPagination, NModal,
+  NForm, NFormItem, NIcon, NEmpty, NSpin, useMessage, useDialog, NAvatar
+} from 'naive-ui'
+import { Search, Add, ArrowForward, GridOutline, Person } from '@vicons/ionicons5'
 import { getBlogListPage, createBlog } from '@/api/blog'
-import { type Blog, type BlogPageQueryDTO, BlogUtils, DateUtils } from '@/types'
-import FRSelector from '@/components/FRSelector.vue'
-import { ElMessage, type FormInstance } from 'element-plus'
+import { getProfileByUid } from '@/api/user'
+import { downloadAvatar } from '@/api/file'
+import type { Blog, BlogPageQueryDTO } from '@/types'
+import { BlogUtils } from '@/types/blog'
+import { DateUtils } from '@/types/date'
 import { useUserStore } from '@/stores/user'
+import ParticleBackground from '@/components/ParticleBackground.vue'
 
-// 路由
+// Fonts
+const fontLink = document.createElement('link')
+fontLink.href = 'https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap'
+fontLink.rel = 'stylesheet'
+document.head.appendChild(fontLink)
+
 const router = useRouter()
-const route = useRoute()
-const uid = Number(route.params.uid)
-const useStore = useUserStore()
+const message = useMessage()
+const dialog = useDialog()
+const userStore = useUserStore()
 
-// 搜索表单
-const searchForm: BlogPageQueryDTO = reactive({
-    page: 1,
-    pageSize: 10,
-    bigCategoryId: 0,
-    keyword: '',
-    orderBy: 'update_time',
-    sortOrder: 'desc',
-    litteCategoryName: '',
-    categoryId: '',
-    authorId: 0
-})
-const orderOptions = [
-    {
-        value: 'update_time',
-        label: '更新字段'
-    }, {
-        value: 'create_time',
-        label: '创建字段'
-    }, {
-        value: 'title',
-        label: '标题'
-    },
-]
-const sortOrderOptions = [
-    {
-        value: 'desc',
-        label: '降序'
-    },
-    {
-        value: 'asc',
-        label: '升序'
-    },
-]
-// 博客列表数据
+const loading = ref(false)
 const blogList = ref<Blog[]>([])
 const total = ref(0)
+const showCreateModal = ref(false)
 
-// 创建博客对话框
-const showCreateDialog = ref(false)
-const createFormRef = ref<FormInstance>()
-const createForm = reactive({
-    bigCategoryId: 0,
-    littleCategoryName: '',
-    title: ''
+const handleCreateClick = () => {
+  if (!userStore.isAuthenticated) {
+    dialog.warning({
+      title: '需要登录',
+      content: '开启创作旅程前，请先登录您的账号。',
+      positiveText: '去登录',
+      negativeText: '再看看',
+      onPositiveClick: () => {
+        router.push('/login')
+      }
+    })
+    return
+  }
+  showCreateModal.value = true
+}
+
+const searchForm = ref<BlogPageQueryDTO>({
+  page: 1,
+  pageSize: 9,
+  bigCategoryId: 0,
+  keyword: '',
+  orderBy: 'create_time',
+  sortOrder: 'desc',
+  litteCategoryName: '',
+  categoryId: '',
+  authorId: 0
+})
+
+const createForm = ref({
+  title: '',
+  bigCategoryId: 1,
+  littleCategoryName: '',
+  authorName: userStore.userInfo?.nickname || ''
 })
 
 const bigCategoryOptions = [
-    { value: 1, label: BlogUtils.bigIdToString(1) as string },
-    { value: 2, label: BlogUtils.bigIdToString(2) as string },
-    { value: 3, label: BlogUtils.bigIdToString(3) as string },
-    { value: 4, label: BlogUtils.bigIdToString(4) as string },
-    { value: 5, label: BlogUtils.bigIdToString(5) as string },
+  { label: '项目实战', value: 1 },
+  { label: '技术栈', value: 2 },
+  { label: '算法心得', value: 3 },
+  { label: '游戏开发', value: 4 },
+  { label: '随笔杂谈', value: 5 }
 ]
 
-// 获取博客列表
-const fetchBlogList = async () => {
+const sortOptions = [
+  { label: '最新发布', value: 'create_time' },
+  { label: '最近更新', value: 'update_time' }
+]
+
+// Avatar handling
+const authorAvatars = ref<Map<number, string>>(new Map())
+
+// 默认头像图标渲染函数
+const renderDefaultAvatar = () => h(NIcon, null, { default: () => h(Person) })
+
+const fetchAuthorAvatars = async (blogs: Blog[]) => {
+  // Get unique author IDs that don't have an avatar URL yet
+  const uids = [...new Set(blogs.map(b => b.authorId).filter(id => id && !authorAvatars.value.has(id)))]
+  
+  if (uids.length === 0) return
+
+  // Fetch avatars in parallel
+  await Promise.all(uids.map(async (uid) => {
     try {
-        const response = await getBlogListPage(uid, searchForm)
-        console.log('分页响应:', response)
-        blogList.value = Array.isArray(response.list) ? response.list : []
-        total.value = typeof response.total === 'number' ? response.total : 0
-        console.log('渲染 blogList:', blogList.value)
+      const res = await getProfileByUid(uid)
+      if (res.user && res.user.avatar) {
+        const blob = await downloadAvatar(res.user.avatar)
+        const url = URL.createObjectURL(blob)
+        authorAvatars.value.set(uid, url)
+      }
     } catch (error) {
-        console.error('获取博客列表失败:', error)
+      console.error(`Failed to fetch avatar for user ${uid}`, error)
     }
+  }))
 }
 
-// 搜索处理
+const fetchBlogs = async () => {
+  loading.value = true
+  try {
+    const params = { ...searchForm.value }
+    if (params.bigCategoryId === 0) delete (params as any).bigCategoryId
+    if (params.authorId === 0) delete (params as any).authorId
+    
+    const res = await getBlogListPage(params)
+    blogList.value = res.list
+    total.value = res.total
+    
+    // Fetch avatars for the current list
+    if (res.list && res.list.length > 0) {
+      fetchAuthorAvatars(res.list)
+    }
+  } catch (error) {
+    message.error('获取博客列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 const handleSearch = () => {
-    fetchBlogList()
+  searchForm.value.page = 1
+  fetchBlogs()
 }
 
-// 分页处理
-// const handleSizeChange = (val: number) => {
-//     searchForm.pageSize = val
-//     fetchBlogList()
-// }
-
-const handleCurrentChange = (val: number) => {
-    searchForm.page = val
-    fetchBlogList()
+const handlePageChange = (page: number) => {
+  searchForm.value.page = page
+  fetchBlogs()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// 跳转到博客详情页
-const openBlog = (bloguid: string) => {
-    router.push(`/${uid}/blog/${bloguid}`)
+const handleCreateBlog = async () => {
+  if (!createForm.value.title) {
+    message.warning('请输入标题')
+    return
+  }
+  try {
+    createForm.value.authorName = userStore.userInfo?.nickname || ''
+    const blogUid = await createBlog(createForm.value)
+    message.success('创建成功')
+    showCreateModal.value = false
+    router.push(`/blog/${blogUid}`)
+  } catch (error) {
+    message.error('创建失败')
+  }
 }
 
-// 关闭创建博客对话框
-function handleCreateDialogClose() {
-    showCreateDialog.value = false
-    if (createFormRef.value) createFormRef.value.resetFields()
-    createForm.bigCategoryId = 0,
-    createForm.littleCategoryName = ''
-    createForm.title = ''
-}
-
-// 创建博客处理
-async function handleCreateBlog() {
-    if (!createForm.bigCategoryId || !createForm.littleCategoryName || !createForm.title) {
-        ElMessage.error('请填写完整信息')
-        return
-    }
-    if (!useStore.$state.userInfo?.id) {
-        ElMessage.error('身份无效或过期，请登录')
-        return
-    }
-    try {
-        // 假定 authorName 可从本地获取或后端自动填充
-        const res = await createBlog(useStore.$state.userInfo?.id as number, {
-            title: createForm.title,
-            bigCategoryId: Number(createForm.bigCategoryId),
-            littleCategoryName: createForm.littleCategoryName,
-            authorName: useStore.$state.userInfo?.nickname as string
-        })
-        ElMessage.success('博客创建成功')
-        showCreateDialog.value = false
-        router.push(`/blog/${res}`)
-    } catch (err) {
-        console.error('>博客创建失败', err)
-    }
-}
-
-// 组件挂载时获取数据
 onMounted(() => {
-    fetchBlogList()
+  fetchBlogs()
+})
+
+onUnmounted(() => {
 })
 </script>
 
+<template>
+  <div class="blog-list-page">
+    <ParticleBackground class="interactive-bg" />
+    
+    <!-- Hero Header -->
+    <div class="hero-section">
+      <div class="hero-content">
+        <h1 class="hero-title">
+          The <span class="highlight">Chronicles</span>
+        </h1>
+        <p class="hero-subtitle">Explore thoughts, stories, and ideas.</p>
+        
+        <div class="search-bar-wrapper">
+          <n-input 
+            v-model:value="searchForm.keyword" 
+            placeholder="Search articles..." 
+            class="hero-search-input custom-input"
+            round
+            size="large"
+            @keyup.enter="handleSearch"
+          >
+            <template #prefix>
+              <n-icon :component="Search" class="search-icon" />
+            </template>
+          </n-input>
+          <button class="search-btn" @click="handleSearch">
+            Search
+          </button>
+        </div>
+      </div>
+
+      <div class="hero-footer">
+        <div class="footer-left">
+          <div class="sort-selector">
+            <n-select
+              v-model:value="searchForm.orderBy"
+              :options="sortOptions"
+              size="medium"
+              class="custom-select"
+              @update:value="handleSearch"
+            />
+          </div>
+        </div>
+
+        <div class="filter-tags">
+          <span
+            class="filter-tag"
+            :class="{ active: searchForm.bigCategoryId === 0 }"
+            @click="searchForm.bigCategoryId = 0; handleSearch()"
+          >
+            All
+          </span>
+          <span
+            v-for="opt in bigCategoryOptions"
+            :key="opt.value"
+            class="filter-tag"
+            :class="{ active: searchForm.bigCategoryId === opt.value }"
+            @click="searchForm.bigCategoryId = opt.value; handleSearch()"
+          >
+            {{ opt.label }}
+          </span>
+        </div>
+
+        <div class="footer-right">
+          <button class="create-btn" @click="handleCreateClick">
+            <n-icon :component="Add" />
+            Write
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Section -->
+    <div class="content-container">
+      <n-spin :show="loading">
+        <div v-if="blogList.length > 0">
+          <div class="blog-grid">
+            <div 
+              v-for="(blog, index) in blogList" 
+              :key="blog.bloguid" 
+              class="blog-card-wrapper"
+              :style="{ animationDelay: `${index * 0.1}s` }"
+              @click="router.push(`/blog/${blog.bloguid}`)"
+            >
+              <div class="blog-card">
+                <div class="card-header">
+                  <div class="card-header-content">
+                    <span class="category-badge">
+                      {{ BlogUtils.bigIdToString(blog.bigCategoryId) }}
+                    </span>
+                    <span class="read-more-icon">
+                      <n-icon :component="ArrowForward" />
+                    </span>
+                  </div>
+                </div>
+                
+                <div class="card-body">
+                  <div class="card-meta-top">
+                    <span class="sub-category">{{ blog.littleCategoryName || 'General' }}</span>
+                    <span class="publish-date">{{ DateUtils.isoToDateOnly(blog.createTime) }}</span>
+                  </div>
+                  
+                  <h3 class="card-title">{{ blog.title }}</h3>
+                  <p class="card-summary">{{ blog.summary || 'No summary available...' }}</p>
+                  
+                  <div class="card-footer">
+                    <div class="author-profile">
+                      <n-avatar 
+                        round 
+                        size="small" 
+                        :src="authorAvatars.get(blog.authorId)" 
+                        :render-icon="renderDefaultAvatar"
+                        class="author-avatar"
+                      />
+                      <span class="author-name">{{ blog.authorName }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="pagination-container">
+            <n-pagination
+              v-model:page="searchForm.page"
+              :item-count="total"
+              :page-size="searchForm.pageSize"
+              size="large"
+              @update:page="handlePageChange"
+            />
+          </div>
+        </div>
+        
+        <n-empty v-else description="No articles found." class="empty-state">
+           <template #icon>
+             <n-icon :component="GridOutline" />
+           </template>
+        </n-empty>
+      </n-spin>
+    </div>
+
+    <!-- Create Modal -->
+    <n-modal v-model:show="showCreateModal">
+      <div class="create-modal-content">
+        <div class="modal-header">
+          <h3>New Article</h3>
+        </div>
+        <div class="modal-body">
+            <n-form ref="createFormRef" :model="createForm" size="large" class="custom-form">
+            <n-form-item label="Title" path="title">
+                <n-input v-model:value="createForm.title" placeholder="Enter article title" class="custom-input" />
+            </n-form-item>
+            <n-form-item label="Category" path="bigCategoryId">
+                <n-select v-model:value="createForm.bigCategoryId" :options="bigCategoryOptions" class="custom-select" />
+            </n-form-item>
+            <n-form-item label="Tags" path="littleCategoryName">
+                <n-input v-model:value="createForm.littleCategoryName" placeholder="e.g. Vue3, SpringBoot" class="custom-input" />
+            </n-form-item>
+            </n-form>
+        </div>
+        <div class="modal-actions">
+            <button class="cancel-btn" @click="showCreateModal = false">Cancel</button>
+            <button class="save-btn" @click="handleCreateBlog">Create</button>
+        </div>
+      </div>
+    </n-modal>
+  </div>
+</template>
+
 <style scoped>
-.blog-list-container {
-    height: 100%;
-    width: 100%;
-    position: relative;
-    overflow: hidden;
+.blog-list-page {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  padding-bottom: 80px;
+  position: relative;
+  overflow: hidden;
 }
 
-.background-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('@/assets/images/bg/bg03.jpg');
-    background-size: cover;
-    background-position: center;
-    filter: blur(1px);
-    z-index: 0;
+.interactive-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
 }
 
-.content-layer {
-    position: relative;
-    z-index: 1;
-    height: 100%;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    box-sizing: border-box;
-    margin-top: 2.5%;
+/* Hero Section */
+.hero-section {
+  position: relative;
+  padding: 80px 20px 40px;
+  margin-bottom: 40px;
+  text-align: center;
+  z-index: 10;
 }
 
-
-.search-container {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
+.hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.8s ease-out;
 }
 
-.search-box {
-    display: flex;
-    gap: 10px;
-    width: 60%;
-    min-width: 300px;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.search-input {
-    flex: 1;
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 4rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  line-height: 1.2;
+  letter-spacing: 2px;
+  color: var(--text-primary);
 }
 
-.blog-list-wrapper {
-    flex: 1;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 15px;
-    padding: 20px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+.highlight {
+  font-style: italic;
+  color: var(--accent-color);
 }
 
-.blog-list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid rgb(53, 238, 204);
+.hero-subtitle {
+  font-family: 'Lato', sans-serif;
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  margin-bottom: 40px;
+  letter-spacing: 1px;
 }
 
-.blog-list-header h2 {
-    color: rgb(183, 121, 241);
-    margin: 0;
-    font-size: 24px;
+.search-bar-wrapper {
+  display: flex;
+  gap: 0;
+  max-width: 600px;
+  margin: 0 auto 40px;
+  border-bottom: 2px solid var(--text-primary);
+  padding-bottom: 5px;
+  transition: border-color 0.3s;
 }
 
-.sort-options {
-    display: flex;
-    gap: 10px;
+.search-bar-wrapper:focus-within {
+  border-color: var(--accent-color);
 }
 
-.sort-select {
-    width: 120px;
+.hero-search-input {
+  flex: 1;
 }
 
-.blog-list-content {
-    flex: 1;
-    overflow-y: auto;
-    margin-bottom: 20px;
+.custom-input :deep(.n-input__input-el) {
+  font-family: 'Lato', sans-serif;
+  font-size: 1.1rem;
+  color: var(--text-primary);
 }
 
-.blog-list-item {
-    width: 100%;
-    min-height: 100px;
-    margin-top: 1%;
-    border-top: 3px solid rgb(249, 149, 245);
-    border-radius: 10px;
-    background-color: rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+.custom-input :deep(.n-input__border),
+.custom-input :deep(.n-input__state-border) {
+  display: none;
 }
 
-.blog-list-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+.custom-input {
+  background: transparent;
 }
 
-.blog-list-item.category-project {
-    border-top: 3px solid rgb(248, 116, 0);
+.search-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: 'Lato', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 2px;
+  cursor: pointer;
+  padding: 0 20px;
+  text-transform: uppercase;
+  transition: color 0.3s;
 }
 
-.blog-list-item.category-tech {
-    border-top: 3px solid rgb(0, 161, 248);
+.search-btn:hover {
+  color: var(--accent-color);
 }
 
-.blog-list-item.category-algo {
-    border-top: 3px solid rgb(0, 248, 83);
+/* Content Container */
+.content-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  position: relative;
+  z-index: 10;
 }
 
-.blog-list-item.category-game {
-    border-top: 3px solid rgb(248, 244, 0);
+.hero-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--line-color);
+  padding-bottom: 20px;
+  animation: fadeIn 0.8s ease-out 0.2s backwards;
 }
 
-.blog-list-item.category-other {
-    border-top: 3px solid rgb(248, 0, 194);
+.footer-left, .footer-right {
+  display: flex;
+  align-items: center;
 }
 
-.blog-header {
-    width: 100%;
-    height: 30px;
-    display: flex;
-    border-bottom: 1px solid rgb(132, 255, 255);
-    align-items: center;
+.custom-select {
+  width: 150px;
 }
 
-.blog-title {
-    margin-left: 3%;
-    color: rgb(253, 202, 0);
-    font-size: 17px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.custom-select :deep(.n-base-selection) {
+  background: transparent;
+  border: 1px solid var(--line-color);
+  border-radius: 0;
 }
 
-.blog-category {
-    margin-left: auto;
-    color: white;
-    margin-right: 5%;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 14px;
+.custom-select :deep(.n-base-selection__border),
+.custom-select :deep(.n-base-selection__state-border) {
+  display: none;
 }
 
-.blog-category > span {
-    color: rgb(38, 181, 209);
+.custom-select :deep(.n-base-selection-input) {
+  font-family: 'Lato', sans-serif;
+  color: var(--text-primary);
 }
 
-.blog-category > span.category-project {
-    color: rgb(255, 183, 0);
+.filter-tags {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex: 1;
 }
 
-.blog-category > span.category-tech {
-    color: rgb(0, 132, 255);
+.filter-tag {
+  font-family: 'Lato', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s;
+  padding: 5px 0;
+  position: relative;
+  text-transform: uppercase;
 }
 
-.blog-category > span.category-algo {
-    color: rgb(2, 186, 35);
+.filter-tag::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background-color: var(--text-primary);
+  transition: width 0.3s;
 }
 
-.blog-category > span.category-game {
-    color: rgb(216, 201, 32);
+.filter-tag:hover {
+  color: var(--text-primary);
 }
 
-.blog-category > span.category-other {
-    color: rgb(155, 112, 255);
+.filter-tag:hover::after,
+.filter-tag.active::after {
+  width: 100%;
 }
 
-.blog-category > span:last-child {
-    color: rgb(1, 215, 208);
+.filter-tag.active {
+  color: var(--text-primary);
+  font-weight: 700;
 }
 
-.blog-time {
-    color: rgba(2, 198, 198, 0.466);
-    font-size: 14px;
-    margin-right: 1%;
+.create-btn {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border: none;
+  padding: 10px 20px;
+  font-family: 'Lato', sans-serif;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
 }
 
-.blog-body {
-    width: 95%;
-    flex: 1;
-    display: flex;
-    align-items: center;
-    padding: 10px 0;
-    margin-left: 2%;
+.create-btn:hover {
+  background: var(--accent-color);
+  transform: translateY(-2px);
 }
 
-.blog-summary {
-    display: flex;
-    align-items: center;
-    color: #ccc;
-    font-size: 14px;
+/* Blog Grid */
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 40px;
+  margin-top: 40px;
+}
+
+.blog-card-wrapper {
+  animation: slideInUp 0.6s ease-out backwards;
+}
+
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.blog-card {
+  height: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--line-color);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.4s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.blog-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: var(--text-primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+}
+
+.blog-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 15px 15px 0px var(--line-color);
+}
+
+.blog-card:hover::before {
+  transform: scaleX(1);
+  background: var(--accent-color);
+}
+
+.card-header {
+  padding: 20px 24px 0;
+}
+
+.card-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--line-color);
+  padding-bottom: 15px;
+}
+
+.category-badge {
+  font-family: 'Lato', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.read-more-icon {
+  color: var(--text-secondary);
+  transition: all 0.3s;
+  transform: translateX(-10px);
+  opacity: 0;
+}
+
+.blog-card:hover .read-more-icon {
+  transform: translateX(0);
+  opacity: 1;
+  color: var(--accent-color);
+}
+
+.card-body {
+  padding: 20px 24px 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-meta-top {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  margin-bottom: 15px;
+  letter-spacing: 1px;
+}
+
+.sub-category {
+  color: var(--accent-color);
+}
+
+.card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 15px;
+  line-height: 1.3;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.3s;
+}
+
+.blog-card:hover .card-title {
+  color: var(--accent-color);
+}
+
+.card-summary {
+  font-family: 'Lato', sans-serif;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.card-footer {
+  margin-top: auto;
+}
+
+.author-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.author-avatar {
+  border: 1px solid var(--line-color);
+}
+
+.author-name {
+  font-family: 'Lato', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-primary);
+  text-transform: uppercase;
 }
 
 .pagination-container {
-    display: flex;
-    justify-content: center;
-    padding: 20px 0;
+  margin-top: 60px;
+  display: flex;
+  justify-content: center;
 }
 
-/* Element Plus 样式覆盖 */
-:deep(.el-input__wrapper) {
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    box-shadow: none;
-    transition: all 0.3s ease;
+.pagination-container :deep(.n-pagination) {
+  font-family: 'Lato', sans-serif;
 }
 
-:deep(.el-input__wrapper:hover) {
-    border-color: rgba(255, 255, 255, 0.4);
-    background-color: rgba(255, 255, 255, 0.15);
+.pagination-container :deep(.n-pagination-item) {
+  border-radius: 0;
+  border: 1px solid var(--line-color);
+  background: transparent;
+  color: var(--text-primary);
 }
 
-:deep(.el-input__wrapper.is-focus) {
-    border-color: #8a2be2;
-    background-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 0 2px rgba(138, 43, 226, 0.2);
+.pagination-container :deep(.n-pagination-item--active) {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
 }
 
-:deep(.el-input__inner) {
-    color: #ffffff;
+.empty-state {
+  margin-top: 100px;
+  font-family: 'Playfair Display', serif;
 }
 
-:deep(.el-input__inner::placeholder) {
-    color: rgba(255, 255, 255, 0.6);
-}
-
-:deep(.el-select .el-input__wrapper) {
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    box-shadow: none;
-}
-
-:deep(.el-select .el-input__wrapper:hover) {
-    border-color: rgba(255, 255, 255, 0.4);
-    background-color: rgba(255, 255, 255, 0.15);
-}
-
-:deep(.el-select .el-input__wrapper.is-focus) {
-    border-color: #8a2be2;
-    background-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 0 2px rgba(138, 43, 226, 0.2);
-}
-
-:deep(.el-button) {
-    background: linear-gradient(90deg, #8a2be2, #9370db);
-    border: none;
-    color: white;
-    font-weight: 500;
-    padding: 12px 20px;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
-}
-
-:deep(.el-button:hover) {
-    background: linear-gradient(90deg, #9370db, #8a2be2);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(138, 43, 226, 0.4);
-}
-
-:deep(.el-button:active) {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(138, 43, 226, 0.3);
-}
-
-:deep(.el-pagination) {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-:deep(.el-pagination .el-pager li) {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
-    border-radius: 4px;
-    margin: 0 2px;
-}
-
-:deep(.el-pagination .el-pager li.active) {
-    background-color: #8a2be2;
-    color: white;
-}
-
-:deep(.el-pagination .el-pager li:hover) {
-    color: #9370db;
-}
-
-:deep(.el-pagination .btn-prev),
-:deep(.el-pagination .btn-next) {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
-    border-radius: 4px;
-}
-
-:deep(.el-pagination .btn-prev:hover),
-:deep(.el-pagination .btn-next:hover) {
-    color: #9370db;
-}
-
-/* 强力穿透 el-dialog 样式，保证玻璃磨砂和自定义效果 */
-:deep(.el-dialog) {
-    background: rgba(255,255,255,0.08) !important;
-    backdrop-filter: blur(18px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
-    border-radius: 18px !important;
-    box-shadow: 0 8px 32px rgba(138,43,226,0.18) !important;
-    border: 1px solid rgba(255,255,255,0.18) !important;
-}
-:deep(.el-dialog__title) {
-    color: #fd52e7 !important;
-    font-size: 20px !important;
-    font-weight: 600 !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
-}
-:deep(.el-dialog__body) {
-    background: transparent !important;
-    padding: 30px !important;
-}
-:deep(.el-dialog__footer) {
-    background: transparent !important;
-    border-radius: 0 0 18px 18px !important;
-    padding: 20px !important;
-    margin: 0 !important;
-}
-
-.create-blog-dialog {
-    background: rgba(255,255,255,0.08);
-    backdrop-filter: blur(18px) saturate(180%);
-    -webkit-backdrop-filter: blur(18px) saturate(180%);
-    border-radius: 18px;
-    box-shadow: 0 8px 32px rgba(138,43,226,0.18);
-    border: 1px solid rgba(255,255,255,0.18);
-}
-.create-blog-dialog .el-dialog__title {
-    color: #fd52e7;
-    font-size: 20px;
-    font-weight: 600;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-.create-blog-dialog .el-dialog__body {
-    background: transparent;
+/* Modal Styles */
+.create-modal-content {
+    background: var(--modal-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     padding: 30px;
-}
-.create-blog-dialog .el-dialog__footer {
-    background: linear-gradient(90deg, rgba(138, 43, 226, 0.08), rgba(147, 112, 219, 0.08));
-    border-radius: 0 0 18px 18px;
-    padding: 20px;
-    margin: 0;
-}
-.create-blog-form .el-form-item__label {
-    color: #fff !important;
-    font-size: 20px !important;
-    font-weight: 600 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    letter-spacing: 1px;
-}
-.create-blog-form .el-input__wrapper {
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    box-shadow: none;
-    transition: all 0.3s ease;
-}
-.create-blog-form .el-input__wrapper:hover {
-    border-color: rgba(255, 255, 255, 0.4);
-    background-color: rgba(255, 255, 255, 0.15);
-}
-.create-blog-form .el-input__wrapper.is-focus {
-    border-color: #8a2be2;
-    background-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 0 2px rgba(138, 43, 226, 0.2);
-}
-.create-blog-form .el-input__inner {
-    color: #ffffff;
-}
-.create-blog-form .el-input__inner::placeholder {
-    color: rgba(255, 255, 255, 0.6);
-}
-.create-blog-dialog .cancel-btn {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.2));
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #ffffff;
-    font-weight: 500;
-    padding: 10px 20px;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-.create-blog-dialog .cancel-btn:hover {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.3));
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
-}
-.create-blog-dialog .confirm-btn {
-    background: linear-gradient(90deg, #8a2be2, #9370db);
-    border: none;
-    color: white;
-    font-weight: 500;
-    padding: 10px 20px;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
-}
-.create-blog-dialog .confirm-btn:hover {
-    background: linear-gradient(90deg, #9370db, #8a2be2);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(138, 43, 226, 0.4);
-}
-.create-blog-dialog .confirm-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(138, 43, 226, 0.3);
-}
-.dialog-row {
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-.dialog-row :deep(.fr-selector) {
-    width: 160px !important;
-    min-width: 120px;
-    margin-left: 0;
+    width: 90vw;
+    max-width: 500px;
+    border: 1px solid var(--line-color);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    border-radius: 0;
+    box-sizing: border-box;
 }
 
-/* 穿透 el-form-item label 样式，确保字体变大且为白色 */
-:deep(.el-form-item__label) {
-    color: #fff !important;
-    font-size: 20px !important;
-    font-weight: 600 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+.modal-header {
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--line-color);
+    padding-bottom: 15px;
+}
+
+.modal-header h3 {
+    font-family: 'Playfair Display', serif;
+    margin: 0;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+}
+
+.custom-form :deep(.n-form-item-label) {
+    font-family: 'Lato', sans-serif;
+    font-size: 0.85rem;
     letter-spacing: 1px;
+    color: var(--text-secondary);
+}
+
+.modal-actions {
+    margin-top: 30px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    border-top: 1px solid var(--line-color);
+    padding-top: 20px;
+}
+
+.cancel-btn {
+    background: transparent;
+    border: 1px solid var(--line-color);
+    color: var(--text-primary);
+    padding: 10px 20px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.cancel-btn:hover {
+    border-color: var(--text-primary);
+}
+
+.save-btn {
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border: none;
+    padding: 10px 25px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.save-btn:hover {
+    background: var(--accent-color);
+    transform: translateY(-2px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 3rem;
+  }
+  .hero-footer {
+    flex-direction: column;
+    gap: 20px;
+    align-items: stretch;
+  }
+  .footer-left, .footer-right {
+    justify-content: center;
+  }
+  .filter-tags {
+    flex-wrap: wrap;
+  }
+  .blog-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

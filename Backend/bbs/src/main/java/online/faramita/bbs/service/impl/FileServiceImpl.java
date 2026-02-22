@@ -24,6 +24,7 @@ import online.faramita.bbs.entity.AvatarInfo;
 import online.faramita.bbs.exception.FileException;
 import online.faramita.bbs.mapper.FileMapper;
 import online.faramita.bbs.service.FileService;
+import online.faramita.bbs.util.GithubFileUtil;
 
 @Service
 @Slf4j
@@ -33,6 +34,8 @@ public class FileServiceImpl implements FileService {
     private FileConfig fileConfig;
     @Autowired
     private FileMapper fileMapper;
+    @Autowired
+    private GithubFileUtil githubFileUtil;
 
     /**
      * 上传头像文件
@@ -41,7 +44,7 @@ public class FileServiceImpl implements FileService {
      */
     public String uploadAvatar(MultipartFile file) {
         // 1.校验文件
-        validateFile(file);
+        validateAvatar(file);
 
         // 2.生成file_uuid : 时间戳 + uuid + 后缀名
         String originalFileName = file.getOriginalFilename();
@@ -67,6 +70,7 @@ public class FileServiceImpl implements FileService {
         // 5.写入磁盘
         try {
             file.transferTo(diskFile);
+            log.info("头像上传成功，保存路径：{}", diskFile.getAbsolutePath());
         } catch (IOException e) {
             log.error("头像写入磁盘失败");
             throw new FileException(MessageConstant.FILE_ERROR);
@@ -169,10 +173,32 @@ public class FileServiceImpl implements FileService {
         return successCount;
     }
 
-    
+    /**
+     * 上传图片文件
+     * @param file
+     * @return
+     * @throws IOException 
+     */
+    public String uploadImage(MultipartFile file) {
+        // 1.校验图片文件
+        validateImage(file);
+
+        // 2.调用工具类上传Github图床
+        String imageUrl;
+        try {
+            imageUrl = githubFileUtil.upload(file);
+        } catch (IOException e) {
+            log.error("图片上传失败", e);
+            throw new FileException(MessageConstant.FILE_ERROR);
+        }
+
+        // 3.返回url
+        return imageUrl;
+    }
+
     // ? 功能方法
-    // 校验文件非空、大小
-    private void validateFile(MultipartFile file) {
+    // 校验头像文件非空、大小
+    private void validateAvatar(MultipartFile file) {
         // 1.非空校验
         if (file == null || file.isEmpty()) {
             throw new FileException(MessageConstant.FILE_IS_NULL);
@@ -182,4 +208,24 @@ public class FileServiceImpl implements FileService {
             throw new FileException(MessageConstant.FILE_OUT_SIZE);
         }
     }
+    // 校验图片文件非空、大小、文件类型
+    private void validateImage(MultipartFile file) {
+        // 1.非空校验
+        if (file == null || file.isEmpty()) {
+            throw new FileException(MessageConstant.FILE_IS_NULL);
+        }
+
+        // 2.大小校验
+        if (file.getSize() > fileConfig.getImage().getMaxSize()) {
+            throw new FileException(MessageConstant.FILE_OUT_SIZE);
+        }
+
+        // 3.文件类型校验
+        String contentType = file.getContentType();
+        if (!fileConfig.getImage().getAcceptTypes().contains(contentType)) {
+            throw new FileException(MessageConstant.FILE_TYPE_ERROR);
+        }
+    }
+
+    
 }

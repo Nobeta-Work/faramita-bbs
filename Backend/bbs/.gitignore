@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local env / secret override ###
+.env
+.env.*
+!*.example
+src/main/resources/application-local.yml
+
+### Runtime generated files ###
+src/main/resources/static/

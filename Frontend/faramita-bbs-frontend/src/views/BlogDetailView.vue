@@ -1,873 +1,1602 @@
-<template>
-    <div class="blog-detail-container">
-        <!-- 背景层 -->
-        <div class="background-layer">
-
-        </div>
-
-        <!-- 内容层 -->
-        <div class="content-layer">
-            <!-- 博客区 -->
-            <div class="blog-container">
-                <!-- 博客头部信息 -->
-                <div class="blog-header-container">
-                    <div class="blog-title-container">
-                        <div class="blog-title">
-                            标题 
-                            <span v-if="!isEditable">{{ blog.title }}</span>
-                            <el-input v-else v-model="blog.title" placeholder="请输入标题" 
-                            style="width: 200px; margin-left: 8px;" />
-                        </div>
-                        <div class="author-info">
-                            作者 <span @click="router.push(`/${blog.authorId}`)" style="cursor: pointer;">{{ blog.authorName }}</span>
-                        </div>
-                        <div class="big-big-category">
-                            大分类 
-                            <span v-if="!isEditable">{{ BlogUtils.bigIdToString(blog.bigCategoryId) }}</span>
-                            <select v-else v-model="blog.bigCategoryId" class="transparent-select">
-                                <option value="" disabled selected>请选择大分类</option>
-                                <option value="1">项目</option>
-                                <option value="2">技术栈</option>
-                                <option value="3">算法</option>
-                                <option value="4">游戏</option>
-                                <option value="5">余文</option>
-                            </select>
-                        </div>
-                        <div class="blog-little-category">
-                            小分类 
-                            <span v-if="!isEditable">{{ blog.littleCategoryName }}</span>
-                            <el-input v-else v-model="blog.littleCategoryName" placeholder="请输入小分类" style="width: 150px; margin-left: 8px;" />
-                        </div>
-                        <div class="blog-time">
-                            {{ DateUtils.isoToDateTime(blog.updateTime) }}
-                        </div>
-                    </div>
-                    <div class="summary-container">
-                        摘要
-                        <span v-if="!isEditable">{{ blog.summary }}</span>
-                        <el-input v-else v-model="blog.summary" :rows="2" type="textarea" placeholder="请输入摘要|概述"></el-input>
-                    </div>
-                </div>
-                <!-- 博客内容区域 -->
-                <div class="blog-content-container">
-                    <!-- 编辑器 -->
-                    <div class="editor-toolbar" v-if="isEditable">
-
-                    </div>
-                    <div class="blog-detail">
-                        <!-- Vditor编辑器 -->
-                        <div v-if="isEditable" class="vditor-container">
-                            <div ref="vditorRef" class="vditor-editor"></div>
-                        </div>
-                        <!-- 博文内容显示 -->
-                        <div v-else class="blog-content">
-                            <div ref="previewRef" class="vditor-preview" />
-                        </div>
-                    </div>
-                    <!-- 博客操作区 -->
-                    <div class="blog-actions">
-                        <el-switch
-                            v-model="blog.isPublished"
-                            v-if="isEditable"
-                            style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-                            active-value="1" :active-action-icon="View"
-                            inactive-value="0" :inactive-action-icon="Hide"
-                        />
-                        <div class="action-btns">
-                            <el-button class="edit-btn" type="primary" v-if="isAuthor && !isEditable" @click="editBlog">编辑</el-button>
-                            <el-button class="save-btn" type="success" v-if="isEditable" @click="saveBlog">保存</el-button>
-                             <el-button class="cancel-btn" v-if="isEditable" @click="cancelEdit">取消</el-button>
-                            <el-button class="delete-btn" v-if="isEditable" @click="handleDeleteBlog">删除</el-button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</template>
-
 <script setup lang="ts">
-import { BlogUtils, DateUtils, type Blog } from '@/types';
-import Vditor from 'vditor';
-import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
-import { useUserStore } from '@/stores/user';
-import { useRoute } from 'vue-router';
-import { deleteBlog, getBlog, updateBlog } from '@/api/blog';
-import router from '@/router';
+import { ref, onMounted, computed, watch, onUnmounted, nextTick, h } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import Vditor from 'vditor'
 import 'vditor/dist/index.css'
-import { ElMessage } from 'element-plus';
-import { Hide, View } from '@element-plus/icons-vue'
-// # 初始实例化对象
-const userStore = useUserStore()
-const route = useRoute()
-const uid = Number(route.params.uid)
-const bloguid: string = route.params.bloguid as string
+import { getBlog, updateBlog, deleteBlog } from '@/api/blog'
+import { getProfileByUid } from '@/api/user'
+import { downloadAvatar, uploadImage } from '@/api/file'
+import { useUserStore } from '@/stores/user'
+import { useThemeStore } from '@/stores/theme'
+import { storeToRefs } from 'pinia'
+import {
+  NCard, NSpace, NSpin,
+  NAvatar, NInput, NSwitch, NPopconfirm,
+  NIcon, NModal
+} from 'naive-ui'
+import { ListOutline, Person } from '@vicons/ionicons5'
+import { createDiscreteApi } from 'naive-ui'
+import type { Blog } from '@/types/blog'
+import type { BlogUpdateDTO } from '@/types/api'
+import { DateUtils } from '@/types/date'
 
-// Blog实体类
-const blog: Blog = reactive({
-    bloguid: '',
-    title: '',
-    content: '',
-    summary: '',
-    authorId: 0,
-    authorName: '',
-    categoryId: 0,
-    bigCategoryId: 0,
-    littleCategoryName: '',
-    isPublished: 0,
-    createTime: '',
-    updateTime: '',
-})
-// # 获取Blog实例
-const fetchBlog = async () => {
-    if (!uid || !bloguid) return
-    
-    try {
-        const response = await getBlog(uid, bloguid)
-        Object.assign(blog, response)
+// Fonts
+const fontLink = document.createElement('link')
+fontLink.href = 'https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap'
+fontLink.rel = 'stylesheet'
+document.head.appendChild(fontLink)
 
-        await nextTick()    // 使用nextTick确保视图更新后输出日志
+const { message } = createDiscreteApi(['message'])
 
-        console.log('>查询blog成功 => blog:', blog)
+// Vditor instances
+const vditor = ref<Vditor | null>(null)
+const vditorPreviewRef = ref<HTMLDivElement | null>(null)
+const vditorEditRef = ref<HTMLElement | null>(null)
 
-        isAuthor.value = validatePermisson()
-    } catch (error) {
-        console.error('>查询blog失败:', error)
+// TOC types
+interface TocItem {
+  id: string
+  text: string
+  level: number
+  parentId?: string
+  hasChildren?: boolean
+}
+
+const tocItems = ref<TocItem[]>([])
+const activeTocId = ref<string>('')
+const expandedTocIds = ref<Set<string>>(new Set())
+
+const toggleTocExpand = (id: string, e: Event) => {
+  e.stopPropagation()
+  const newSet = new Set(expandedTocIds.value)
+  if (newSet.has(id)) {
+    newSet.delete(id)
+  } else {
+    newSet.add(id)
+  }
+  expandedTocIds.value = newSet
+}
+
+const visibleTocItems = computed(() => {
+  return tocItems.value.filter(item => {
+    if (item.level === 1) return true
+    let currentParentId = item.parentId
+    while (currentParentId) {
+      if (!expandedTocIds.value.has(currentParentId)) return false
+      const parent = tocItems.value.find(t => t.id === currentParentId)
+      currentParentId = parent?.parentId
     }
-}
-onMounted(() => {
-    fetchBlog()
+    return true
+  })
 })
-// ? 功能方法
-const validatePermisson = () => {
-    return userStore.$state.userInfo?.id === blog.authorId
-}
-// # Vditor相关
-const vditorRef = ref<HTMLDivElement>()
-const vditorInstance = ref<Vditor>()
-const previewRef = ref<HTMLDivElement>()
-const isEditable = ref(false)
-const isAuthor = ref(validatePermisson())
 
-// 初始化Vditor
-const initVditor = async () => {
-    if (!vditorRef.value) return
-
-    await nextTick()
-
-    vditorInstance.value = new Vditor(vditorRef.value, {
-        height: 700,
-        mode: 'ir', // 即时渲染
-        theme: 'dark',
-        icon: 'material',
-        typewriterMode: true,
-        placeholder: '开始编写博客内容',
-        cache: {
-            enable: false
-        },
-        toolbarConfig: {
-            pin: true,
-            hide: false
-        },
-        // 确保弹出层正确定位
-        // popup: {
-        //     enable: true,
-        //     esc: true,
-        //     follow: true,
-        //     position: 'absolute'
-        // },
-        // 添加emoji配置
-        // emoji: {
-        //     enable: true,
-        //     emojiPath: 'https://cdn.jsdelivr.net/npm/vditor@3.11.2/dist/images/emoji',
-        //     inlineCode: true
-        // },
-        upload: {
-            accept: 'image/*',
-            handler: (files: File[]) => {
-                // TODO文件上传api处理
-                files.forEach(file => {
-                    console.log('文件上传:',file.name)
-                    
-                })
-                return Promise.resolve([]) as unknown as string | Promise<string> | Promise<null> | null
-            }
-        },
-        toolbar: [
-            // 'emoji',
-            'headings',
-            'bold',
-            'italic',
-            'strike',
-            'link',
-            '|',
-            'list',
-            'ordered-list',
-            'check',
-            'outdent',
-            'indent',
-            '|',
-            'quote',
-            'line',
-            'code',
-            'inline-code',
-            'insert-before',
-            'insert-after',
-            '|',
-            'table',
-            '|',
-            'undo',
-            'redo',
-            '|',
-            'fullscreen',
-            'edit-mode',
-            {
-                name: 'more',
-                toolbar: [
-                    'both',
-                    'code-theme',
-                    'content-theme',
-                    'export',
-                    'outline',
-                    'preview',
-                    'devtools',
-                ],
-            }
-        ],
-        after: () => {
-            // 编辑器初始化完成后设置内容
-            if (blog.content) {
-                vditorInstance.value?.setValue(blog.content)
-            }
-        }
+watch(activeTocId, (newId) => {
+  if (!newId) return
+  
+  const item = tocItems.value.find(t => t.id === newId)
+  if (!item) return
+  
+  let currentParentId = item.parentId
+  let changed = false
+  const newSet = new Set(expandedTocIds.value)
+  
+  while (currentParentId) {
+    if (!newSet.has(currentParentId)) {
+      newSet.add(currentParentId)
+      changed = true
+    }
+    const parent = tocItems.value.find(t => t.id === currentParentId)
+    currentParentId = parent?.parentId
+  }
+  
+  if (changed) {
+    expandedTocIds.value = newSet
+  }
+  
+  if (windowWidth.value > 1024) {
+    nextTick(() => {
+      const activeEl = document.querySelector('.toc-active')
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
     })
-}
-// 渲染Markdown预览
-const renderPreview = () => {
-    if (previewRef.value && blog.content) {
-        Vditor.preview(previewRef.value, blog.content, {
-            mode: 'dark', // 使用暗色模式
-            anchor: 1,
-            markdown: {
-                autoSpace: true,
-                // fixTermLink: true,
-                toc: true,
-            },
-            hljs: {
-                enable: true,
-                style: 'github-dark', // 使用github暗色代码高亮
-                lineNumber: true
-            },
-            speech: {
-                enable: false
-            },
-            math: {
-                engine: 'KaTeX',
-                inlineDigit: true,
-                macros: {}
-            }
-            // 移除自定义主题配置，使用内置主题
-        })
-    }
+  }
+})
+
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
+const themeStore = useThemeStore()
+const { isDark } = storeToRefs(themeStore)
+
+const blogUid = route.params.bloguid as string
+const blog = ref<Blog | null>(null)
+const authorAvatar = ref<string | undefined>(undefined)
+const loading = ref(false)
+
+// 默认头像图标渲染函数
+const renderDefaultAvatar = () => h(NIcon, null, { default: () => h(Person) })
+const isEditing = ref(false)
+const showTableModal = ref(false)
+const tableRows = ref(0)
+const tableCols = ref(0)
+const hoverRows = ref(0)
+const hoverCols = ref(0)
+const content = ref('')
+const summary = ref('')
+const originalBlogData = ref<{
+  title: string
+  content: string
+  summary: string
+  isPublished: number
+} | null>(null)
+const isPublished = ref(1) // 1: published, 0: draft
+
+const windowWidth = ref(window.innerWidth)
+const editorHeight = computed(() => (windowWidth.value <= 1024 ? 520 : 760))
+const showTocPanel = ref(false)
+const sidePanelToggleText = computed(() => (showTocPanel.value ? 'Info' : 'TOC'))
+
+const toggleSidePanel = () => {
+  showTocPanel.value = !showTocPanel.value
 }
 
-// 在获取博客内容后渲染预览
-watch(() => blog.content, (newContent) => {
-    if (!isEditable.value && newContent) {
-        nextTick(() => {
-            renderPreview()
-        })
+const setPageScrollLock = (locked: boolean) => {
+  const overflowValue = locked ? 'hidden' : ''
+  document.documentElement.style.overflow = overflowValue
+  document.body.style.overflow = overflowValue
+}
+
+const handleResize = () => {
+  const wasMobile = windowWidth.value <= 1024
+  windowWidth.value = window.innerWidth
+  const isMobile = windowWidth.value <= 1024
+  
+  if (wasMobile !== isMobile) {
+    if (scrollSpyObserver) {
+      scrollSpyObserver.disconnect()
+      scrollSpyObserver = null
     }
+    if (!isMobile) {
+      scrollSpyObserver = setupScrollSpy()
+    }
+  }
+}
+
+// Responsive toolbar items based on screen width
+const vditorToolbar = computed(() => {
+  const isWide = windowWidth.value > 1400
+  const isMedium = windowWidth.value > 1000
+  
+  const tableItem = {
+    name: 'custom-table', // Use a unique name to avoid Vditor's internal 'table' handler
+    tip: 'Insert Table',
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M448 71.9c0-26.5-21.5-48-48-48H48C21.5 23.9 0 45.4 0 71.9v368.1c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V71.9zM128 416H48v-80h80v80zm0-128H48v-80h80v80zm0-128H48V80h80v80zm144 256h-96v-80h96v80zm0-128h-96v-80h96v80zm0-128h-96V80h96v80zm128 256h-80v-80h80v80zm0-128h-80v-80h80v80zm0-128h-80V80h80v80z"/></svg>',
+    click: () => {
+      showTableModal.value = true
+    }
+  }
+
+  if (isWide) {
+    // Show almost everything on top
+    return [
+      'emoji', 'headings', 'bold', 'italic', 'strike', 'link', '|',
+      'list', 'ordered-list', 'check', 'outdent', 'indent', '|',
+      'quote', 'line', 'code', 'inline-code', 'insert-before', 'insert-after', '|',
+      'upload', tableItem, '|',
+      'undo', 'redo', '|',
+      'edit-mode', 'export', 'fullscreen',
+      {
+        name: 'more',
+        toolbar: []
+      }
+    ]
+  } else if (isMedium) {
+    // Move some secondary items to more
+    return [
+      'headings', 'bold', 'italic', 'link', '|',
+      'list', 'ordered-list', '|',
+      'upload', tableItem, '|',
+      'undo', 'redo', '|',
+      'edit-mode',
+      {
+        name: 'more',
+        toolbar: [
+          'emoji', 'strike', 'check', 'outdent', 'indent', 'quote', 'line', 
+          'code', 'inline-code', 'insert-before', 'insert-after', 'export', '|',
+          'fullscreen', 'both'
+        ]
+      }
+    ]
+  } else {
+    // Compact mode for mobile/small screens
+    return [
+      'headings', 'bold', 'italic', '|',
+      'list', '|',
+      'upload', '|',
+      'undo', 'redo', '|',
+      {
+        name: 'more',
+        toolbar: [
+          'emoji', 'strike', 'link', 'ordered-list', 'check', 'outdent', 'indent', 
+          'quote', 'line', 'code', 'inline-code', 'insert-before', 'insert-after', 
+          tableItem, 'edit-mode', 'export', '|',
+          'fullscreen', 'both'
+        ]
+      }
+    ]
+  }
+})
+
+// Debounce re-init to avoid flickering during resize
+let resizeTimer: any = null
+let tocSyncTimer: any = null
+watch(vditorToolbar, () => {
+  if (!isEditing.value || !vditor.value) return
+  
+  clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(() => {
+    const currentVal = vditor.value?.getValue() || content.value
+    vditor.value?.destroy()
+    initVditorEdit(currentVal)
+  }, 500)
+})
+
+const toggleEdit = () => {
+  if (!isEditing.value) {
+    // Starting edit: backup current state
+    if (blog.value) {
+      originalBlogData.value = {
+        title: blog.value.title,
+        content: content.value,
+        summary: summary.value,
+        isPublished: isPublished.value
+      }
+    }
+    isEditing.value = true
+  } else {
+    // Cancelling edit: restore from backup
+    if (originalBlogData.value && blog.value) {
+      blog.value.title = originalBlogData.value.title
+      content.value = originalBlogData.value.content
+      summary.value = originalBlogData.value.summary
+      isPublished.value = originalBlogData.value.isPublished
+    }
+    isEditing.value = false
+  }
+}
+  const isAuthor = computed(() => {
+  return userStore.userInfo?.id === blog.value?.authorId
+})
+
+const authorProfile = ref<any>(null)
+
+// Theme adaptation helper
+const vditorPreviewMode = computed(() => isDark.value ? 'dark' : 'light')
+const vditorEditorTheme = computed(() => isDark.value ? 'dark' : 'classic')
+const vditorContentTheme = computed(() => isDark.value ? 'dark' : 'light')
+
+// Render TOC from Vditor content
+const extractToc = () => {
+  const container = isEditing.value ? vditorEditRef.value : vditorPreviewRef.value
+  if (!container) return
+
+  // In IR mode, headings are inside the contenteditable area
+  // In preview mode, they are inside the preview container
+  const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6')
+  const items: TocItem[] = []
+  
+  const parentStack: TocItem[] = []
+
+  headings.forEach((heading, index) => {
+    // Vditor sometimes uses its own ID, if not, we assign one
+    let id = heading.id
+    if (!id) {
+      id = `heading-${index}`
+      heading.id = id
+    }
+    
+    // Clean text: remove the '#' character vditor adds as anchor
+    let text = (heading as HTMLElement).innerText.trim()
+    if (text.endsWith('#')) text = text.slice(0, -1).trim()
+    
+    const level = parseInt(heading.tagName.substring(1))
+    
+    // Find parent
+    while (parentStack.length > 0 && parentStack[parentStack.length - 1]!.level >= level) {
+      parentStack.pop()
+    }
+    
+    const parentId = parentStack.length > 0 ? parentStack[parentStack.length - 1]!.id : undefined
+    
+    if (parentStack.length > 0) {
+      parentStack[parentStack.length - 1]!.hasChildren = true
+    }
+
+    const item: TocItem = {
+      id,
+      text,
+      level,
+      parentId,
+      hasChildren: false
+    }
+    
+    items.push(item)
+    parentStack.push(item)
+  })
+  tocItems.value = items
+}
+
+// Scroll Spy for TOC
+const setupScrollSpy = () => {
+  if (windowWidth.value <= 1024) return null
+
+  const container = isEditing.value ? vditorEditRef.value : vditorPreviewRef.value
+  if (!container) return null
+
+  const headings = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+  if (headings.length === 0) return null
+
+  const observer = new IntersectionObserver((entries) => {
+    const visibleHeadings = entries
+      .filter(entry => entry.isIntersecting)
+      .sort((a, b) => a.target.getBoundingClientRect().top - b.target.getBoundingClientRect().top)
+
+    if (visibleHeadings.length > 0) {
+      const firstHeading = visibleHeadings[0]
+      if (firstHeading && firstHeading.target) {
+        activeTocId.value = firstHeading.target.id
+      }
+    }
+  }, { 
+    rootMargin: '-100px 0px -70% 0px', // Match the scroll-margin-top
+    threshold: [0, 1] 
+  })
+
+  headings.forEach(h => observer.observe(h))
+  return observer
+}
+
+let scrollSpyObserver: IntersectionObserver | null = null
+
+const scrollToHeading = (id: string) => {
+  // Find element within the current active container to be safe
+  const container = isEditing.value ? vditorEditRef.value : vditorPreviewRef.value
+  if (!container) return
+
+  const element = container.querySelector(`#${id}`) as HTMLElement | null
+  if (element) {
+    element.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    })
+    
+    activeTocId.value = id
+  } else {
+    // Fallback to global search if container-specific fails
+    const globalElement = document.getElementById(id)
+    if (globalElement) {
+      globalElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      })
+      activeTocId.value = id
+    }
+  }
+}
+
+const insertCustomTable = (r?: number, c?: number) => {
+  const rows = r || tableRows.value
+  const cols = c || tableCols.value
+  
+  if (rows <= 0 || cols <= 0) return
+  
+  let tableMd = '\n'
+  // Header row
+  tableMd += '| ' + Array(cols).fill(' ').join(' | ') + ' |\n'
+  // Separator row
+  tableMd += '| ' + Array(cols).fill('---').join(' | ') + ' |\n'
+  // Data rows
+  for (let i = 0; i < rows - 1; i++) {
+    tableMd += '| ' + Array(cols).fill(' ').join(' | ') + ' |\n'
+  }
+  tableMd += '\n'
+  
+  vditor.value?.insertValue(tableMd)
+  showTableModal.value = false
+  // Reset
+  hoverRows.value = 0
+  hoverCols.value = 0
+}
+
+// Initialize Vditor for Preview
+const initVditorPreview = async (markdown: string) => {
+  if (!vditorPreviewRef.value) return
+  
+  await Vditor.preview(vditorPreviewRef.value, markdown, {
+    mode: vditorPreviewMode.value,
+    theme: {
+      current: vditorContentTheme.value
+    },
+    hljs: {
+      style: isDark.value ? 'dracula' : 'github'
+    },
+    anchor: 1,
+    after: () => {
+      nextTick(() => {
+        extractToc()
+        if (scrollSpyObserver) scrollSpyObserver.disconnect()
+        scrollSpyObserver = setupScrollSpy()
+      })
+    }
+  })
+}
+
+// Initialize Vditor for Editing
+const initVditorEdit = (markdown: string) => {
+  if (!vditorEditRef.value) return
+  
+  vditor.value = new Vditor(vditorEditRef.value, {
+    height: editorHeight.value,
+    mode: 'ir', // Instant Rendering
+    value: markdown,
+    theme: vditorEditorTheme.value,
+    preview: {
+      theme: {
+        current: vditorContentTheme.value
+      },
+      hljs: {
+        style: isDark.value ? 'dracula' : 'github'
+      }
+    },
+    toolbar: vditorToolbar.value,
+    toolbarConfig: {
+      pin: true,
+    },
+    cache: {
+      enable: false
+    },
+    upload: {
+      accept: 'image/*',
+      multiple: false,
+      handler: async (files: File[]) => {
+        const file = files[0]
+        if (!file) {
+          return 'No file selected'
+        }
+        try {
+          const res = await uploadImage(file)
+          // The request util returns res.data directly, so if the API returns { url: '...' } inside data
+          const url = typeof res === 'string' ? res : (res.data || res)
+          vditor.value?.insertValue(`![${file.name}](${url})`)
+          return ''
+        } catch (error) {
+          message.error('Upload failed')
+          return 'Upload failed'
+        }
+      }
+    },
+    input: (value) => {
+      content.value = value
+      clearTimeout(tocSyncTimer)
+      tocSyncTimer = setTimeout(() => {
+        nextTick(() => {
+          extractToc()
+          if (scrollSpyObserver) scrollSpyObserver.disconnect()
+          scrollSpyObserver = setupScrollSpy()
+        })
+      }, 180)
+    },
+    after: () => {
+      nextTick(() => {
+        extractToc()
+        if (scrollSpyObserver) scrollSpyObserver.disconnect()
+        scrollSpyObserver = setupScrollSpy()
+      })
+    }
+  })
+}
+
+const formatDate = (dateStr: string | undefined) => {
+  if (!dateStr) return ''
+  return DateUtils.isoToDateTime(dateStr)
+}
+
+const fetchAuthorProfile = async (uid: number) => {
+  try {
+    const res = await getProfileByUid(uid)
+    authorProfile.value = res.user
+    if (res.user.avatar) {
+      const blob = await downloadAvatar(res.user.avatar)
+      authorAvatar.value = URL.createObjectURL(blob)
+    }
+  } catch (error) {
+    console.error('Failed to fetch author info', error)
+  }
+}
+
+const fetchBlog = async () => {
+  loading.value = true
+  try {
+    const res = await getBlog(blogUid)
+    blog.value = res
+    content.value = res.content
+    summary.value = res.summary
+    isPublished.value = res.isPublished
+    document.title = res.title + ' - Faramita BBS'
+
+    // Fetch author info
+    if (res.authorId) {
+      fetchAuthorProfile(res.authorId)
+    }
+
+    // Initialize Vditor Preview
+    nextTick(() => {
+      initVditorPreview(res.content)
+    })
+  } catch (error) {
+    console.error(error)
+    message.error('Failed to load blog')
+  } finally {
+    loading.value = false
+  }
+}
+
+// Watchers for Mode and Theme
+watch(isEditing, (newVal) => {
+  setPageScrollLock(newVal)
+  nextTick(() => {
+    showTocPanel.value = false
+    if (newVal) {
+      if (scrollSpyObserver) {
+        scrollSpyObserver.disconnect()
+        scrollSpyObserver = null
+      }
+      // Switch to editing
+      initVditorEdit(content.value)
+    } else {
+      // Switch to preview
+      initVditorPreview(content.value)
+    }
+  })
 }, { immediate: true })
 
-// 在编辑模式切换时重新渲染预览
-watch(isEditable, (newValue) => {
-    if (!newValue && blog.content) {
-        nextTick(() => {
-            renderPreview()
-        })
-    }
+watch(isDark, () => {
+  // Re-initialize to apply theme
+  if (isEditing.value) {
+    initVditorEdit(content.value)
+  } else {
+    initVditorPreview(content.value)
+  }
 })
-// 销毁Vditor实例
-const destroyVditor = () => {
-    if (vditorInstance.value) {
-        vditorInstance.value.destroy()
-        vditorInstance.value = undefined
-    }
+
+const handleSave = async () => {
+  if (!blog.value) return
+
+  const updateData: BlogUpdateDTO = {
+    title: blog.value.title,
+    content: content.value,
+    summary: summary.value,
+    littleCategoryName: blog.value.littleCategoryName,
+    bigCategoryId: blog.value.bigCategoryId,
+    isPublished: isPublished.value
+  }
+
+  try {
+    await updateBlog(blog.value.bloguid, updateData)
+    message.success('Saved successfully')
+    isEditing.value = false
+    // Update local state
+    blog.value.content = content.value
+    blog.value.summary = summary.value
+    blog.value.isPublished = isPublished.value
+  } catch (error) {
+    message.error('Save failed')
+  }
 }
 
-// 编辑博客
-let originalBlogData: {
-    title: string,
-    bigCategoryId: number,
-    littleCategoryName: string,
-    content: string,
-    isPublished: number,
-} | null = null
-const editBlog = () => {
-    isEditable.value = true
-
-    // 保存原始数据，以便取消时恢复
-    originalBlogData = {
-        title: blog.title,
-        bigCategoryId: blog.bigCategoryId,
-        littleCategoryName: blog.littleCategoryName,
-        content: blog.content,
-        isPublished: blog.isPublished
-    }
-
-    nextTick(() => {
-        initVditor()
-    })
+const handleDelete = async () => {
+  if (!blog.value) return
+  try {
+    await deleteBlog(blog.value.bloguid)
+    message.success('Deleted successfully')
+    router.push('/blog')
+  } catch (error) {
+    message.error('Delete failed')
+  }
 }
 
-// 保存博客
-const saveBlog = async () => {
-    if (vditorInstance.value) {
-        blog.content = vditorInstance.value.getValue()
-        // 调用API保存博客
-        try {
-            // 构造响应结构
-            const blogUpdateDTO = {
-                title: blog.title,
-                content: blog.content,
-                summary: blog.summary,
-                bigCategoryId: blog.bigCategoryId,
-                littleCategoryName: blog.littleCategoryName,
-                isPublished: blog.isPublished
-            }
+onMounted(() => {
+  window.scrollTo(0, 0)
+  window.addEventListener('resize', handleResize)
+  fetchBlog()
+})
 
-            console.log('>保存博客<')
-            await updateBlog(uid, bloguid, blogUpdateDTO)
-            ElMessage.success('保存成功')
-            // 保存成功后退出编辑模式
-            isEditable.value = false
-            destroyVditor()
-        } catch (error) {
-            console.error('>保存博客失败：', error)
-        }
-    }
-}
-
-// 取消编辑
-const cancelEdit = () => {
-    isEditable.value = false
-
-    // 恢复原始数据
-    if (originalBlogData) {
-        blog.title = originalBlogData.title
-        blog.bigCategoryId = originalBlogData.bigCategoryId
-        blog.littleCategoryName = originalBlogData.littleCategoryName
-        blog.content = originalBlogData.content
-    }
-
-    destroyVditor()
-}
-
-// 删除博客
-const handleDeleteBlog = async () => {
-    // 删除博客
-    console.log('>删除博客')
-    try {
-        await deleteBlog(uid, bloguid)
-        ElMessage.success('删除博客成功')
-
-        router.push(`/${uid}/blog`)
-    } catch (error) {
-        console.error('>删除博客失败:', error)
-    }
-}
-
-// 组件卸载
 onUnmounted(() => {
-    destroyVditor()
+  setPageScrollLock(false)
+  window.removeEventListener('resize', handleResize)
+  clearTimeout(tocSyncTimer)
+  clearTimeout(resizeTimer)
+  if (scrollSpyObserver) {
+    scrollSpyObserver.disconnect()
+  }
+  if (vditor.value) {
+    vditor.value.destroy()
+  }
 })
-
 </script>
 
+<template>
+  <div class="blog-detail-page" :class="{ 'editing-no-scroll': isEditing }">
+    <n-spin :show="loading">
+      <div v-if="blog" class="blog-container" :class="{ 'editing-layout': isEditing }">
+        <!-- Left Sidebar: Blog Info / TOC -->
+        <div class="left-sidebar">
+          <div class="fixed-sidebar-wrapper">
+            <aside class="side-col side-stack">
+              <div class="side-panel-wrap">
+                <template v-if="!isEditing">
+                  <div class="author-wrapper" style="margin-bottom: 20px;">
+                    <n-card class="author-card" :bordered="false">
+                      <div class="author-info">
+                        <div class="author-avatar-wrapper">
+                          <n-avatar 
+                            round 
+                            :size="80" 
+                            :src="authorAvatar" 
+                            :render-icon="renderDefaultAvatar"
+                            class="author-avatar-lg" 
+                          />
+                        </div>
+                        <div class="author-details">
+                            <h3 class="author-name-lg">{{ blog.authorName }}</h3>
+                            <!-- TODO 待开发功能：作者卡片详情 -->
+                            <!-- <p class="author-bio">{{ authorProfile?.remark || 'No bio available.' }}</p> -->
+                        </div>
+                        <button class="visit-btn" @click="router.push(`/${blog.authorId}`)">
+                          View Profile
+                        </button>
+                      </div>
+                    </n-card>
+                  </div>
+
+                  <div class="toc-wrapper">
+                    <div class="toc-container">
+                      <div class="toc-header">
+                        <n-icon class="toc-icon">
+                          <ListOutline />
+                        </n-icon>
+                        <span class="toc-title">Contents</span>
+                      </div>
+                      <div class="toc-list">
+                        <div
+                          v-for="item in visibleTocItems"
+                          :key="item.id"
+                          class="toc-item"
+                          :class="[`toc-level-${item.level}`, { 'toc-active': activeTocId === item.id }]"
+                          @click="scrollToHeading(item.id)"
+                        >
+                          <span class="toc-text">{{ item.text }}</span>
+                          <span 
+                            v-if="item.hasChildren" 
+                            class="toc-expand-icon" 
+                            @click="toggleTocExpand(item.id, $event)"
+                          >
+                            {{ expandedTocIds.has(item.id) ? '-' : '+' }}
+                          </span>
+                        </div>
+                        <div v-if="tocItems.length === 0" class="toc-empty">No contents</div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+
+                <template v-else>
+                  <transition name="panel-slide" mode="out-in">
+                    <div v-if="showTocPanel" class="toc-wrapper" key="toc">
+                      <div class="toc-container">
+                        <div class="toc-header">
+                          <n-icon class="toc-icon">
+                            <ListOutline />
+                          </n-icon>
+                          <span class="toc-title">Contents</span>
+                        </div>
+                        <div class="toc-list">
+                          <div
+                            v-for="item in visibleTocItems"
+                            :key="item.id"
+                            class="toc-item"
+                            :class="[`toc-level-${item.level}`, { 'toc-active': activeTocId === item.id }]"
+                            @click="scrollToHeading(item.id)"
+                          >
+                            <span class="toc-text">{{ item.text }}</span>
+                            <span 
+                              v-if="item.hasChildren" 
+                              class="toc-expand-icon" 
+                              @click="toggleTocExpand(item.id, $event)"
+                            >
+                              {{ expandedTocIds.has(item.id) ? '-' : '+' }}
+                            </span>
+                          </div>
+                          <div v-if="tocItems.length === 0" class="toc-empty">No contents</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <n-card v-else class="edit-side-card blog-info-card" :bordered="false" key="info">
+                      <div class="edit-side-header">Article Info</div>
+                      <n-space vertical :size="12">
+                        <div class="field-label">Title</div>
+                        <n-input
+                          v-model:value="blog.title"
+                          type="text"
+                          placeholder="Enter title"
+                          class="edit-title-input custom-input"
+                          size="large"
+                        />
+
+                        <div class="field-label">Summary</div>
+                        <n-input
+                          v-model:value="summary"
+                          type="textarea"
+                          placeholder="Enter summary"
+                          :autosize="{ minRows: 3, maxRows: 6 }"
+                          class="custom-input"
+                        />
+
+                        <div class="field-label">Status</div>
+                        <div class="publish-row">
+                          <span>{{ isPublished === 1 ? 'Public' : 'Private' }}</span>
+                          <n-switch v-model:value="isPublished" :checked-value="1" :unchecked-value="0" />
+                        </div>
+
+                        <div class="action-group">
+                          <button class="save-btn" @click="handleSave">Save</button>
+                          <div class="action-subrow">
+                            <button class="cancel-btn" @click="toggleEdit">Cancel</button>
+                            <n-popconfirm @positive-click="handleDelete">
+                              <template #trigger>
+                                <button class="delete-btn">Delete</button>
+                              </template>
+                              Are you sure you want to delete this article?
+                            </n-popconfirm>
+                          </div>
+                        </div>
+                      </n-space>
+                    </n-card>
+                  </transition>
+                </template>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <button v-if="isEditing" class="edge-toggle-tag" type="button" @click="toggleSidePanel">
+          {{ sidePanelToggleText }}
+        </button>
+
+        <!-- Center: Content -->
+        <main class="main-col">
+          <n-card v-if="!isEditing" class="blog-card" :bordered="false">
+            <div class="blog-header">
+              <h1 class="blog-title">{{ blog.title }}</h1>
+
+              <div class="blog-display-meta">
+                 <div class="blog-meta-row">
+                    <n-space align="center" size="small">
+                      <span class="category-badge">{{ blog.littleCategoryName }}</span>
+                      <span class="meta-divider">|</span>
+                      <span class="date">Published {{ formatDate(blog.createTime) }}</span>
+                      <template v-if="blog.updateTime && blog.updateTime !== blog.createTime">
+                          <span class="meta-divider">|</span>
+                          <span class="date">Updated {{ formatDate(blog.updateTime) }}</span>
+                      </template>
+                    </n-space>
+                 </div>
+
+                 <div class="blog-summary-section" v-if="blog.summary">
+                    <p class="blog-summary-text">{{ blog.summary }}</p>
+                 </div>
+              </div>
+
+              <div class="blog-actions">
+                <n-space align="center" justify="end">
+                  <template v-if="isAuthor">
+                    <button class="edit-btn" @click="toggleEdit">Edit</button>
+                  </template>
+                </n-space>
+              </div>
+            </div>
+
+            <div class="blog-content">
+              <!-- Vditor Containers -->
+              <div ref="vditorPreviewRef" class="vditor-preview-container"></div>
+            </div>
+          </n-card>
+
+          <n-card v-else class="editor-only-card" :bordered="false">
+            <div class="blog-content editing-mode">
+              <div ref="vditorEditRef" class="vditor-edit-container"></div>
+            </div>
+          </n-card>
+        </main>
+
+        <!-- Table Size Selector Modal (Checkerboard Style) -->
+        <n-modal
+          v-model:show="showTableModal"
+          preset="card"
+          title="Insert Table"
+          style="width: 320px"
+          :bordered="false"
+          class="table-grid-modal"
+        >
+          <div class="table-grid-container">
+            <div class="table-grid-info">
+              {{ hoverRows > 0 ? `${hoverRows} x ${hoverCols}` : 'Select size' }}
+            </div>
+            <div 
+              class="table-grid-cells"
+              @mouseleave="hoverRows = 0; hoverCols = 0"
+            >
+              <div v-for="r in 10" :key="`row-${r}`" class="grid-row">
+                <div 
+                  v-for="c in 10" 
+                  :key="`cell-${r}-${c}`" 
+                  class="grid-cell"
+                  :class="{ 'active': r <= hoverRows && c <= hoverCols }"
+                  @mouseenter="hoverRows = r; hoverCols = c"
+                  @click="insertCustomTable(r, c)"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </n-modal>
+      </div>
+    </n-spin>
+  </div>
+</template>
+
 <style scoped>
-.blog-detail-container {
-    height: 100vh;
-    background-image: url('@/assets/images/bg/bg02.png');
-    background-size: cover;
-    background-position: center;
-    position: relative;
-    overflow: auto;
+/* ==================== 页面基础 ==================== */
+.blog-detail-page {
+  min-height: 100vh;
+  padding-top: 40px;
+  background: var(--bg-primary);
+  position: relative;
+  overflow-x: hidden;
 }
 
-/* 背景层 */
-.background-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
+.blog-detail-page.editing-no-scroll {
+  height: calc(100vh - 40px);
+  overflow: hidden;
+}
+
+.blog-detail-page.editing-no-scroll .blog-container {
+  height: calc(100vh - 56px);
+}
+
+.blog-detail-page.editing-no-scroll .main-col,
+.blog-detail-page.editing-no-scroll .editor-only-card,
+.blog-detail-page.editing-no-scroll .blog-content.editing-mode {
+  height: 100%;
+}
+
+/* New layout using flexbox */
+.blog-container {
+  display: flex;
+  gap: 40px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.left-sidebar {
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+  flex-shrink: 0;
+}
+
+.fixed-sidebar-wrapper {
+  position: fixed;
+  top: 100px;
+  width: 280px;
+  height: calc(100vh - 120px);
+  z-index: 10;
+}
+
+.side-col {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.side-col::-webkit-scrollbar {
+  display: none;
+}
+
+.side-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.main-col {
+  width: auto;
+  flex-grow: 1;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+}
+
+.blog-container.editing-layout .main-col {
+  width: calc(100% - 320px);
+}
+
+.side-panel-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.edge-toggle-tag {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translate(-68%, -50%);
+  height: 112px;
+  width: 42px;
+  border-radius: 0;
+  border: 1px solid var(--text-primary);
+  border-left: none;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  font-family: 'Lato', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 40;
+}
+
+.edge-toggle-tag:hover {
+  transform: translate(0, -50%);
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.panel-slide-enter-active,
+.panel-slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.panel-slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.panel-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* Mobile Adaptation */
+@media (max-width: 1024px) {
+  .blog-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+    padding: 0 16px 20px;
+  }
+
+  .left-sidebar {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: unset;
+    order: 1;
+  }
+
+  .fixed-sidebar-wrapper {
+    position: static;
     width: 100%;
     height: auto;
-    z-index: 0;
-    background-color: rgba(0, 0, 0, 0.1);
-}
+  }
 
-/* 内容层 */
-.content-layer {
-    margin-top: 2%;
-    position: relative;
-    z-index: 5;
+  .edge-toggle-tag {
+    top: auto;
+    bottom: 100px;
+    transform: translateX(-66%);
+    height: 94px;
+    width: 38px;
+    font-size: 0.8rem;
+  }
+
+  .edge-toggle-tag:hover {
+    transform: translateX(0);
+  }
+
+  .side-col {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .main-col {
     width: 100%;
-    min-height: 50%;
-    display: flex;
-    justify-content: center;
-    padding: 1% 0;
+    order: 2;
+    margin: 0;
+  }
+
+  .blog-container.editing-layout .main-col {
+    width: 100%;
+  }
 }
 
-/* 博客容器 */
-.blog-container {
-    width: 70%;
-    max-width: 1200px;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 16px;
-    padding: 30px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(138, 43, 226, 0.3);
+/* ==================== 目录卡片 ==================== */
+.toc-wrapper {
+  width: 100%;
+  min-width: 0;
 }
 
-/* 博客头部容器 */
-.blog-header-container {
-    border-bottom: 2px solid rgba(43, 226, 211, 0.5);
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-    position: relative;
+.toc-container {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 24px;
+  background: var(--bg-primary);
+  border: 1px solid var(--line-color);
 }
 
-.blog-title-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    align-items: center;
+/* Custom TOC styles */
+.toc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.blog-title-container > div {
-    background-color: rgba(138, 43, 226, 0.1);
-    border-radius: 8px;
-    padding: 10px 15px;
-    border-left: 3px solid #3a2be2;
-    transition: all 0.3s ease;
+.toc-item {
+  padding: 4px 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--text-secondary);
+  font-family: 'Lato', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  word-break: break-word;
 }
 
-.blog-title-container > div:hover {
-    background-color: rgba(138, 43, 226, 0.2);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
+.toc-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
-.blog-title-container span {
-    color: #e6e6fa;
-    font-weight: 600;
-    margin-left: 8px;
+.toc-expand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  font-size: 1.2rem;
+  color: var(--text-tertiary);
+  transition: color 0.3s;
+  flex-shrink: 0;
 }
 
-.blog-title {
-    color: #ffd700;
-    font-size: 18px;
-    font-weight: 600;
+.toc-expand-icon:hover {
+  color: var(--accent-color);
+}
+
+.toc-item:hover {
+  color: var(--text-primary);
+  transform: translateX(4px);
+}
+
+.toc-active {
+  color: var(--text-primary) !important;
+  font-weight: 700;
+}
+
+.toc-active::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: var(--accent-color);
+  border-radius: 50%;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Level-based indentation */
+.toc-level-1 {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-top: 12px;
+  color: var(--text-primary);
+}
+
+.toc-level-1:first-child {
+  margin-top: 0;
+}
+
+.toc-level-2 { padding-left: 16px; }
+.toc-level-3 { padding-left: 32px; }
+.toc-level-4 { padding-left: 48px; }
+.toc-level-5 { padding-left: 64px; }
+.toc-level-6 { padding-left: 80px; }
+
+.toc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--line-color);
+}
+
+.toc-icon {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+}
+
+.toc-title {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+}
+
+/* ==================== 博客主卡片 ==================== */
+.blog-card {
+  border-radius: 0;
+  min-height: 80vh;
+  padding: 40px 50px;
+  background: var(--bg-primary);
+  border: 1px solid var(--line-color);
+  z-index: 2;
+}
+
+.edit-side-card {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--line-color);
+  padding: 24px;
+}
+
+.edit-side-header {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--line-color);
+  padding-bottom: 15px;
+}
+
+.field-label {
+  font-family: 'Lato', sans-serif;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+  margin-bottom: 5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.custom-input :deep(.n-input__input-el),
+.custom-input :deep(.n-input__textarea-el) {
+  font-family: 'Lato', sans-serif;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.custom-input :deep(.n-input__border),
+.custom-input :deep(.n-input__state-border) {
+  border: 1px solid var(--line-color);
+  border-radius: 0;
+}
+
+.custom-input {
+  background: transparent;
+}
+
+.publish-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.9rem;
+  padding: 10px 0;
+  color: var(--text-primary);
+}
+
+.action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.action-subrow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.save-btn, .cancel-btn, .delete-btn {
+  font-family: 'Lato', sans-serif;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 12px 0;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.save-btn {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+.save-btn:hover {
+  background: var(--accent-color);
+}
+
+.cancel-btn {
+  background: transparent;
+  border: 1px solid var(--line-color);
+  color: var(--text-primary);
+}
+
+.cancel-btn:hover {
+  border-color: var(--text-primary);
+}
+
+.delete-btn {
+  background: transparent;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+}
+
+.delete-btn:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.editor-only-card {
+  border-radius: 0;
+  min-height: calc(100vh - 120px);
+  padding: 20px;
+  background: var(--bg-primary);
+  border: 1px solid var(--line-color);
+}
+
+.author-wrapper {
+  width: 100%;
+}
+
+.author-card {
+  border-radius: 0;
+  text-align: center;
+  background: var(--bg-primary);
+  border: 1px solid var(--line-color);
+  padding: 30px 20px;
 }
 
 .author-info {
-    color: #87ceeb;
-    font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
 }
 
-.big-big-category {
-    color: #98fb98;
-    font-size: 16px;
+.author-avatar-lg {
+  border: 1px solid var(--line-color);
 }
 
-.blog-little-category {
-    color: #ffb6c1;
-    font-size: 16px;
-    margin-left: auto;
+.author-name-lg {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: var(--text-primary);
+  letter-spacing: 1px;
 }
 
-.blog-time {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    color: #dda0dd;
-    font-size: 14px;
-    background-color: transparent !important;
-    border: none !important; /* 去掉边框 */
-    font-style: italic;
-    padding: 0 !important; /* 去掉内边距 */
-    margin: 0 !important; /* 去掉外边距 */
+.author-bio {
+  font-family: 'Lato', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0 0 20px;
+  line-height: 1.6;
+  font-style: italic;
 }
 
-/* 博客内容容器 */
-.blog-content-container {
-    margin-bottom: 30px;
+.author-stats {
+  width: 100%;
+  padding: 15px 0;
+  border-top: 1px solid var(--line-color);
+  border-bottom: 1px solid var(--line-color);
+  margin-bottom: 20px;
 }
 
-/* Vditor编辑器容器 */
-.vditor-container {
-    border: 1px solid #333;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    position: relative;
-    z-index: 1000;
-    overflow: visible;
+.stat-item {
+  text-align: center;
 }
 
-.vditor-editor {
-    width: 100%;
-    min-height: 400px;
-    color: #e8e8e8 !important; /* 设置编辑器字体颜色为浅色 */
+.stat-val {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 1.8rem;
+  color: var(--text-primary);
 }
 
-.vditor-preview {
-    border-radius: 8px;
-    padding: 20px;
-    color: #e8e8e8 !important; /* 设置预览区域字体颜色为浅色 */
+.stat-label {
+  font-family: 'Lato', sans-serif;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-/* 确保Vditor内部元素的字体颜色 */
+.visit-btn {
+  background: transparent;
+  border: 1px solid var(--text-primary);
+  color: var(--text-primary);
+  font-family: 'Lato', sans-serif;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 10px 0;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.visit-btn:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+/* ==================== 博客内容区域 ==================== */
+.blog-header {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.blog-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem;
+  margin-bottom: 20px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+}
+
+.blog-display-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.blog-meta-row {
+  font-family: 'Lato', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+.category-badge {
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.meta-divider {
+  color: var(--line-color);
+}
+
+.blog-summary-section {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px 0;
+  border-top: 1px solid var(--line-color);
+  border-bottom: 1px solid var(--line-color);
+}
+
+.blog-summary-text {
+  margin: 0;
+  font-family: 'Lato', sans-serif;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  font-style: italic;
+}
+
+.edit-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: 'Lato', sans-serif;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: color 0.3s;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
+.edit-btn:hover {
+  color: var(--text-primary);
+}
+
+/* Vditor Styles Overrides */
+.vditor-preview-container, .vditor-edit-container {
+  width: 100%;
+  min-height: 420px;
+}
+
+.editing-mode .vditor-edit-container {
+  min-height: calc(100vh - 220px);
+}
+
+:deep(.vditor) {
+  border: none !important;
+  background-color: transparent !important;
+}
+
+:deep(.vditor-toolbar) {
+  border-bottom: 1px solid var(--line-color) !important;
+  background-color: var(--bg-primary) !important;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+:deep(.vditor-content) {
+  background-color: transparent !important;
+}
+
 :deep(.vditor-reset) {
-    color: #e8e8e8 !important;
-}
-/* 编辑器背景 */
-:deep(.vditor-ir) {
-    color: #e8e8e8 !important;
+  font-family: 'Lato', sans-serif !important;
+  color: var(--text-primary) !important;
+  padding: 0 !important;
+  font-size: 1.1rem !important;
+  line-height: 1.8 !important;
 }
 
-:deep(.vditor-wysiwyg) {
-    color: #e8e8e8 !important;
+:deep(.vditor-reset h1),
+:deep(.vditor-reset h2),
+:deep(.vditor-reset h3),
+:deep(.vditor-reset h4),
+:deep(.vditor-reset h5),
+:deep(.vditor-reset h6) {
+  font-family: 'Playfair Display', serif !important;
+  margin-top: 2em !important;
+  margin-bottom: 1em !important;
+  font-weight: 700 !important;
 }
-/* 预览区域背景 */
-.vditor-preview {
-    background-color: rgba(0, 0, 0, 0.3) !important;
-    border-radius: 8px;
+
+:deep(.vditor-reset a) {
+  color: var(--accent-color) !important;
+  text-decoration: none !important;
+  border-bottom: 1px solid var(--accent-color) !important;
+}
+
+:deep(.vditor-reset blockquote) {
+  border-left: 4px solid var(--text-primary) !important;
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+  font-style: italic !important;
+  padding: 10px 20px !important;
+  margin: 20px 0 !important;
+}
+
+/* Fix for TOC anchors - ensure headings have margin for fixed header */
+:deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
+  scroll-margin-top: 120px;
+}
+
+@media (max-width: 1024px) {
+  .blog-card,
+  .editor-only-card {
     padding: 20px;
-    color: #e8e8e8 !important;
-}
-:deep(.vditor-preview__action) {
-    color: #e8e8e8 !important;
-}
-
-
-
-/* 博客操作区 */
-.blog-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 15px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(138, 43, 226, 0.3);
-}
-
-.action-btns {
-    display: flex;
-    gap: 10px;
-}
-
-/* 按钮样式 */
-:deep(.el-button) {
-    background: linear-gradient(135deg, #8a2be2, #9370db);
-    border: none;
-    color: white;
-    font-weight: 500;
-    padding: 10px 20px;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
-}
-
-:deep(.el-button:hover) {
-    background: linear-gradient(135deg, #9370db, #8a2be2);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(138, 43, 226, 0.5);
-}
-
-:deep(.el-button:active) {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(138, 43, 226, 0.3);
-}
-
-:deep(.el-button.edit-btn) {
-    background: linear-gradient(135deg, #4d9de0, #3498db);
-}
-
-:deep(.el-button.edit-btn:hover) {
-    background: linear-gradient(135deg, #3498db, #4d9de0);
-}
-
-:deep(.el-button.save-btn) {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
-}
-
-:deep(.el-button.save-btn:hover) {
-    background: linear-gradient(135deg, #27ae60, #2ecc71);
-}
-
-:deep(.el-button.delete-btn) {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-
-:deep(.el-button.delete-btn:hover) {
-    background: linear-gradient(135deg, #c0392b, #e74c3c);
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-    .blog-container {
-        width: 90%;
-        padding: 20px;
-    }
-    
-    .blog-title-container {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-    
-    .blog-actions {
-        justify-content: center;
-    }
-    
-    .action-btns {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    :deep(.el-button) {
-        width: 100%;
-    }
-}
-
-/* 动画效果 */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.blog-container {
-    animation: fadeIn 0.6s ease-out;
-}
-
-.blog-title-container > div {
-    animation: fadeIn 0.8s ease-out;
-}
-
-.blog-title-container > div:nth-child(1) { animation-delay: 0.1s; }
-.blog-title-container > div:nth-child(2) { animation-delay: 0.2s; }
-.blog-title-container > div:nth-child(3) { animation-delay: 0.3s; }
-.blog-title-container > div:nth-child(4) { animation-delay: 0.4s; }
-.blog-title-container > div:nth-child(5) { animation-delay: 0.5s; }
-
-/* 编辑模式下表单元素样式 */
-:deep(.el-input) {
-    background-color: transparent !important;
-}
-:deep(.el-input__wrapper) {
-    background-color: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-    padding: 0 !important;
-}
-:deep(.el-input__inner) {
-    background-color: transparent !important;
-    border: none !important;
-    color: #e8e8e8 !important;
-    border-radius: 0;
-    padding-left: 0 !important;
-    box-shadow: none !important;
-}
-:deep(.el-input__inner:focus) {
-    border: none !important;
-    box-shadow: none !important;
-}
-
-
-/* 下拉菜单动画效果 */
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* 针对自定义类的样式 */
-:deep(.transparent-select) {
-    background-color: transparent !important;
-    color: #e8e8e8 !important;
-    border: 1px solid rgba(138, 43, 226, 0.5) !important;
-    outline: none;
-    width: 150px;
-    margin-left: 8px;
-    padding: 8px 12px;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8e8e8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 16px;
-    border-radius: 6px;
-    background-color: rgba(30, 30, 30, 0.7) !important;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    animation: slideDown 0.3s ease-out;
-}
-
-:deep(.transparent-select:hover) {
-    border-color: rgba(138, 43, 226, 0.8) !important;
-    box-shadow: 0 0 8px rgba(138, 43, 226, 0.5);
-    transform: translateY(-2px);
-}
-
-:deep(.transparent-select:focus) {
-    outline: none;
-    border-color: #8a2be2 !important;
-    box-shadow: 0 0 12px rgba(138, 43, 226, 0.8);
-}
-
-:deep(.transparent-select option) {
-    background-color: rgba(30, 30, 30, 0.95);
-    color: #e8e8e8;
-    padding: 10px;
-    transition: all 0.2s ease;
-}
-
-:deep(.transparent-select option:hover) {
-    background-color: rgba(138, 43, 226, 0.3);
-}
-
-:deep(.transparent-select option:checked) {
-    background-color: rgba(138, 43, 226, 0.5);
-    color: #fff;
-}
-
-/* 兼容旧的 el-select 样式 */
-:deep(.transparent-select .el-input__wrapper) {
-    background-color: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-    padding: 0 !important;
-}
-:deep(.transparent-select .el-input) {
-    background-color: transparent !important;
-}
-:deep(.transparent-select .el-input__inner) {
-    background-color: transparent !important;
-    border: none !important;
-    color: #e8e8e8 !important;
-    border-radius: 0;
-    padding-left: 0 !important;
-    box-shadow: none !important;
-}
-
-/* 美化摘要容器 */
-.summary-container {
-    color: rgb(255, 0, 212);
-    font-size: large;
-    margin-top: 10px;
-    margin-bottom: 5px;
-    padding: 15px;
-    background: linear-gradient(135deg, rgba(138, 43, 226, 0.1), rgba(147, 112, 219, 0.1));
-    border-radius: 12px;
-    border: 1px solid rgba(138, 43, 226, 0.2);
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(138, 43, 226, 0.1);
-    animation: fadeIn 0.8s ease-out 0.6s both; /* 添加动画效果，延迟出现 */
-}
-
-.summary-container:hover {
-    background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), rgba(147, 112, 219, 0.15));
-    border-color: rgba(138, 43, 226, 0.3);
-    box-shadow: 0 6px 16px rgba(138, 43, 226, 0.2);
-    transform: translateY(-2px);
-}
-.summary-container >span {
-    color: white;
-    font-size: medium;
-    margin-left: 1%;
-}
-
-/* 美化摘要文本框 */
-.summary-container :deep(.el-input) {
-    width: 100%;
-}
-
-.summary-container :deep(.el-input__wrapper) {
-    background-color: rgba(0, 0, 0, 0.3) !important;
-    box-shadow: none !important;
-    border: 1px solid rgba(138, 43, 226, 0.3) !important;
-    border-radius: 8px !important;
-    padding: 8px 12px !important;
-    transition: all 0.3s ease;
-}
-
-.summary-container :deep(.el-input__wrapper:hover) {
-    border-color: rgba(138, 43, 226, 0.5) !important;
-    box-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
-}
-
-.summary-container :deep(.el-input__wrapper.is-focus) {
-    border-color: #8a2be2 !important;
-    box-shadow: 0 0 12px rgba(138, 43, 226, 0.4);
-}
-
-.summary-container :deep(.el-input__inner) {
-    background-color: transparent !important;
-    border: none !important;
-    color: #e8e8e8 !important;
-    border-radius: 6px !important;
-    padding: 8px 0 !important;
-    font-size: 15px;
-    line-height: 1.6;
-    resize: vertical; /* 允许垂直调整大小 */
-    min-height: 80px;
-    max-height: 200px;
-}
-
-.summary-container :deep(.el-input__inner::placeholder) {
-    color: rgba(232, 232, 232, 0.5) !important;
-    font-style: italic;
-}
-
-  /* 非编辑模式下，为博客内容容器的子内容区域设置最大高度和滚动条 */
-  .blog-content-container:not(.edit-mode) .vditor-preview,
-  .blog-content-container:not(.edit-mode) .blog-actual-content {
-    min-height: 500px;
-    max-height: 1500px;
-    overflow-y: auto;
-    padding-right: 8px; /* 为滚动条留出空间 */
   }
-  
-  /* 优化滚动条样式 */
-  .blog-content-container:not(.edit-mode) .vditor-preview::-webkit-scrollbar,
-  .blog-content-container:not(.edit-mode) .blog-actual-content::-webkit-scrollbar {
-    width: 8px;
+
+  .blog-title {
+    font-size: 2rem;
   }
-  
-  .blog-content-container:not(.edit-mode) .vditor-preview::-webkit-scrollbar-track,
-  .blog-content-container:not(.edit-mode) .blog-actual-content::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
+
+  .editing-mode .vditor-edit-container {
+    min-height: 58vh;
   }
-  
-  .blog-content-container:not(.edit-mode) .vditor-preview::-webkit-scrollbar-thumb,
-  .blog-content-container:not(.edit-mode) .blog-actual-content::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-  }
-  
-  .blog-content-container:not(.edit-mode) .vditor-preview::-webkit-scrollbar-thumb:hover,
-  .blog-content-container:not(.edit-mode) .blog-actual-content::-webkit-scrollbar-thumb:hover {
-    background: #555;
-  }
+}
+
+.toc-empty {
+  text-align: center;
+  color: var(--text-tertiary);
+  padding: 20px 0;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* Table Grid Selector Styles */
+.table-grid-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.table-grid-info {
+  margin-bottom: 15px;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.table-grid-cells {
+  border: 1px solid var(--line-color);
+  padding: 2px;
+  background: var(--bg-primary);
+  display: inline-block;
+}
+
+.grid-row {
+  display: flex;
+}
+
+.grid-cell {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line-color);
+  margin: 1px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.grid-cell:hover {
+  transform: scale(1.1);
+  z-index: 2;
+}
+
+.grid-cell.active {
+  background-color: var(--text-primary);
+  border-color: var(--text-primary);
+}
 </style>

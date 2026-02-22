@@ -15,4 +15,5 @@ public class MessageConstant {
     public static final String BLOG_NOT_EXISTS = "博客不存在";
     public static final String NICKNAME_EXIST = "该昵称已被占用";
     public static final String PASSWORD_EXIST = "新旧密码不能相同";
+    public static final String FILE_TYPE_ERROR = "文件类型错误";
 }

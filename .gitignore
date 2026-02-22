@@ -1,0 +1,26 @@
+# ---------- Root scope ----------
+# 仅保留需要发布的主工程目录
+备份/
+version/
+Architecture/
+API/
+
+# 隐私与本地文件
+secret.txt
+*.env
+*.env.*
+!.env.example
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# 日志
+*.log
+*.tmp
+*.swp
+
+# 运行时资源（不入库）
+Backend/resources/static/images/

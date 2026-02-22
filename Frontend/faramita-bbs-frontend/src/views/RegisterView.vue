@@ -1,73 +1,25 @@
-<template>
-    <div class="register-container">
-        <transition name="scale-in">
-            <div class="register-form" v-show="showForm">
-                <img class="faramita-logo" src="@/assets/images/logo/FaramitaBBSLogo.png">
-                <h1>注册账号</h1>
-                <el-form ref="formRef" :model="registerForm" label-width="80px" class="el-form"
-                status-icon  @keyup.enter="handleRegister" :rules="registerRules">
-                    <div class="user-info-row">
-                        <el-form-item class="el-form-item avatar-item" label="头像" prop="avatar">
-                            <el-upload ref="uploadRef" class="avatar-uploader" :show-file-list="false" :limit="1" :on-exceed="handleExceed"
-                            :http-request="handleAvatarUpload" :before-upload="beforeAvatarUpload">
-                                <el-avatar :size="130" :src="avatarDisplayUrl"></el-avatar>
-                            </el-upload>
-                        </el-form-item>
-                        <div class="user-info-fields">
-                            <el-form-item class="el-form-item" label="昵称" prop="nickname">
-                                <el-input v-model="registerForm.nickname" placeholder="这里输入昵称" :prefix-icon="Flag"/>
-                            </el-form-item>
-                            <el-form-item class="el-form-item" label="账号" prop="username">
-                                <el-input v-model="registerForm.username" placeholder="这里输入账号" :prefix-icon="User" />
-                            </el-form-item>
-                        </div>
-                    </div>
-                    <el-form-item class="el-form-item" label="密码" prop="password">
-                        <el-input type="password" show-password="true" v-model="registerForm.password" placeholder="这里输入密码" :prefix-icon="Lock"/>
-                    </el-form-item>
-                    <el-form-item class="el-form-item" label="确认密码" prop="password2">
-                        <el-input type="password" show-password="true" v-model="registerForm.password2" placeholder="这里输入密码" :prefix-icon="Lock"/>
-                    </el-form-item>
-                    <el-form-item class="el-form-item" label="性别" prop="sex">
-                        <el-radio-group v-model="registerForm.sex">
-                            <el-radio value="1">男</el-radio>
-                            <el-radio value="0">女</el-radio>
-                            <el-radio value="2">神秘</el-radio>
-                        </el-radio-group>
-                    </el-form-item>
-                    <el-form-item class="el-form-item" label="种族" prop="race">
-                        <el-input v-model="registerForm.race" placeholder="这里输入种族" :prefix-icon="Grid" />
-                    </el-form-item>
-                    <div class="register-btn-container">
-                        <el-button @click="handleRegister">注册</el-button>
-                    </div>
-                </el-form>
-            </div>
-        </transition>
-    </div>
-</template>
-
 <script setup lang="ts">
-import defaultAvatar from '@/assets/images/default-avatar.png'
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, onUnmounted, reactive, ref, h } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage, genFileId, type UploadInstance, type FormInstance, type FormRules, type UploadProps, type UploadRawFile, type UploadRequestOptions } from 'element-plus';
-import { User, Lock, Flag, Grid} from '@element-plus/icons-vue'
+import { useMessage, type FormInst, type FormRules, NForm, NFormItem, NInput, NIcon, NAvatar, NRadioGroup, NRadio } from 'naive-ui';
+import { PersonOutline, LockClosedOutline, FlagOutline, GridOutline, CameraOutline, CloseOutline, Person, ArrowForwardOutline } from '@vicons/ionicons5';
 import { uploadAvatar } from '@/api/file';
 import { register } from '@/api/user';
+import FaramitaLogo from '@/assets/images/logo/FaramitaBBSLogo.png';
+
+// Fonts
+const fontLink = document.createElement('link')
+fontLink.href = 'https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap'
+fontLink.rel = 'stylesheet'
+document.head.appendChild(fontLink)
 
 const router = useRouter()
-const formRef = ref<FormInstance>()
-const uploadRef = ref<UploadInstance>()
-const avatarDisplayUrl = ref(defaultAvatar)
+const message = useMessage()
+const formRef = ref<FormInst | null>(null)
+const avatarDisplayUrl = ref('')
+const loading = ref(false)
 
-// 动效变量
-const showForm = ref(false)
-onMounted(() => {
-    setTimeout(() => {
-        showForm.value = true
-    }, 100)
-})
+const renderDefaultAvatar = () => h(NIcon, null, { default: () => h(Person) })
 
 const registerForm = reactive({
     nickname: '',
@@ -76,394 +28,846 @@ const registerForm = reactive({
     password2: '',
     sex: 2,
     race: '',
-    avatar: '',
+    avatar: ''
 })
-// # 头像请求
-// 头像上传前校验
-const handleExceed: UploadProps['onExceed'] = (files) => {
-    uploadRef.value!.clearFiles()
-    const file = files[0] as UploadRawFile
-    
-    // 在手动触发上传前进行文件大小校验
-    const isLt10M = file.size / 1024 /1024 < 10
-    if (!isLt10M) {
-        ElMessage.error('头像大小不能超过10MB')
-        return
-    }
-    
-    file.uid = genFileId()
-    uploadRef.value!.handleStart(file)
-    
-    // 手动触发上传
-    const options: UploadRequestOptions = {
-        file: file,
-        filename: file.name,
-        data: {},
-        action: '',
-        method: 'POST',
-        headers: {},
-        withCredentials: false,
-        onProgress: () => {},
-        onSuccess: () => {},
-        onError: () => {}
-    };
-    handleAvatarUpload(options)
-}
-const beforeAvatarUpload = (file: File) => {
-    const isLt10M = file.size / 1024 /1024 < 10
-    if (!isLt10M) {
-        ElMessage.error('头像大小不能超过10MB')
-    }
-    return isLt10M
-}
-// 处理头像上传
-const handleAvatarUpload = async (options: UploadRequestOptions) => {
-    const { file } = options
-    try {
-        // 创建本地预览URL
-        const localPreviewURL = URL.createObjectURL(file as File)
-        avatarDisplayUrl.value = localPreviewURL;
 
-        const response = await uploadAvatar(file as File)
-        registerForm.avatar = response as unknown as string
-        console.log('头像上传成功，registerForm.avatar:', registerForm.avatar) // 添加调试信息
-        ElMessage.success('头像上传成功')
-    } catch (error) {
-        console.error('头像上传失败', error)
+// Avatar Crop Logic (Native Implementation from UserProfile.vue)
+const showModal = ref(false);
+const tempAvatarUrl = ref('');
+const croppingAvatar = ref(false);
+const nativeCropImgRef = ref<HTMLImageElement | null>(null);
+const cropContainerRef = ref<HTMLDivElement | null>(null);
+
+// Native Crop State
+const scale = ref(1);
+const offset = ref({ x: 0, y: 0 });
+const isDragging = ref(false);
+const lastMousePos = ref({ x: 0, y: 0 });
+
+const rules: FormRules = {
+    nickname: { required: true, message: 'Nickname is required', trigger: 'blur' },
+    username: { required: true, message: 'Username is required', trigger: 'blur' },
+    password: { required: true, message: 'Password is required', trigger: 'blur' },
+    password2: {
+        required: true,
+        validator: (_, value) => {
+            if (!value) return new Error('Please confirm your password')
+            if (value !== registerForm.password) return new Error('Passwords do not match')
+            return true
+        },
+        trigger: 'blur'
     }
+};
+
+const showForm = ref(false);
+
+// Canvas Refs
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+let ctx: CanvasRenderingContext2D | null = null
+let animationFrameId: number
+let mouseX = -1000
+let mouseY = -1000
+
+// Canvas Animation Logic
+const initCanvas = () => {
+  if (!canvasRef.value) return
+  const canvas = canvasRef.value
+  ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const resize = () => {
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+  }
+  window.addEventListener('resize', resize)
+  resize()
+
+  const gap = 30 // Grid gap
+  const pointSize = 1.5
+  
+  const animate = () => {
+    if (!ctx || !canvas) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    
+    // Theme colors
+    const isDark = document.documentElement.classList.contains('dark')
+    ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'
+    
+    const time = Date.now() * 0.001
+
+    for (let x = 0; x <= canvas.width; x += gap) {
+      for (let y = 0; y <= canvas.height; y += gap) {
+        // Distance to mouse
+        const dx = x - mouseX
+        const dy = y - mouseY
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        
+        // Wave effect params
+        const maxDist = 250
+        let offsetX = 0
+        let offsetY = 0
+        let scale = 1
+
+        if (dist < maxDist) {
+          const force = (maxDist - dist) / maxDist
+          // Repulsion + Wave
+          const angle = Math.atan2(dy, dx)
+          const wave = Math.sin(dist * 0.05 - time * 2) * 5 * force
+          
+          offsetX = Math.cos(angle) * (force * 20 + wave)
+          offsetY = Math.sin(angle) * (force * 20 + wave)
+          scale = 1 + force * 1.5
+        }
+
+        ctx.beginPath()
+        ctx.arc(x + offsetX, y + offsetY, pointSize * scale, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+    
+    animationFrameId = requestAnimationFrame(animate)
+  }
+  animate()
+  
+  return resize
 }
-// # 注册请求
-// 表单校验规则
-const registerRules = reactive<FormRules>({
-    nickname: [
-        {required: true, message: '请输入昵称', trigger: 'blur'},
-        {min: 1, max: 20, message: '昵称长度应在1到20个字符之间', trigger: 'blur'},
-    ],
-    username: [
-        { required: true, message: '请输入账号', trigger: 'blur'},
-        { min: 6, max: 30, message: '账号长度应在6到30个字符之间', trigger: 'blur'},
-    ],
-    password: [
-        { required: true, message: '请输入密码', trigger: 'blur' },
-        { min: 6, max: 30, message: '密码长度应在6到30个字符之间', trigger: 'blur' }
-    ],
-    password2: [
-        { 
-            required: true,
-            validator: (_, value, callback) => {
-                if (!value) {
-                    callback(new Error('请再次输入密码'))
-                } else if (value !== registerForm.password) {
-                    callback(new Error('两次输入的密码不一致'))
-                } else {
-                    callback()
-                }
-            }, 
-            trigger: ['blur', 'change'] 
-        }
-    ],
-    sex: [
-        { required: true, message: '请选择性别', trigger: 'change' }
-    ],
-    race: [
-        { required: true, message: '请输入种族', trigger: 'blur' },
-        { min: 1, max: 20, message: '种族长度应在1到20个字符之间', trigger: 'blur' }
-    ],
-    avatar: [
-        { required: true, message: '请上传头像', trigger: 'change' },
-        {
-            validator: (_, value, callback) => {
-                if (!value || value === '') {
-                    callback(new Error('请上传头像'))
-                } else {
-                    callback()
-                }
-            },
-            trigger: 'change'
-        }
-    ]
+
+const handleMouseMove = (e: MouseEvent) => {
+  mouseX = e.clientX
+  mouseY = e.clientY
+}
+
+let resizeHandler: (() => void) | undefined
+
+onMounted(() => {
+    setTimeout(() => {
+        showForm.value = true
+    }, 100)
+    resizeHandler = initCanvas()
+    window.addEventListener('mousemove', handleMouseMove)
+});
+
+onUnmounted(() => {
+  cancelAnimationFrame(animationFrameId)
+  window.removeEventListener('mousemove', handleMouseMove)
+  if (resizeHandler) window.removeEventListener('resize', resizeHandler)
 })
-const handleRegister =  async () =>  {
-    if (!formRef.value) return
 
-    try {
-        // 表单验证
-        await formRef.value.validate()
-        // 头像验证
-        if (!registerForm.avatar) {
-            ElMessage.error('请上传头像')
-            return
-        }
-        // 调用注册API
-        const response = await register({
-            nickname: registerForm.nickname,
-            username: registerForm.username,
-            password: registerForm.password,
-            sex: registerForm.sex,
-            race: registerForm.race,
-            avatar: registerForm.avatar
-        })
-        console.log('>注册:', response)
-        ElMessage.success('注册成功')
-
-        router.push('/login')
-    } catch (error) {
-        console.log('注册失败', error)
+const handleFileChange = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            tempAvatarUrl.value = e.target?.result as string;
+            // Reset crop state
+            scale.value = 1;
+            offset.value = { x: 0, y: 0 };
+            showModal.value = true;
+            // Reset file input
+            input.value = '';
+        };
+        reader.readAsDataURL(file);
     }
-}
+};
 
+const handleCropMouseDown = (e: MouseEvent) => {
+    isDragging.value = true;
+    lastMousePos.value = { x: e.clientX, y: e.clientY };
+    e.preventDefault();
+};
 
+const handleCropMouseMove = (e: MouseEvent) => {
+    if (!isDragging.value) return;
+    const dx = e.clientX - lastMousePos.value.x;
+    const dy = e.clientY - lastMousePos.value.y;
+    offset.value.x += dx;
+    offset.value.y += dy;
+    lastMousePos.value = { x: e.clientX, y: e.clientY };
+};
+
+const handleCropMouseUp = () => {
+    isDragging.value = false;
+};
+
+const handleCropWheel = (e: WheelEvent) => {
+    const zoomSpeed = 0.001;
+    const delta = -e.deltaY;
+    const newScale = Math.max(0.1, Math.min(5, scale.value + delta * zoomSpeed));
+    scale.value = newScale;
+    e.preventDefault();
+};
+
+const handleCropAndUpload = async () => {
+    if (!nativeCropImgRef.value || !cropContainerRef.value) return;
+
+    croppingAvatar.value = true;
+    try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 400;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const img = nativeCropImgRef.value;
+        const container = cropContainerRef.value;
+
+        // 背景填黑
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, 400, 400);
+
+        // 计算比例：Canvas(400) �?容器物理尺寸 的比�?        
+        const containerSize = container.offsetWidth;
+        const drawScale = 400 / containerSize;
+
+        // 计算图片在容器中的实际渲染尺�?        
+        const renderWidth = img.offsetWidth * scale.value;
+        const renderHeight = img.offsetHeight * scale.value;
+
+        // 映射�?Canvas 上的尺寸
+        const canvasDrawWidth = renderWidth * drawScale;
+        const canvasDrawHeight = renderHeight * drawScale;
+
+        // 映射�?Canvas 上的偏移（以中心为原点）
+        const canvasOffsetX = offset.value.x * drawScale;
+        const canvasOffsetY = offset.value.y * drawScale;
+
+        // 绘制图片：Canvas 中心点为 (200, 200)
+        ctx.drawImage(
+            img,
+            200 + canvasOffsetX - canvasDrawWidth / 2,
+            200 + canvasOffsetY - canvasDrawHeight / 2,
+            canvasDrawWidth,
+            canvasDrawHeight
+        );
+
+        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+
+        if (blob) {
+            const croppedFile = new File([blob], 'avatar.png', { type: 'image/png' });
+            const res: any = await uploadAvatar(croppedFile);
+            registerForm.avatar = res as string;
+            avatarDisplayUrl.value = URL.createObjectURL(croppedFile);
+            message.success('Avatar uploaded successfully');
+            showModal.value = false;
+        }
+    } catch (error) {
+        message.error('Upload failed');
+    } finally {
+        croppingAvatar.value = false;
+    }
+};
+
+const handleRegister = () => {
+    formRef.value?.validate(async (errors) => {
+        if (!errors) {
+            loading.value = true;
+            try {
+                await register({
+                    nickname: registerForm.nickname,
+                    username: registerForm.username,
+                    password: registerForm.password,
+                    sex: registerForm.sex,
+                    race: registerForm.race,
+                    avatar: registerForm.avatar
+                });
+                message.success('Registration successful, please sign in');
+                router.push('/login');
+            } catch (error: any) {
+                message.error(error.message || 'Registration failed');
+            } finally {
+                loading.value = false;
+            }
+        }
+    });
+};
 </script>
 
+<template>
+    <div class="register-page" :class="{ 'loaded': showForm }">
+        <canvas ref="canvasRef" class="bg-canvas"></canvas>
+
+        <div class="register-container animate-section" v-if="showForm">
+            <div class="register-card animate-scale-in">
+                <div class="header-section">
+                    <img :src="FaramitaLogo" alt="Faramita BBS Logo" class="logo-image" />
+                    <h1 class="title">JOIN US</h1>
+                    <div class="decorative-line"></div>
+                    <p class="subtitle">Create your persona to enter Faramita BBS.</p>
+                </div>
+                
+                <n-form ref="formRef" :model="registerForm" :rules="rules" class="register-form" @keyup.enter="handleRegister">
+                    <div class="form-content">
+                        <!-- Avatar Section -->
+                        <div class="avatar-section">
+                            <label class="avatar-wrapper">
+                                <input type="file" accept="image/*" style="display: none" @change="handleFileChange" />
+                                <n-avatar
+                                    :size="120"
+                                    :src="avatarDisplayUrl"
+                                    :render-icon="renderDefaultAvatar"
+                                    class="avatar-img"
+                                />
+                                <div class="avatar-overlay">
+                                    <n-icon size="24" color="white"><CameraOutline /></n-icon>
+                                </div>
+                            </label>
+                            <span class="avatar-hint">UPLOAD AVATAR</span>
+                        </div>
+
+                        <!-- Fields Grid -->
+                        <div class="fields-grid">
+                            <n-form-item label="NICKNAME" path="nickname">
+                                <n-input v-model:value="registerForm.nickname" placeholder="Your persona name" class="custom-input">
+                                    <template #prefix><n-icon :component="PersonOutline" /></template>
+                                </n-input>
+                            </n-form-item>
+                            
+                            <n-form-item label="USERNAME" path="username">
+                                <n-input v-model:value="registerForm.username" placeholder="Your login ID" class="custom-input">
+                                    <template #prefix><n-icon :component="GridOutline" /></template>
+                                </n-input>
+                            </n-form-item>
+                            
+                            <n-form-item label="PASSWORD" path="password">
+                                <n-input type="password" show-password-on="click" v-model:value="registerForm.password" placeholder="Create password" class="custom-input">
+                                    <template #prefix><n-icon :component="LockClosedOutline" /></template>
+                                </n-input>
+                            </n-form-item>
+                            
+                            <n-form-item label="CONFIRM PASSWORD" path="password2">
+                                <n-input type="password" show-password-on="click" v-model:value="registerForm.password2" placeholder="Confirm password" class="custom-input">
+                                    <template #prefix><n-icon :component="LockClosedOutline" /></template>
+                                </n-input>
+                            </n-form-item>
+                            
+                            <n-form-item label="IDENTITY" path="sex" class="full-width">
+                                <n-radio-group v-model:value="registerForm.sex" name="sex" class="custom-radio-group">
+                                    <n-radio :value="1">MALE</n-radio>
+                                    <n-radio :value="0">FEMALE</n-radio>
+                                    <n-radio :value="2">MYSTERY</n-radio>
+                                </n-radio-group>
+                            </n-form-item>
+                            
+                            <n-form-item label="RACE" path="race" class="full-width">
+                                <n-input v-model:value="registerForm.race" placeholder="e.g. Human, Elf, Cyborg..." class="custom-input">
+                                    <template #prefix><n-icon :component="FlagOutline" /></template>
+                                </n-input>
+                            </n-form-item>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="submit-btn" @click.prevent="handleRegister" :disabled="loading">
+                            <span>{{ loading ? 'CREATING...' : 'CREATE ACCOUNT' }}</span>
+                            <n-icon :component="ArrowForwardOutline" />
+                        </button>
+                        
+                        <div class="divider-wrapper">
+                            <span class="divider-line"></span>
+                            <span class="divider-text">OR</span>
+                            <span class="divider-line"></span>
+                        </div>
+                        
+                        <div class="secondary-actions">
+                            <button class="text-btn" @click.prevent="router.push('/login')">ALREADY HAVE AN ACCOUNT?</button>
+                            <span class="dot-separator">?</span>
+                            <button class="text-btn" @click.prevent="router.push('/')">RETURN HOME</button>
+                        </div>
+                    </div>
+                </n-form>
+            </div>
+        </div>
+
+        <!-- Avatar Crop Modal -->
+        <div v-if="showModal" class="modal-overlay">
+            <div class="crop-modal-content">
+                <div class="modal-header">
+                    <h3>CROP AVATAR</h3>
+                    <button class="close-btn" @click="showModal = false">
+                        <n-icon size="24"><CloseOutline /></n-icon>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div 
+                        class="native-cropper-wrapper" 
+                        ref="cropContainerRef"
+                        @mousedown="handleCropMouseDown"
+                        @mousemove="handleCropMouseMove"
+                        @mouseup="handleCropMouseUp"
+                        @mouseleave="handleCropMouseUp"
+                        @wheel="handleCropWheel"
+                    >
+                        <img 
+                            ref="nativeCropImgRef"
+                            :src="tempAvatarUrl" 
+                            class="native-crop-image"
+                            :style="{
+                                transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`
+                            }"
+                        />
+                        <div class="crop-overlay">
+                            <div class="crop-viewport"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="save-btn" @click="handleCropAndUpload" :disabled="croppingAvatar">
+                        {{ croppingAvatar ? 'UPLOADING...' : 'CONFIRM UPLOAD' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
 <style scoped>
-.register-container {
-    height: 100vh;
-    background-image: url('@/assets/images/bg/bg01.png');
-    background-size: 100%;
-    background-position: center;
+/* Animations */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-scale-in {
+  opacity: 0;
+  animation: scaleIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.register-page {
+    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
     position: relative;
     overflow: hidden;
-    transition: background-size 0.5s ease;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Lato', sans-serif;
+    transition: background-color 0.5s ease, color 0.5s ease;
+    padding: 40px 0;
 }
 
-/* 当logo悬浮时，背景图放大 */
-.register-container:has(.faramita-logo:hover) {
-    background-size: 102%; /* 背景图稍微放大 */
-}
-
-/* 半透明遮罩 */
-.register-container::before {
-    content: '';
+.bg-canvas {
     position: absolute;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 0;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-}
-
-.register-form {
-    background-color: rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 10;
-    width: 80vh;
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border: 1px solid rgb(85, 118, 123);
-}
-
-.faramita-logo {
-    margin-bottom: 20px;
-    width: 60%;
-    height: auto;
-    transition: transform 0.3s ease;
-}
-
-.faramita-logo:hover {
-    transform: scale(1.05);
-}
-
-h1 {
-    color: aqua;
-    margin: 0 0 30px 0;
-    font-size: 28px;
-    font-weight: 600;
-    text-align: center;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.el-form {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.el-form-item {
-    margin-bottom: 20px;
-    width: 80%;
-}
-
-/* 修改表单项标签样式 */
-:deep(.el-form-item__label) {
-    color: #ffffff;
-    font-size: 18px;
-    font-weight: 500;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    white-space: nowrap;
-}
-
-/* 修改输入框样式 */
-:deep(.el-input__wrapper) {
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    box-shadow: none;
-    transition: all 0.3s ease;
-    font-size: 15px;
-}
-
-:deep(.el-input__wrapper:hover) {
-    border-color: rgba(255, 255, 255, 0.4);
-    background-color: rgba(255, 255, 255, 0.15);
-}
-
-:deep(.el-input__wrapper.is-focus) {
-    border-color: #409eff;
-    background-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-}
-
-:deep(.el-input__inner) {
-    color: #ffffff;
-    height: 40px;
-}
-
-:deep(.el-input__inner::placeholder) {
-    color: rgba(255, 255, 255, 0.73);
-}
-
-/* 修改图标样式 */
-:deep(.el-input__prefix-inner) {
-    color: rgba(255, 255, 255, 0.8);
-}
-/* 修改标签项 */
-
-/* 修改图标样式 */
-:deep(.el-input__prefix-inner) {
-    color: rgba(255, 255, 255, 0.8);
-}
-
-/* 修改性别选择器样式 - 简洁紫色系 */
-:deep(.el-radio-group) {
-    display: flex;
-    width: 100%;
-    gap: 10px;
-}
-
-:deep(.el-radio) {
-    margin-right: 0;
-    padding: 6px 12px;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    border-bottom: 3px solid #ccc;
-}
-
-:deep(.el-radio__label) {
-    color: #739efb;
-    font-size: 18px;
-    font-weight: 500;
-    padding-left: 6px;
-}
-
-:deep(.el-radio:hover .el-radio__label) {
-    color: #f748d1;
-}
-
-:deep(.el-radio.is-checked .el-radio__label) {
-    color: #fd52e7;
-}
-
-:deep(.el-radio__inner) {
-    background-color: rgba(138, 43, 226, 0.1);
-    border-color: rgba(138, 43, 226, 0.5);
-    transition: all 0.2s ease;
-}
-
-:deep(.el-radio.is-checked .el-radio__inner) {
-    background-color: #8a2be2;
-    border-color: #8a2be2;
-}
-
-:deep(.el-radio__inner:hover) {
-    border-color: #9370db;
-}
-
-
-
-/* 修改按钮样式 */
-.el-button {
-    background: linear-gradient(90deg, #1036f255, #098af3e3);
-    background-size: 200% 100%;
-    border: none;
-    color: white;
-    font-weight: 500;
-    padding: 12px 30px;
-    border-radius: 8px;
-    font-size: 20px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
-    margin-top: 10px;
-    /* margin-left: 10px; 向左移动按钮 */
-}
-
-.el-button:hover {
-    background-position: 100% 0; /* 悬浮时渐变色两端互换 */
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(61, 90, 255, 0.818);
-}
-
-.el-button:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(31, 97, 162, 0.3);
-}
-
-.user-info-row {
-    display: flex;
-    width: 80%;
-    margin-bottom: 20px;
-    align-items: flex-start;
-}
-.avatar-item {
-    flex: 0 0 auto;
-    margin-right: 20px;
-    margin-bottom: 0;
-    width: auto;
-}
-.avatar-uploader {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-.user-info-fields {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    margin-top: 0;
-    margin-top: 2%;
-}
-.user-info-fields .el-form-item {
-    width: 100%;
-}
-.register-btn-container {
-    display: flex;
-    width: 100%;
-    justify-content: center;
-    /* background-color: #373336; */
-}
-
-/* 表单缩放动画 */
-.scale-in-enter-active,
-.scale-in-leave-active {
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.scale-in-enter-from,
-.scale-in-leave-to {
+    z-index: 0;
+    pointer-events: none;
     opacity: 0;
-    transform: scale(0.7);
+    transition: opacity 1.5s ease;
 }
 
-.scale-in-enter-to,
-.scale-in-leave-from {
+.register-page.loaded .bg-canvas {
     opacity: 1;
-    transform: scale(1);
+}
+
+.register-container {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 800px;
+    padding: 0 20px;
+}
+
+.register-card {
+    background: var(--modal-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 50px;
+    border: 1px solid var(--line-color);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.1);
+}
+
+.header-section {
+    text-align: center;
+    margin-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.logo-image {
+    width: 100%;
+    max-width: 250px;
+    height: auto;
+    margin: 0 auto 20px;
+    display: block;
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1));
+}
+
+.title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    font-weight: 400;
+    margin: 0 0 15px;
+    letter-spacing: 4px;
+    color: var(--text-primary);
+}
+
+.decorative-line {
+    width: 40px;
+    height: 1px;
+    background-color: var(--accent-color);
+    margin: 0 auto 20px;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+    font-style: italic;
+    font-family: 'Playfair Display', serif;
+}
+
+.form-content {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 40px;
+    align-items: start;
+}
+
+.avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.avatar-wrapper {
+    position: relative;
+    cursor: pointer;
+    border-radius: 0;
+    overflow: hidden;
+    display: block;
+    box-shadow: 10px 10px 0px var(--line-color);
+    transition: all 0.3s ease;
+    background: var(--bg-primary);
+}
+
+.avatar-wrapper:hover {
+    transform: translate(-4px, -4px);
+    box-shadow: 14px 14px 0px var(--accent-color);
+}
+
+.avatar-img {
+    border-radius: 0;
+    --n-border-radius: 0;
+    display: block;
+}
+
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    backdrop-filter: blur(2px);
+}
+
+.avatar-wrapper:hover .avatar-overlay {
+    opacity: 1;
+}
+
+.avatar-hint {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--text-tertiary);
+    font-family: 'Lato', sans-serif;
+}
+
+.fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 20px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.register-form :deep(.n-form-item-label) {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--text-tertiary);
+    font-family: 'Lato', sans-serif;
+}
+
+.custom-input {
+    background: transparent;
+}
+
+.custom-input :deep(.n-input__input-el) {
+    font-family: 'Lato', sans-serif;
+    font-size: 1rem;
+}
+
+.custom-radio-group :deep(.n-radio__label) {
+    font-family: 'Lato', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+}
+
+.form-actions {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.submit-btn {
+    width: 100%;
+    max-width: 400px;
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border: none;
+    padding: 15px 0;
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+}
+
+.submit-btn:hover:not(:disabled) {
+    background: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.divider-wrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+    margin: 30px 0;
+}
+
+.divider-line {
+    flex: 1;
+    height: 1px;
+    background-color: var(--line-color);
+}
+
+.divider-text {
+    padding: 0 15px;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--text-tertiary);
+}
+
+.secondary-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.text-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: 'Lato', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    padding: 0;
+}
+
+.text-btn:hover {
+    color: var(--accent-color);
+}
+
+.dot-separator {
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.crop-modal-content {
+    background: var(--modal-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 24px;
+    width: 90vw;
+    max-width: 600px;
+    height: 70vh;
+    max-height: 600px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line-color);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    border-radius: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.modal-header {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-color);
+}
+
+.modal-header h3 {
+    font-family: 'Playfair Display', serif;
+    margin: 0;
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: color 0.3s;
+}
+
+.close-btn:hover {
+    color: var(--accent-color);
+}
+
+.modal-body {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    margin: 16px 0;
+    background: #111;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.native-cropper-wrapper {
+    width: 100%;
+    max-width: 360px;
+    aspect-ratio: 1 / 1;
+    position: relative;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.native-crop-image {
+    max-width: none;
+    max-height: none;
+    user-select: none;
+    pointer-events: none;
+    transition: transform 0.05s linear;
+}
+
+.crop-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.crop-viewport {
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-sizing: border-box;
+    position: relative;
+}
+
+.crop-viewport::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.3);
+}
+
+.modal-actions {
+    flex-shrink: 0;
+    padding-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid var(--line-color);
+}
+
+.save-btn {
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border: none;
+    padding: 12px 30px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.save-btn:hover:not(:disabled) {
+    background: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .form-content {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    
+    .fields-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .register-card {
+        padding: 40px 30px;
+    }
 }
 </style>
