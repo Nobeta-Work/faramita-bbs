@@ -32,14 +32,18 @@
             <if test="keyword != null and keyword != ''">
                 AND (title LIKE CONCAT('%', #{keyword}, '%') OR summary LIKE CONCAT('%', #{keyword}, '%') OR author_name LIKE CONCAT('%', #{keyword}, '%'))
             </if>
-            <if test="queryUid == null or queryUid != authorId">
+            <!-- 权限控制：若未传入 queryUid 则仅显示已发布；若传入，则显示该用户自己的或已发布的 -->
+            <if test="queryUid == null">
                 AND is_published = 1
+            </if>
+            <if test="queryUid != null">
+                AND (author_id = #{queryUid} OR is_published = 1)
             </if>
         </where>
 
         <choose>
             <when test="orderBy != null and orderBy != '' and sortOrder != null and sortOrder != ''">
-                ORDER BY #{orderBy} #{sortOrder}
+                ORDER BY ${orderBy} ${sortOrder}
             </when>
             <otherwise>
                 ORDER BY create_time DESC

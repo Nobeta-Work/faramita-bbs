@@ -11,9 +11,14 @@ spring:
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/faramita_bbs?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
-    username: root
-    password: 123456
+    url: ${faramita.datasource.url}
+    username: ${faramita.datasource.username}
+    password: ${faramita.datasource.password}
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
 
 # MyBatis-Plus配置
 mybatis:
@@ -24,9 +29,9 @@ mybatis:
 
 # jwt配置
 jwt: 
-  secret: ${faramita.dev.jwt.secret}
-  expire: ${faramita.dev.jwt.expire}
-  header: ${faramita.dev.jwt.header}
+  secret: ${faramita.jwt.secret}
+  expire: ${faramita.jwt.expire}
+  header: ${faramita.jwt.header}
 
 # PageHelper配置
 pagehelper:
@@ -46,10 +51,23 @@ springdoc:
     display-request-duration: true  # 显示请求持续时间
   packages-to-scan: online.faramita.bbs.controller  # 指定要扫描的包
 
-# 文件存储位置
 faramita:
+  # 文件存储位置
   file:
     avatar:
-      root-path: ${faramita.dev.file.avatar.root-path}
-      max-size: ${faramita.dev.file.avatar.max-size}
-      expire: ${faramita.dev.file.avatar.expire}
+      root-path: ${faramita.file.avatar.root-path}
+      max-size: ${faramita.file.avatar.max-size}
+      expire: ${faramita.file.avatar.expire}
+    image:
+      max-size: ${faramita.file.image.max-size}
+  # Github配置
+  github:
+    branch: main
+    name: Nobeta
+    email: 377877931@qq.com
+    owner: Nobeta-Work
+    repo: faramita-bbs-file
+    path: img/
+    token: ${faramita.github.token}
+
+

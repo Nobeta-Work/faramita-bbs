@@ -14,6 +14,21 @@ export function uploadAvatar(file: File) {
     })
 }
 
+// 博文图片上传
+export function uploadImage(file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    return request({
+        url: '/uploadImage',
+        method: 'post',
+        data: formData,
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    })
+}
+
 // 头像图片下载
 export function downloadAvatar(avatar: string) {
     return request({

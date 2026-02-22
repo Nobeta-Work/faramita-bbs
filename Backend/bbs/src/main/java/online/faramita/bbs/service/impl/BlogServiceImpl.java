@@ -37,7 +37,7 @@ public class BlogServiceImpl implements BlogService{
      * @param pageQueryDTO
      * @return
      */
-    public PageResult<Blog> pageQuery(Long uid, PageQueryDTO<BlogQueryDTO> pageQueryDTO) {
+    public PageResult<Blog> pageQuery(PageQueryDTO<BlogQueryDTO> pageQueryDTO) {
         // 1.提取参数
         Integer pageNum = pageQueryDTO.getPage();
         Integer pageSize = pageQueryDTO.getPageSize();
@@ -50,9 +50,8 @@ public class BlogServiceImpl implements BlogService{
         if (blogQueryDTO.getKeyword() != null) {
             blogQueryDTO.setKeyword(blogQueryDTO.getKeyword().trim());
         }
-
-        blogQueryDTO.setAuthorId(uid);
         
+        // 查询情景设置
         blogQueryDTO.setQueryUid(BaseContext.getCurrentId());
         blogQueryDTO.setNeedContent(false);
         
@@ -99,18 +98,18 @@ public class BlogServiceImpl implements BlogService{
         BeanUtils.copyProperties(blogDTO, blog);
         blog.setBloguid(bloguid);
         blog.setIsPublished(0);
-        blog.setContent(">默认信息<");
+        blog.setContent("内容为空");
         try {
             blogMapper.insertBlog(blog);
         } catch (Exception e) {
-            log.error(">异常：{}", e);
+            log.error(">创建博文异常：{}", e);
         }
                         
-        return blog.getBloguid();
+        return bloguid;
     }
 
     /**
-     * 根据bloguid查询博文
+     * 根据bloguid查询博文(内实现权限校验)
      * @param uid
      * @param bloguid
      * @return
@@ -118,8 +117,7 @@ public class BlogServiceImpl implements BlogService{
     public Blog getBlogByBloguid(Long uid, String bloguid) {
         // 1.构造QueryDTO
         BlogQueryDTO queryDTO = BlogQueryDTO.builder()
-                        .queryUid(BaseContext.getCurrentId())
-                        .authorId(uid)
+                        .queryUid(uid)
                         .bloguid(bloguid)
                         .build();
         // 2.根据QueryDTO获取博文
@@ -128,10 +126,9 @@ public class BlogServiceImpl implements BlogService{
         if (blog == null) {
             throw new ResourceNotFoundException(MessageConstant.BLOG_NOT_EXISTS);
         }
-        // 1.2 异常：博文未发布且访问id不为uid
+        // 1.2 异常：博文未发布且访问uid不为authorId
         if (blog.getIsPublished() < 1) {
-            Long id = BaseContext.getCurrentId();
-            if (id == null || !id.equals(uid)) {
+            if (uid == null || !uid.equals(blog.getAuthorId())) {
                 throw new PermissionException(MessageConstant.NO_PERMISSION);
             }
         }
@@ -144,25 +141,33 @@ public class BlogServiceImpl implements BlogService{
      * @param bloguid
      */
     public void deleteBlogByBloguid(String bloguid) {
+        // 查询文章
+        Long uid = BaseContext.getCurrentId();
+        Blog blog = getBlogByBloguid(uid, bloguid);
 
-        blogMapper.deleteBlogByBloguid(bloguid);
-        
+        blogMapper.deleteBlogByBloguid(blog.getBloguid());
     }
 
     /**
      * 更新博客
      * @param uid
+     * @param bloguid
      * @param updateDTO
      */
     @Transactional
-    public void updateBlog(String bloguid, BlogUpdateDTO updateDTO) {
+    public void updateBlog(Long uid, String bloguid, BlogUpdateDTO updateDTO) {
         // 1.根据bloguid查询原始博客信息
         Blog blog = getBlogByBloguid(BaseContext.getCurrentId(), bloguid);
         if (blog == null) {
             throw new ResourceNotFoundException(MessageConstant.BLOG_NOT_EXISTS);
         }
 
-        // 2.根据uid,大类ID和小类名称，获取或创建小类，并返回其ID
+        // 2.权限校验
+        if (!uid.equals(blog.getAuthorId())) {
+            throw new PermissionException(MessageConstant.NO_PERMISSION);
+        }
+
+        // 3.根据authorId,大类ID和小类名称，获取或创建小类，并返回其ID
         BlogCategory category = blogMapper.findCategoryByBigIdAndName(blog.getAuthorId(), updateDTO.getBigCategoryId(), updateDTO.getLittleCategoryName());
         if (category != null) {
             // 2.1 小类存在
@@ -184,4 +189,5 @@ public class BlogServiceImpl implements BlogService{
         // 4.调用Mapper执行更新
         blogMapper.updateBlog(blog);
     }
+
 }

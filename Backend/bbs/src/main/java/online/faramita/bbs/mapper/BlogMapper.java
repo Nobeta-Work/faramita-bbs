@@ -70,5 +70,4 @@ public interface BlogMapper {
      * @param blog
      */
     void updateBlog(Blog blog);    
-
 }

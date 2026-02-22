@@ -1,37 +1,23 @@
 <script setup lang="ts">
-import TopNav from '@/components/TopNav.vue';
+import { NConfigProvider, NGlobalStyle, NMessageProvider, NDialogProvider, NNotificationProvider, NLoadingBarProvider } from 'naive-ui'
+import { useThemeStore } from '@/stores/theme'
+import { storeToRefs } from 'pinia'
+
+const themeStore = useThemeStore()
+const { theme } = storeToRefs(themeStore)
 </script>
 
 <template>
-  <div class="app-container">
-    <TopNav />
-    <router-view></router-view>
-  </div>
+  <n-config-provider :theme="theme">
+    <n-global-style />
+    <n-loading-bar-provider>
+      <n-message-provider>
+        <n-dialog-provider>
+          <n-notification-provider>
+            <router-view />
+          </n-notification-provider>
+        </n-dialog-provider>
+      </n-message-provider>
+    </n-loading-bar-provider>
+  </n-config-provider>
 </template>
-
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-}
-
-#app {
-  height: 100%;
-  width: 100%;
-}
-</style>
-
-<style scoped>
-.app-container {
-  height: 100%;
-  width: 100%;
-}
-</style>

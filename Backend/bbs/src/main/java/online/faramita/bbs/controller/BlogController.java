@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,7 +24,7 @@ import online.faramita.bbs.dto.BlogQueryDTO;
 import online.faramita.bbs.dto.BlogUpdateDTO;
 import online.faramita.bbs.dto.PageQueryDTO;
 import online.faramita.bbs.entity.Blog;
-import online.faramita.bbs.exception.PermissionException;
+import online.faramita.bbs.exception.AccountException;
 import online.faramita.bbs.result.PageResult;
 import online.faramita.bbs.result.Result;
 import online.faramita.bbs.service.BlogService;
@@ -34,7 +33,7 @@ import online.faramita.bbs.service.BlogService;
  * 博客相关接口
  */
 @RestController
-@RequestMapping("api/{uid}/blog")
+@RequestMapping("api/blog")
 @Slf4j
 @Tag(name = "博客相关接口", description = "博客相关接口")
 public class BlogController {
@@ -50,9 +49,9 @@ public class BlogController {
      */
     @Operation(summary = "分页查询接口")
     @GetMapping("")
-    public Result<PageResult<Blog>> pageQuery(@PathVariable("uid") Long uid,
+    public Result<PageResult<Blog>> pageQuery(
     @ModelAttribute BlogPageQueryDTO blogPageQueryDTO) {
-        log.info("发起分页查询:bbs/{}/blog", uid);
+        log.info("发起分页查询:{}", blogPageQueryDTO);
         // 封装查询参数
         BlogQueryDTO blogQueryDTO = new BlogQueryDTO();
         BeanUtils.copyProperties(blogPageQueryDTO, blogQueryDTO);
@@ -61,24 +60,26 @@ public class BlogController {
         pageQueryDTO.setPageSize(blogPageQueryDTO.getPageSize());
         pageQueryDTO.setQuery(blogQueryDTO);
 
-        PageResult<Blog> pageResult = blogService.pageQuery(uid, pageQueryDTO);
+        PageResult<Blog> pageResult = blogService.pageQuery(pageQueryDTO);
         return Result.success(pageResult);
     }
 
     /**
-     * 创建博客(身份校验)
+     * 创建博客
      * @param uid
      * @param blogDTO
      * @return
      */
     @PostMapping("create")
     @Operation(summary = "创建博客接口")
-    public Result<String> createBlog(@PathVariable("uid") Long uid,
-    @RequestBody BlogDTO blogDTO) {
-        // 身份校验
-        validatePermission(uid);
-        
+    public Result<String> createBlog(@RequestBody BlogDTO blogDTO) {
+        // 身份存在校验
+        validateLogin();
+
+        // 传递jwt身份权限
+        Long uid = BaseContext.getCurrentId();
         log.info(">{}发起了创建博客请求<", uid);
+
         String bloguid =  blogService.createBlog(uid, blogDTO);
 
         return Result.success(bloguid);
@@ -93,8 +94,9 @@ public class BlogController {
      */
     @GetMapping("/{bloguid}")
     @Operation(summary = "博文查询接口")
-    public Result<Blog> getBlogByBloguid(@PathVariable("uid") Long uid,
+    public Result<Blog> getBlogByBloguid(
     @PathVariable("bloguid") String bloguid) {
+        Long uid = BaseContext.getCurrentId();
 
         Blog blog = blogService.getBlogByBloguid(uid, bloguid);
 
@@ -109,15 +111,15 @@ public class BlogController {
      */
     @DeleteMapping("/{bloguid}")
     @Operation(summary = "删除博客接口")
-    public Result<Void> deleteBlogByBloguid(@PathVariable("uid") Long uid,
+    public Result<Void> deleteBlogByBloguid(
     @PathVariable("bloguid") String bloguid) {
-        // 身份校验
-        validatePermission(uid);
+        // 身份存在校验
+        validateLogin();
 
-        log.info(">{}发起删除博客{}的请求<", uid, bloguid);
+        log.info(">发起删除博客{}的请求<", bloguid);
         blogService.deleteBlogByBloguid(bloguid);
 
-        log.info(">{}已删除博客{}<", uid, bloguid);
+        log.info(">已删除博客{}<", bloguid);
         return Result.success();
     }
 
@@ -128,26 +130,24 @@ public class BlogController {
      * @return
      */
     @PutMapping("/{bloguid}")
-    public Result<Void> updateBlog(@PathVariable("uid") Long uid,
+    public Result<Void> updateBlog(
     @PathVariable("bloguid") String bloguid,
     @Valid @RequestBody BlogUpdateDTO updateDTO) {
-        // 身份校验
-        validatePermission(uid);
+        Long uid = BaseContext.getCurrentId();
         log.info(">{}发起了更新{}博客的请求<", uid, bloguid);
-        blogService.updateBlog(bloguid, updateDTO);
+        blogService.updateBlog(uid, bloguid, updateDTO);
 
         log.info(">{}更新博客{}成功<", uid, bloguid);
         return Result.success();
     }
 
     // ? 功能方法
-    // 身份校验
-    private void validatePermission(Long uid) {
+    // 身份存在校验
+    private void validateLogin() {
         Long id = BaseContext.getCurrentId();
-        if (id != null && id.equals(uid)) {
+        if (id != null && id > 0) {
             return;
         }
-        log.error(">Controller拦截：身份验证失败,id:{},uid:{}<", id, uid);
-        throw new PermissionException(MessageConstant.NO_PERMISSION);
+        throw new AccountException(MessageConstant.USER_NOT_EXISTS);
     }
 }

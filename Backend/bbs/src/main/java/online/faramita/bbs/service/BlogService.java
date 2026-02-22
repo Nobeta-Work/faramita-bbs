@@ -14,7 +14,7 @@ public interface BlogService {
      * @param pageQueryDTO
      * @return
      */
-    PageResult<Blog> pageQuery(Long uid, PageQueryDTO<BlogQueryDTO> pageQueryDTO);
+    PageResult<Blog> pageQuery(PageQueryDTO<BlogQueryDTO> pageQueryDTO);
 
     /**
      * 创建博客
@@ -42,9 +42,10 @@ public interface BlogService {
     /**
      * 更新博客
      * @param uid
+     * @param bloguid
      * @param updateDTO
      */
-    void updateBlog(String bloguid, BlogUpdateDTO updateDTO);
+    void updateBlog(Long uid, String bloguid, BlogUpdateDTO updateDTO);
 
     
 

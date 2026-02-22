@@ -1,14 +1,21 @@
 faramita:
-  prod:
-    jwt:
-      secret: ${生产环境密钥}
-      expire: 86400000
-      header: Authorization
-    file:
-      avatar:
-        root-path: ${生产环境路径}  # 生产环境存储路径
-        max-size: 10485760
-        expire: 2
+  jwt:
+    secret: ${FARAMITA_JWT_SECRET}
+    expire: 86400000
+    header: Authorization
+  file:
+    avatar:
+      root-path: /opt/projects/faramita-bbs/data/avatars/  # 生产环境存储路径
+      max-size: 10485760
+      expire: 2
+    image:
+      max-size: 15728640
+  github:
+    token: ${FARAMITA_GITHUB_TOKEN}
+  datasource:
+    url: ${FARAMITA_DB_URL}
+    username: ${FARAMITA_DB_USERNAME}
+    password: ${FARAMITA_DB_PASSWORD}
 
 springdoc:
   api-docs:

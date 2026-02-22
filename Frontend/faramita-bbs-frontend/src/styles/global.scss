@@ -1,0 +1,403 @@
+:root {
+  /* New Design System Variables */
+  --bg-primary: white; /* Warm/Linen White */
+  --text-primary: #1A1A1A;
+  --text-secondary: #4A4A4A;
+  --text-tertiary: #9AA5B1;
+  --accent-color: #006D77; /* Deep Teal */
+  --accent-highlight: #E29578; /* Warm Coral */
+  --line-color: rgba(0,0,0,0.08);
+  --card-hover: rgba(0,0,0,0.03);
+  --avatar-shadow: rgba(0,0,0,0.1);
+  --modal-bg: rgba(255, 255, 255, 0.85);
+  --deco-line-color: black;
+
+  /* Legacy mapping for compatibility */
+  --bg-color: var(--bg-primary);
+  --dot-color: black;
+}
+
+html {
+  background-color: var(--bg-primary) !important;
+}
+
+html.dark {
+  --bg-primary: #0F1115; /* Deep Space */
+  --text-primary: #E6E6E6;
+  --text-secondary: #B0B0B0;
+  --text-tertiary: #606060;
+  --accent-color: #83C5BE; /* Soft Aqua */
+  --accent-highlight: #FFDDD2; /* Pale Peach */
+  --line-color: rgba(255,255,255,0.08);
+  --card-hover: rgba(255,255,255,0.03);
+  --avatar-shadow: rgba(0,0,0,0.5);
+  --modal-bg: rgba(20, 20, 25, 0.85);
+  --dot-color: rgba(255, 255, 255, 0.12);
+  --deco-line-color: rgb(252, 0, 185);
+
+  --bg-color: var(--bg-primary);
+  background-color: var(--bg-primary) !important;
+}
+
+/* Static Dot Grid Background (Legacy) */
+.static-dot-grid {
+  display: none;
+}
+
+body {
+  margin: 0;
+  font-family: 'Lato', sans-serif;
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* Glassmorphism utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+html.dark .glass {
+  background: rgba(20, 20, 25, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Background Canvas */
+.bg-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: -1; /* Behind content */
+  pointer-events: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+}
+
+.vditor-reset, .vditor-preview__content {
+  h1 { 
+    color: #fc1378 !important; 
+    border-bottom: none !important;
+    box-shadow: none !important;
+    padding-bottom: 0.3em !important;
+    display: block; // Changed from flex to block to fix editor alignment
+    width: fit-content;
+    text-decoration: none !important;
+    line-height: 1.2;
+    
+    // Gradient underline approach: only on the text, not on pseudo-elements
+    background-image: linear-gradient(to right, #bd34fe 100%, #bd34fe 100%);
+    background-repeat: no-repeat;
+    background-size: calc(100% - 2.5em) 2px;
+    background-position: center bottom;
+    
+    &::before { content: "『"; margin-right: 4px; display: inline; } // Changed to inline
+    &::after { content: "』"; margin-left: 4px; display: inline; } // Changed to inline
+  }
+  h2 { 
+    color: #fc13c9 !important; 
+    width: fit-content;
+    text-decoration: none !important;
+    display: block; // Changed from flex to block
+    line-height: 1.2;
+
+    background-image: linear-gradient(to right, #a453fe 100%, #a453fe 100%);
+    background-repeat: no-repeat;
+    background-size: calc(100% - 2em) 1.5px;
+    background-position: center bottom;
+
+    &::before { content: "「"; margin-right: 2px; display: inline; } // Changed to inline
+    &::after { content: "」"; margin-left: 2px; display: inline; } // Changed to inline
+  }
+  h3 { color: #da01af !important; }
+  h4 { color: #88006d !important; }
+  h5 { color: #fca018 !important; }
+  h6 { color: #d2b303 !important; }
+  h4, h5, h6 { font-size: 1.25rem !important; }
+  h1 a, h2 a, h3 a, h4 a, h5 a, h6 a { color: inherit !important; text-decoration: none; }
+
+  // Bold + Italic Highlight Block
+  strong em, em strong, b i, i b {
+    background-color: #fff5b1;
+    color: #ef6b06;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-style: normal;
+    font-weight: bold;
+    margin: 0;
+    border-bottom: 2px solid #f79b4b;
+  }
+
+  // Beautified Images
+  img {
+    display: block;
+    max-width: 90%;
+    margin: 24px auto;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+
+    &:hover {
+      transform: scale(1.02) translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    }
+  }
+
+  // Beautified Inline Code
+  code:not(pre code) {
+    background-color: #eee;
+    color: red;
+    padding: 1px 4px !important;
+    border-radius: 0px !important;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 0.9em !important;
+    margin: 0 4px;
+    border: 1px solid rgba(0, 109, 119, 0.15);
+    transition: all 0.2s ease;
+    vertical-align: middle;
+
+    &:hover {
+      background-color: rgba(0, 109, 119, 0.12);
+      border-color: rgba(0, 109, 119, 0.3);
+    }
+  }
+
+  // Beautified Links
+  a {
+    color: blue;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    border-bottom: 1px dashed var(--accent-color);
+    padding-bottom: 1px;
+
+    &:hover {
+      color: var(--accent-highlight) !important;
+      border-bottom-style: solid;
+    }
+  }
+
+  // Beautified Task Lists (Checklists)
+  .vditor-task-list {
+    list-style: none !important;
+    padding-left: 0.5em !important;
+
+    .vditor-task-list__item {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      transition: all 0.2s ease;
+
+      input[type="checkbox"] {
+        margin-top: 5px;
+        margin-right: 10px;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: var(--accent-color);
+        border-radius: 4px;
+      }
+
+      &--done {
+        color: var(--text-tertiary);
+        text-decoration: line-through rgba(0, 0, 0, 0.2);
+      }
+    }
+  }
+}
+
+html.dark {
+    .vditor-reset, .vditor-preview__content {
+      background-color: transparent !important;
+      color: var(--text-primary) !important;
+    h1 { 
+      color: #FFD700 !important; 
+      border-bottom: none !important;
+      box-shadow: none !important;
+      padding-bottom: 0.3em !important;
+      display: block; // Changed from flex to block
+      width: fit-content;
+      text-decoration: none !important;
+      line-height: 1.2;
+
+      background-image: linear-gradient(to right, #FFD700 100%, #FFD700 100%);
+      background-repeat: no-repeat;
+      background-size: calc(100% - 2.5em) 2px;
+      background-position: center bottom;
+      
+      &::before { content: "『"; margin-right: 4px; display: inline; }
+      &::after { content: "』"; margin-left: 4px; display: inline; }
+    }
+    h2 { 
+      color: #D9D633 !important; 
+      width: fit-content;
+      text-decoration: none !important;
+      border-bottom: none !important; // Explicitly disable Vditor's default border
+      display: block; // Changed from flex to block
+      line-height: 1.2;
+
+      background-image: linear-gradient(to right, #D9D633 100%, #D9D633 100%);
+      background-repeat: no-repeat;
+      background-size: calc(100% - 2em) 1.5px;
+      background-position: center bottom;
+
+      &::before { content: "「"; margin-right: 2px; display: inline; }
+      &::after { content: "」"; margin-left: 2px; display: inline; }
+    }
+    h3 { color: #B3D566 !important; }
+    h4 { color: #8DD399 !important; }
+    h5 { color: #67D2CC !important; }
+    h6 { color: #41D1FF !important; }
+    h4, h5, h6 { font-size: 1.25rem !important; }
+    h1 a, h2 a, h3 a, h4 a, h5 a, h6 a { color: inherit !important; text-decoration: none; }
+
+    // Bold + Italic Highlight Block (Dark Mode)
+    strong em, em strong, b i, i b {
+      background-color: #B3E60F;
+      color: #161823;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-style: normal;
+      font-weight: bold;
+      margin: 0;
+      border-bottom: 2px solid #D149D2;
+    }
+
+    // Beautified Images (Dark Mode)
+    img {
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      background-color: #1a1a1a;
+
+      &:hover {
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
+      }
+    }
+
+    // Beautified Inline Code (Dark Mode)
+    code:not(pre code) {
+      background-color: #6a7a80 !important;
+      color: #00f4ec;
+
+      &:hover {
+        background-color: rgba(131, 197, 190, 0.2);
+        border-color: rgba(131, 197, 190, 0.4);
+      }
+    }
+
+    // Beautified Links (Dark Mode)
+    a {
+      color: rgb(255, 196, 0);
+      border-bottom-color: var(--accent-color);
+
+      &:hover {
+        color: rgb(238, 0, 255) !important;
+        border-bottom-color: var(--accent-highlight);
+      }
+    }
+
+    // Beautified Task Lists (Dark Mode)
+    .vditor-task-list {
+      .vditor-task-list__item {
+        &--done {
+          text-decoration-color: rgba(255, 255, 255, 0.2);
+        }
+      }
+    }
+  }
+
+  // Vditor Dark Theme Overrides
+  .vditor {
+    background-color: transparent !important;
+    border-color: var(--line-color) !important;
+    
+    .vditor-toolbar {
+      background-color: rgba(30, 32, 35, 0.8) !important; // Slightly lighter than bg for depth
+      border-bottom-color: var(--line-color) !important;
+      backdrop-filter: blur(8px);
+      
+      .vditor-tooltipped {
+        color: var(--text-secondary) !important;
+        &:hover {
+          background-color: var(--card-hover) !important;
+          color: var(--text-primary) !important;
+        }
+      }
+
+      .vditor-toolbar__divider {
+        background-color: var(--line-color) !important;
+      }
+    }
+
+    .vditor-content {
+      background-color: transparent !important;
+      
+      // Ensure the reset area inside content is also dark
+      .vditor-reset {
+        background-color: transparent !important;
+      }
+    }
+
+    .vditor-textarea {
+      background-color: transparent !important;
+      color: var(--text-primary) !important;
+      
+      // Target all editing modes specifically
+      .vditor-reset, 
+      .vditor-ir, 
+      .vditor-sv, 
+      .vditor-wysiwyg {
+        background-color: transparent !important;
+        color: var(--text-primary) !important;
+        background-image: none !important; // Remove any potential default background images
+      }
+
+      // Fix for the actual contenteditable area
+      [contenteditable="true"] {
+        background-color: transparent !important;
+      }
+    }
+
+    .vditor-counter {
+      background-color: transparent !important;
+      color: var(--text-tertiary) !important;
+    }
+
+    .vditor-outline {
+      background-color: var(--bg-primary) !important;
+      border-left-color: var(--line-color) !important;
+    }
+
+    // Dropdown menus and panels
+    .vditor-panel, .vditor-hint, .vditor-menu {
+      background-color: #1e2025 !important;
+      border-color: var(--line-color) !important;
+      color: var(--text-primary) !important;
+      
+      button:hover {
+        background-color: var(--card-hover) !important;
+      }
+    }
+  }
+}

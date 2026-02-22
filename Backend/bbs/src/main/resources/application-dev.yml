@@ -1,11 +1,18 @@
 faramita:
-  dev:
-    jwt:
-      secret: thisIsASecure256BitKeyForHmacSha256Algorithm
-      expire: 86400000 # 1天
-      header: Authorization
-    file:
-      avatar:
-        root-path: D:\Education\Project\Faramita\Backend\resources\static\images\avator\
-        max-size: 10485760  # 最大上传10MB
-        expire: 2  # 过期时间2h
+  jwt:
+    secret: ${FARAMITA_JWT_SECRET:replace-with-dev-jwt-secret}
+    expire: 864000000 # 10天
+    header: Authorization
+  file:
+    avatar:
+      root-path: D:\Education\Project\Faramita BBS\Backend\resources\static\images\avator\
+      max-size: 10485760  # 最大上传10MB
+      expire: 2  # 过期时间2h
+    image:
+      max-size: 15728640  # 最大上传15MB
+  github:
+    token: ${FARAMITA_GITHUB_TOKEN:}
+  datasource:
+    url: ${FARAMITA_DB_URL:jdbc:mysql://localhost:3306/faramita_bbs?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${FARAMITA_DB_USERNAME:root}
+    password: ${FARAMITA_DB_PASSWORD:}

@@ -31,6 +31,8 @@ public class FileController {
     
     /**
      * 全局头像上传接口(无需身份校验=>无关联用户)
+     * @param file
+     * @return
      */
     @PostMapping("/uploadAvatar")
     @Operation(summary = "全局头像上传接口")
@@ -49,6 +51,20 @@ public class FileController {
     @Operation(summary = "全局头像下载接口")
     @GetMapping("/downloadAvatar")
     public void downloadAvatar(@RequestParam("avatar") String fileUuid, HttpServletResponse response) throws IOException {
+        log.info(">头像文件下载<");
         fileService.downloadAvatar(fileUuid, response);
+    }
+
+    /**
+     * 图片上传接口
+     * @param file
+     * @return
+     */
+    @Operation(summary = "图片上传接口")
+    @PostMapping("/uploadImage")
+    public Result<String> uploadImage(@RequestParam("file") MultipartFile file) {
+        log.info(">图片文件上传<");
+        String url = fileService.uploadImage(file);
+        return Result.success(url);
     }
 }

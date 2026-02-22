@@ -1,7 +1,11 @@
 import axios, { type InternalAxiosRequestConfig, type AxiosResponse} from "axios";
-import { ElMessage, ElMessageBox } from "element-plus";
 import { useUserStore } from "@/stores/user";
 import router from "@/router";
+import { createDiscreteApi } from 'naive-ui'
+
+const { message, dialog } = createDiscreteApi(
+  ['message', 'dialog']
+)
 
 // 1.创建Axios实例
 const service = axios.create({
@@ -43,18 +47,20 @@ service.interceptors.response.use(
             // 3.1.1响应逻辑性失败
             console.error(res.message || 'Error')
             if (res.message) {
-                ElMessage.error(res.message)
+                message.error(res.message)
             }
             // 3.1.2处理401错误响应
             if (res.code === 401) {
-                ElMessageBox.confirm('访问拒绝','您未登录或身份已失效，请重新登录',{
-                    confirmButtonText: '点击登录',
-                    cancelButtonText: '取消',
-                    type: 'warning',
-                }).then(() => {
-                    const userStore = useUserStore()
-                    userStore.logout()
-                    router.push('/login')
+                dialog.warning({
+                    title: '访问拒绝',
+                    content: '您未登录或身份已失效，请重新登录',
+                    positiveText: '点击登录',
+                    negativeText: '取消',
+                    onPositiveClick: () => {
+                        const userStore = useUserStore()
+                        userStore.logout()
+                        router.push('/login')
+                    }
                 })
             }
 
@@ -69,29 +75,29 @@ service.interceptors.response.use(
         
         // 处理错误类型
         if (error.message.includes('Network Error')) {
-            ElMessage.error('网络连接失败，请检查网络设置')
+            message.error('网络连接失败，请检查网络设置')
         } else if (error.message.includes('timeout')) {
-            ElMessage.error('请求超时，请稍后重试')
+            message.error('请求超时，请稍后重试')
         } else if (error.response) {
             // 处理HTTP错误状态码
             switch (error.response.status) {
                 case 400:
-                    ElMessage.error('请求参数错误')
+                    message.error('请求参数错误')
                     break
                 case 401:
-                    ElMessage.error('未授权，请登录')
+                    message.error('未授权，请登录')
                     break
                 case 403:
-                    ElMessage.error("拒绝访问")
+                    message.error("拒绝访问")
                     break
                 case 404:
-                    ElMessage.error('请求资源不存在')
+                    message.error('请求资源不存在')
                     break
                 case 500:
-                    ElMessage.error('服务器错误')
+                    message.error('服务器错误')
                     break
                 default:
-                    ElMessage.error('网络异常，请稍后重试')
+                    message.error('网络异常，请稍后重试')
             }
         }
 

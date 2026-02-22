@@ -14,7 +14,7 @@ export interface PageQueryDTO< T = any> {
 }
 
 // 获取个人资料响应
-export interface ProfileRespose {
+export interface ProfileResponse {
     user: User;
     blogList: Array<Blog>;
 }

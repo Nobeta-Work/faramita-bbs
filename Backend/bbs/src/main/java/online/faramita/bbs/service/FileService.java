@@ -1,5 +1,7 @@
 package online.faramita.bbs.service;
 
+import java.io.IOException;
+
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,5 +28,12 @@ public interface FileService {
      */
     int cleanExpiredUnreferencedAvatars();
 
-    
+    /**
+     * 上传图片文件
+     * @param file
+     * @return
+     * @throws IOException 
+     */
+    String uploadImage(MultipartFile file);
+
 }
