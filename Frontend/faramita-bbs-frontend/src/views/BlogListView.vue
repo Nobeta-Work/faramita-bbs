@@ -8,7 +8,7 @@ import {
 import { Search, Add, ArrowForward, GridOutline, Person } from '@vicons/ionicons5'
 import { getBlogListPage, createBlog } from '@/api/blog'
 import { getProfileByUid } from '@/api/user'
-import { downloadAvatar } from '@/api/file'
+import { resolveAvatarUrl } from '@/utils/avatar'
 import type { Blog, BlogPageQueryDTO } from '@/types'
 import { BlogUtils } from '@/types/blog'
 import { DateUtils } from '@/types/date'
@@ -95,13 +95,10 @@ const fetchAuthorAvatars = async (blogs: Blog[]) => {
   await Promise.all(uids.map(async (uid) => {
     try {
       const res = await getProfileByUid(uid)
-      if (res.user && res.user.avatar) {
-        const blob = await downloadAvatar(res.user.avatar)
-        const url = URL.createObjectURL(blob)
-        authorAvatars.value.set(uid, url)
-      }
+      authorAvatars.value.set(uid, resolveAvatarUrl(res.user?.avatar))
     } catch (error) {
       console.error(`Failed to fetch avatar for user ${uid}`, error)
+      authorAvatars.value.set(uid, resolveAvatarUrl(undefined))
     }
   }))
 }

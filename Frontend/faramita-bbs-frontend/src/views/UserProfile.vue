@@ -8,7 +8,7 @@ import {
   ArrowForwardOutline, LogoGithub, LogoTwitter, PencilOutline, CloseOutline, CameraOutline, Person
 } from '@vicons/ionicons5'
 import { getProfileByUid, updateAvatar, updateProfile } from '@/api/user'
-import { downloadAvatar } from '@/api/file'
+import { resolveAvatarUrl } from '@/utils/avatar'
 import { useUserStore } from '@/stores/user'
 import type { User, Blog } from '@/types'
 import { DateUtils } from '@/types/date'
@@ -29,7 +29,7 @@ const uid = computed(() => Number(route.params.uid))
 const isCurrentUser = computed(() => userStore.userInfo?.id === uid.value)
 
 const user = ref<User | null>(null)
-const userAvatarUrl = ref<string | undefined>(undefined)
+const userAvatarUrl = computed(() => resolveAvatarUrl(user.value?.avatar))
 const blogList = ref<Blog[]>([])
 
 const renderDefaultAvatar = () => h(NIcon, null, { default: () => h(Person) })
@@ -208,18 +208,6 @@ const fetchProfile = async () => {
     user.value = res.user
     blogList.value = res.blogList
     document.title = `${res.user.nickname} - Estetica`
-
-    if (res.user.avatar) {
-        try {
-            const blob = await downloadAvatar(res.user.avatar)
-            userAvatarUrl.value = URL.createObjectURL(blob)
-        } catch (e) {
-            console.error(e)
-            userAvatarUrl.value = undefined
-        }
-    } else {
-        userAvatarUrl.value = undefined
-    }
   } catch (error) {
     message.error('无法加载用户信息')
   } finally {

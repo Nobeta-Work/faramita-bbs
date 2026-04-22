@@ -2,8 +2,9 @@
 # 仅保留需要发布的主工程目录
 备份/
 version/
-Architecture/
 API/
+docs/
+design/
 
 # 隐私与本地文件
 secret.txt
@@ -21,6 +22,10 @@ Thumbs.db
 *.log
 *.tmp
 *.swp
+
+# 缓存
+.npm-cache/
+.playwright-cli/
 
 # 运行时资源（不入库）
 Backend/resources/static/images/

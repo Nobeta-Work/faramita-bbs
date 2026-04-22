@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { h, ref, computed, watch, onMounted } from 'vue'
+import { h, ref, computed } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { NLayoutHeader, NMenu, NButton, NAvatar, NDropdown, NSpace, NIcon, NSwitch, NDrawer, NDrawerContent } from 'naive-ui'
 import { PersonCircleOutline, LogOutOutline, Moon, Sunny, MenuOutline, Person } from '@vicons/ionicons5'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 import { storeToRefs } from 'pinia'
-import { downloadAvatar } from '@/api/file'
+import { resolveAvatarUrl } from '@/utils/avatar'
 
 const themeStore = useThemeStore()
 const { isDark } = storeToRefs(themeStore)
@@ -15,7 +15,7 @@ const router = useRouter()
 const route = useRoute()
 
 const showMobileMenu = ref(false)
-const userAvatarUrl = ref<string | undefined>(undefined)
+const userAvatarUrl = computed(() => resolveAvatarUrl(userStore.userInfo?.avatar))
 
 // 默认头像图标渲染函数
 const renderDefaultAvatar = () => h(NIcon, null, { default: () => h(Person) })
@@ -28,29 +28,6 @@ const activeKey = computed(() => {
     return 'blog'
   }
   return null
-})
-
-const fetchUserAvatar = async () => {
-    if (userStore.userInfo?.avatar) {
-        try {
-            const blob = await downloadAvatar(userStore.userInfo.avatar)
-            userAvatarUrl.value = URL.createObjectURL(blob)
-        } catch (error) {
-            console.error('加载头像失败', error)
-        }
-    } else {
-        userAvatarUrl.value = undefined
-    }
-}
-
-watch(() => userStore.userInfo?.avatar, () => {
-    fetchUserAvatar()
-})
-
-onMounted(() => {
-    if (userStore.isAuthenticated) {
-        fetchUserAvatar()
-    }
 })
 
 const menuOptions = [

@@ -145,12 +145,14 @@ public class UserServiceImpl implements UserService {
             throw e;
         }
         // 4.关联头像和用户
-        AvatarInfo avatorInfo = AvatarInfo.builder()
-                        .fileUuid(user.getAvatar())
-                        .isReferenced(1)
-                        .uid(user.getId())
-                        .build();
-        fileMapper.updateAvator(avatorInfo);
+        if (user.getAvatar() != null && !user.getAvatar().isBlank()) {
+            AvatarInfo avatorInfo = AvatarInfo.builder()
+                    .fileUuid(user.getAvatar())
+                    .isReferenced(1)
+                    .uid(user.getId())
+                    .build();
+            fileMapper.updateAvator(avatorInfo);
+        }
     }
 
     /**
@@ -192,21 +194,21 @@ public class UserServiceImpl implements UserService {
         validateUser(uid);
         User user = new User();
         // 文件上传磁盘，存入avatar_info数据库，无关联
-        String fileUuid = fileService.uploadAvatar(file);
+        String avatarKey = fileService.uploadAvatar(file);
         // 更新关联
         AvatarInfo avatar = AvatarInfo.builder()
-                        .fileUuid(fileUuid)
+                        .fileUuid(avatarKey)
                         .uid(uid)
                         .isReferenced(1)
                         .build();
         fileMapper.updateAvator(avatar);
         // 更新数据库
         user.setId(uid);
-        user.setAvatar(fileUuid);
+        user.setAvatar(avatarKey);
 
         userMapper.update(user);
 
-        return fileUuid;
+        return avatarKey;
     }
 
     /**
@@ -217,10 +219,11 @@ public class UserServiceImpl implements UserService {
     public void updateProfile(ProfileDTO profileDTO) {
         // 用户存在校验
         User user = validateUser(profileDTO.getId());
+        String oldPassword = user.getPassword();
         BeanUtils.copyProperties(profileDTO, user);
         // 密码修改处理
         if (profileDTO.getPassword() != null) {
-            if (PasswordEncoderUtil.matches(profileDTO.getPassword(), user.getPassword())) {
+            if (PasswordEncoderUtil.matches(profileDTO.getPassword(), oldPassword)) {
                 throw new AccountException(MessageConstant.PASSWORD_EXIST);
             }
             String password = PasswordEncoderUtil.encode(user.getPassword());

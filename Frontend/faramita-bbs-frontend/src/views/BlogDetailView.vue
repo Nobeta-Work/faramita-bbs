@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, onUnmounted, nextTick, h } from 'vue'
+import { ref, reactive, onMounted, computed, watch, onUnmounted, nextTick, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Vditor from 'vditor'
 import 'vditor/dist/index.css'
 import { getBlog, updateBlog, deleteBlog } from '@/api/blog'
 import { getProfileByUid } from '@/api/user'
-import { downloadAvatar, uploadImage } from '@/api/file'
+import { uploadImage } from '@/api/file'
+import { resolveAvatarUrl } from '@/utils/avatar'
+import { decorateMarkdownContent } from '@/utils/markdown'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import { storeToRefs } from 'pinia'
@@ -111,8 +113,8 @@ const { isDark } = storeToRefs(themeStore)
 
 const blogUid = route.params.bloguid as string
 const blog = ref<Blog | null>(null)
-const authorAvatar = ref<string | undefined>(undefined)
 const loading = ref(false)
+const editingSurfaceRef = ref<HTMLDivElement | null>(null)
 
 // 默认头像图标渲染函数
 const renderDefaultAvatar = () => h(NIcon, null, { default: () => h(Person) })
@@ -124,6 +126,20 @@ const hoverRows = ref(0)
 const hoverCols = ref(0)
 const content = ref('')
 const summary = ref('')
+let markdownDecorationTimer: number | null = null
+let editorInteractionCleanup: (() => void) | null = null
+const tableHoverState = reactive({
+  showColumn: false,
+  showRow: false,
+  columnLeft: 0,
+  columnTop: 0,
+  rowLeft: 0,
+  rowTop: 0,
+  table: null as HTMLTableElement | null,
+  cell: null as HTMLTableCellElement | null,
+  row: null as HTMLTableRowElement | null,
+  columnIndex: -1,
+})
 const originalBlogData = ref<{
   title: string
   content: string
@@ -133,7 +149,7 @@ const originalBlogData = ref<{
 const isPublished = ref(1) // 1: published, 0: draft
 
 const windowWidth = ref(window.innerWidth)
-const editorHeight = computed(() => (windowWidth.value <= 1024 ? 520 : 760))
+const editorHeight = computed(() => (windowWidth.value <= 1024 ? window.innerHeight - 120 : 760))
 const showTocPanel = ref(false)
 const sidePanelToggleText = computed(() => (showTocPanel.value ? 'Info' : 'TOC'))
 
@@ -142,6 +158,12 @@ const toggleSidePanel = () => {
 }
 
 const setPageScrollLock = (locked: boolean) => {
+  // Do not lock body scroll on mobile since stacked layout exceeds viewport height
+  if (windowWidth.value <= 1024) {
+    document.documentElement.style.overflow = ''
+    document.body.style.overflow = ''
+    return
+  }
   const overflowValue = locked ? 'hidden' : ''
   document.documentElement.style.overflow = overflowValue
   document.body.style.overflow = overflowValue
@@ -153,6 +175,10 @@ const handleResize = () => {
   const isMobile = windowWidth.value <= 1024
   
   if (wasMobile !== isMobile) {
+    if (isEditing.value) {
+      setPageScrollLock(true)
+    }
+    
     if (scrollSpyObserver) {
       scrollSpyObserver.disconnect()
       scrollSpyObserver = null
@@ -237,7 +263,6 @@ watch(vditorToolbar, () => {
   clearTimeout(resizeTimer)
   resizeTimer = setTimeout(() => {
     const currentVal = vditor.value?.getValue() || content.value
-    vditor.value?.destroy()
     initVditorEdit(currentVal)
   }, 500)
 })
@@ -265,11 +290,12 @@ const toggleEdit = () => {
     isEditing.value = false
   }
 }
-  const isAuthor = computed(() => {
+const isAuthor = computed(() => {
   return userStore.userInfo?.id === blog.value?.authorId
 })
 
 const authorProfile = ref<any>(null)
+const authorAvatarUrl = computed(() => resolveAvatarUrl(authorProfile.value?.avatar))
 
 // Theme adaptation helper
 const vditorPreviewMode = computed(() => isDark.value ? 'dark' : 'light')
@@ -385,6 +411,318 @@ const scrollToHeading = (id: string) => {
   }
 }
 
+const hideTableHoverState = () => {
+  tableHoverState.showColumn = false
+  tableHoverState.showRow = false
+  tableHoverState.table = null
+  tableHoverState.cell = null
+  tableHoverState.row = null
+  tableHoverState.columnIndex = -1
+}
+
+const cleanupEditorInteractions = () => {
+  if (editorInteractionCleanup) {
+    editorInteractionCleanup()
+    editorInteractionCleanup = null
+  }
+  hideTableHoverState()
+}
+
+const destroyVditorInstance = () => {
+  cleanupEditorInteractions()
+  clearTimeout(resizeTimer)
+  resizeTimer = null
+  if (vditor.value) {
+    vditor.value.destroy()
+    vditor.value = null
+  }
+}
+
+const scheduleMarkdownDecoration = (root?: HTMLElement | null) => {
+  if (markdownDecorationTimer) {
+    clearTimeout(markdownDecorationTimer)
+  }
+
+  markdownDecorationTimer = window.setTimeout(() => {
+    const targetRoot = root ?? (isEditing.value ? vditorEditRef.value : vditorPreviewRef.value)
+    if (targetRoot) {
+      decorateMarkdownContent(targetRoot)
+    }
+  }, 0)
+}
+
+const syncEditorContent = (value?: string) => {
+  if (typeof value === 'string') {
+    content.value = value
+  } else if (vditor.value) {
+    content.value = vditor.value.getValue()
+  }
+
+  clearTimeout(tocSyncTimer)
+  tocSyncTimer = setTimeout(() => {
+    nextTick(() => {
+      extractToc()
+      if (scrollSpyObserver) {
+        scrollSpyObserver.disconnect()
+      }
+      scrollSpyObserver = setupScrollSpy()
+    })
+  }, 180)
+
+  scheduleMarkdownDecoration()
+}
+
+const replaceSelectionWithRenderedMarkdown = (range: Range, markdown: string) => {
+  if (!vditor.value) {
+    return
+  }
+
+  const lute = (vditor.value as any).lute
+  const renderedHtml = lute?.Md2VditorIRDOM
+    ? lute.Md2VditorIRDOM(markdown)
+    : markdown
+
+  if (!renderedHtml) {
+    return
+  }
+
+  const fragment = range.createContextualFragment(renderedHtml)
+  const lastNode = fragment.lastChild
+  range.deleteContents()
+  range.insertNode(fragment)
+
+  if (lastNode) {
+    const nextRange = document.createRange()
+    nextRange.setStartAfter(lastNode)
+    nextRange.collapse(true)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(nextRange)
+  }
+}
+
+const removeIndentBeforeCaret = (range: Range) => {
+  const startContainer = range.startContainer
+  if (startContainer.nodeType !== Node.TEXT_NODE) {
+    return false
+  }
+
+  const textNode = startContainer as Text
+  const text = textNode.data
+  const caretOffset = range.startOffset
+  const beforeCaret = text.slice(0, caretOffset)
+
+  if (beforeCaret.endsWith('    ')) {
+    textNode.deleteData(caretOffset - 4, 4)
+    range.setStart(textNode, caretOffset - 4)
+    range.collapse(true)
+    return true
+  }
+
+  if (beforeCaret.endsWith('\t')) {
+    textNode.deleteData(caretOffset - 1, 1)
+    range.setStart(textNode, caretOffset - 1)
+    range.collapse(true)
+    return true
+  }
+
+  return false
+}
+
+const handleEditorTab = (event: KeyboardEvent) => {
+  if (!vditor.value || !vditorEditRef.value) {
+    return false
+  }
+
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) {
+    return false
+  }
+
+  const range = selection.getRangeAt(0)
+  if (!vditorEditRef.value.contains(range.commonAncestorContainer)) {
+    return false
+  }
+
+  const indent = '    '
+
+  if (range.collapsed) {
+    if (event.shiftKey) {
+      return removeIndentBeforeCaret(range)
+    }
+
+    const textNode = document.createTextNode(indent)
+    range.insertNode(textNode)
+    range.setStartAfter(textNode)
+    range.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(range)
+    return true
+  }
+
+  const temp = document.createElement('div')
+  temp.appendChild(range.cloneContents())
+
+  const lute = (vditor.value as any).lute
+  const selectedMarkdown = lute?.VditorIRDOM2Md
+    ? lute.VditorIRDOM2Md(temp.innerHTML)
+    : temp.textContent || ''
+
+  const lines = selectedMarkdown.split(/\r?\n/)
+  const transformedMarkdown = event.shiftKey
+    ? lines.map((line: string) => line.replace(/^( {1,4}|\t)/, '')).join('\n')
+    : lines.map((line: string) => `${indent}${line}`).join('\n')
+
+  replaceSelectionWithRenderedMarkdown(range, transformedMarkdown)
+  return true
+}
+
+const insertTableColumnAt = (cell: HTMLTableCellElement) => {
+  const row = cell.parentElement as HTMLTableRowElement | null
+  const table = cell.closest('table') as HTMLTableElement | null
+  if (!row || !table) {
+    return
+  }
+
+  const index = Array.from(row.children).indexOf(cell)
+  Array.from(table.rows).forEach((tableRow, rowIndex) => {
+    const targetCell = tableRow.cells[index]
+    if (!targetCell) {
+      return
+    }
+
+    targetCell.insertAdjacentHTML('afterend', rowIndex === 0 ? '<th> </th>' : '<td> </td>')
+  })
+}
+
+const insertTableRowAt = (cell: HTMLTableCellElement) => {
+  const row = cell.parentElement as HTMLTableRowElement | null
+  const table = cell.closest('table') as HTMLTableElement | null
+  if (!row) {
+    return
+  }
+
+  const rowHTML = Array.from({ length: row.children.length })
+    .map(() => (cell.tagName === 'TH' ? '<th> </th>' : '<td> </td>'))
+    .join('')
+
+  if (cell.tagName === 'TH') {
+    if (!table) {
+      return
+    }
+
+    const tbody = table.tBodies[0] ?? table.createTBody()
+    tbody.insertAdjacentHTML('afterbegin', `<tr>${rowHTML}</tr>`)
+    return
+  }
+
+  row.insertAdjacentHTML('afterend', `<tr>${rowHTML}</tr>`)
+}
+
+const handleTableHover = (event: MouseEvent) => {
+  const hoverSurface = editingSurfaceRef.value || (vditorEditRef.value?.parentElement as HTMLElement | null)
+  if (!isEditing.value || windowWidth.value <= 1024 || !hoverSurface || !vditorEditRef.value) {
+    hideTableHoverState()
+    return
+  }
+
+  const target = event.target as HTMLElement | null
+  if (!target || !hoverSurface.contains(target)) {
+    hideTableHoverState()
+    return
+  }
+
+  if (target.closest('.table-hover-action')) {
+    return
+  }
+
+  const cell = target?.closest('td, th') as HTMLTableCellElement | null
+
+  if (!cell) {
+    hideTableHoverState()
+    return
+  }
+
+  const table = cell.closest('table') as HTMLTableElement | null
+  const row = cell.parentElement as HTMLTableRowElement | null
+  if (!table || !row) {
+    hideTableHoverState()
+    return
+  }
+
+  const tableRect = table.getBoundingClientRect()
+  const cellRect = cell.getBoundingClientRect()
+  const surfaceRect = hoverSurface.getBoundingClientRect()
+  const buttonRadius = 48
+  const buttonOffset = 24
+  const nearRightEdge = event.clientX >= tableRect.right - 16
+  const nearBottomEdge = event.clientY >= tableRect.bottom - 24
+
+  tableHoverState.table = table
+  tableHoverState.cell = cell
+  tableHoverState.row = row
+  tableHoverState.columnIndex = Array.from(row.children).indexOf(cell)
+  tableHoverState.showColumn = nearRightEdge
+  tableHoverState.showRow = nearBottomEdge
+  tableHoverState.columnLeft = Math.max(buttonRadius, Math.min(surfaceRect.width - buttonRadius, tableRect.right - surfaceRect.left + buttonOffset))
+  tableHoverState.columnTop = Math.max(buttonRadius, Math.min(surfaceRect.height - buttonRadius, cellRect.top - surfaceRect.top + cellRect.height / 2))
+  tableHoverState.rowLeft = Math.max(buttonRadius, Math.min(surfaceRect.width - buttonRadius, cellRect.left - surfaceRect.left + cellRect.width / 2))
+  tableHoverState.rowTop = Math.max(buttonRadius, Math.min(surfaceRect.height - buttonRadius, tableRect.bottom - surfaceRect.top + buttonOffset))
+}
+
+const handleTableColumnAction = () => {
+  if (!tableHoverState.cell) {
+    return
+  }
+
+  insertTableColumnAt(tableHoverState.cell)
+  syncEditorContent()
+  hideTableHoverState()
+}
+
+const handleTableRowAction = () => {
+  if (!tableHoverState.cell) {
+    return
+  }
+
+  insertTableRowAt(tableHoverState.cell)
+  syncEditorContent()
+  hideTableHoverState()
+}
+
+const bindEditorInteractions = () => {
+  const hoverSurface = editingSurfaceRef.value || (vditorEditRef.value?.parentElement as HTMLElement | null)
+  const editorElement = vditorEditRef.value
+  if (!hoverSurface || !editorElement) {
+    return
+  }
+
+  cleanupEditorInteractions()
+
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (event.key !== 'Tab') {
+      return
+    }
+
+    if (handleEditorTab(event)) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+  }
+
+  editorElement.addEventListener('keydown', handleKeydown, true)
+  hoverSurface.addEventListener('mousemove', handleTableHover)
+  hoverSurface.addEventListener('mouseleave', hideTableHoverState)
+  editorElement.addEventListener('scroll', hideTableHoverState)
+
+  editorInteractionCleanup = () => {
+    editorElement.removeEventListener('keydown', handleKeydown, true)
+    hoverSurface.removeEventListener('mousemove', handleTableHover)
+    hoverSurface.removeEventListener('mouseleave', hideTableHoverState)
+    editorElement.removeEventListener('scroll', hideTableHoverState)
+  }
+}
+
 const insertCustomTable = (r?: number, c?: number) => {
   const rows = r || tableRows.value
   const cols = c || tableCols.value
@@ -403,6 +741,7 @@ const insertCustomTable = (r?: number, c?: number) => {
   tableMd += '\n'
   
   vditor.value?.insertValue(tableMd)
+  syncEditorContent()
   showTableModal.value = false
   // Reset
   hoverRows.value = 0
@@ -411,9 +750,10 @@ const insertCustomTable = (r?: number, c?: number) => {
 
 // Initialize Vditor for Preview
 const initVditorPreview = async (markdown: string) => {
+  destroyVditorInstance()
   if (!vditorPreviewRef.value) return
-  
-  await Vditor.preview(vditorPreviewRef.value, markdown, {
+
+  const previewOptions = {
     mode: vditorPreviewMode.value,
     theme: {
       current: vditorContentTheme.value
@@ -424,37 +764,44 @@ const initVditorPreview = async (markdown: string) => {
     anchor: 1,
     after: () => {
       nextTick(() => {
+        if (vditorPreviewRef.value) {
+          decorateMarkdownContent(vditorPreviewRef.value)
+        }
         extractToc()
         if (scrollSpyObserver) scrollSpyObserver.disconnect()
         scrollSpyObserver = setupScrollSpy()
       })
     }
-  })
+  } as any
+
+  await Vditor.preview(vditorPreviewRef.value, markdown, previewOptions)
 }
 
 // Initialize Vditor for Editing
 const initVditorEdit = (markdown: string) => {
   if (!vditorEditRef.value) return
-  
+
+  destroyVditorInstance()
   vditor.value = new Vditor(vditorEditRef.value, {
     height: editorHeight.value,
     mode: 'ir', // Instant Rendering
     value: markdown,
     theme: vditorEditorTheme.value,
-    preview: {
-      theme: {
-        current: vditorContentTheme.value
-      },
-      hljs: {
-        style: isDark.value ? 'dracula' : 'github'
-      }
-    },
     toolbar: vditorToolbar.value,
     toolbarConfig: {
       pin: true,
     },
     cache: {
       enable: false
+    },
+    preview: {
+      theme: {
+        current: vditorContentTheme.value
+      },
+      hljs: {
+        style: isDark.value ? 'dracula' : 'github'
+      },
+      parse: decorateMarkdownContent
     },
     upload: {
       accept: 'image/*',
@@ -477,21 +824,13 @@ const initVditorEdit = (markdown: string) => {
       }
     },
     input: (value) => {
-      content.value = value
-      clearTimeout(tocSyncTimer)
-      tocSyncTimer = setTimeout(() => {
-        nextTick(() => {
-          extractToc()
-          if (scrollSpyObserver) scrollSpyObserver.disconnect()
-          scrollSpyObserver = setupScrollSpy()
-        })
-      }, 180)
+      syncEditorContent(value)
     },
     after: () => {
       nextTick(() => {
-        extractToc()
-        if (scrollSpyObserver) scrollSpyObserver.disconnect()
-        scrollSpyObserver = setupScrollSpy()
+        cleanupEditorInteractions()
+        bindEditorInteractions()
+        syncEditorContent(vditor.value?.getValue() || markdown)
       })
     }
   })
@@ -506,10 +845,6 @@ const fetchAuthorProfile = async (uid: number) => {
   try {
     const res = await getProfileByUid(uid)
     authorProfile.value = res.user
-    if (res.user.avatar) {
-      const blob = await downloadAvatar(res.user.avatar)
-      authorAvatar.value = URL.createObjectURL(blob)
-    }
   } catch (error) {
     console.error('Failed to fetch author info', error)
   }
@@ -545,17 +880,12 @@ const fetchBlog = async () => {
 // Watchers for Mode and Theme
 watch(isEditing, (newVal) => {
   setPageScrollLock(newVal)
+  destroyVditorInstance()
   nextTick(() => {
     showTocPanel.value = false
     if (newVal) {
-      if (scrollSpyObserver) {
-        scrollSpyObserver.disconnect()
-        scrollSpyObserver = null
-      }
-      // Switch to editing
       initVditorEdit(content.value)
     } else {
-      // Switch to preview
       initVditorPreview(content.value)
     }
   })
@@ -563,6 +893,7 @@ watch(isEditing, (newVal) => {
 
 watch(isDark, () => {
   // Re-initialize to apply theme
+  destroyVditorInstance()
   if (isEditing.value) {
     initVditorEdit(content.value)
   } else {
@@ -617,12 +948,11 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   clearTimeout(tocSyncTimer)
   clearTimeout(resizeTimer)
+  clearTimeout(markdownDecorationTimer as number)
   if (scrollSpyObserver) {
     scrollSpyObserver.disconnect()
   }
-  if (vditor.value) {
-    vditor.value.destroy()
-  }
+  destroyVditorInstance()
 })
 </script>
 
@@ -643,7 +973,7 @@ onUnmounted(() => {
                           <n-avatar 
                             round 
                             :size="80" 
-                            :src="authorAvatar" 
+                            :src="authorAvatarUrl" 
                             :render-icon="renderDefaultAvatar"
                             class="author-avatar-lg" 
                           />
@@ -815,8 +1145,45 @@ onUnmounted(() => {
           </n-card>
 
           <n-card v-else class="editor-only-card" :bordered="false">
-            <div class="blog-content editing-mode">
+            <div class="blog-content editing-mode" ref="editingSurfaceRef">
               <div ref="vditorEditRef" class="vditor-edit-container"></div>
+              <div
+                v-if="isEditing && windowWidth > 1024"
+                class="table-hover-layer"
+              >
+                <div
+                  v-if="tableHoverState.showColumn && tableHoverState.cell"
+                  class="table-hover-action table-hover-action--column"
+                  :style="{ left: `${tableHoverState.columnLeft}px`, top: `${tableHoverState.columnTop}px` }"
+                >
+                  <button
+                    type="button"
+                    class="table-hover-button"
+                    aria-label="Insert column on the right"
+                    @mousedown.prevent
+                    @click="handleTableColumnAction"
+                  >
+                    +
+                  </button>
+                  <span class="table-hover-tip">在右侧新增列</span>
+                </div>
+                <div
+                  v-if="tableHoverState.showRow && tableHoverState.cell"
+                  class="table-hover-action table-hover-action--row"
+                  :style="{ left: `${tableHoverState.rowLeft}px`, top: `${tableHoverState.rowTop}px` }"
+                >
+                  <button
+                    type="button"
+                    class="table-hover-button"
+                    aria-label="Insert row below"
+                    @mousedown.prevent
+                    @click="handleTableRowAction"
+                  >
+                    +
+                  </button>
+                  <span class="table-hover-tip">在下方新增行</span>
+                </div>
+              </div>
             </div>
           </n-card>
         </main>
@@ -990,6 +1357,18 @@ onUnmounted(() => {
 
 /* Mobile Adaptation */
 @media (max-width: 1024px) {
+  .blog-detail-page.editing-no-scroll {
+    height: auto;
+    overflow: visible;
+  }
+
+  .blog-detail-page.editing-no-scroll .blog-container,
+  .blog-detail-page.editing-no-scroll .main-col,
+  .blog-detail-page.editing-no-scroll .editor-only-card,
+  .blog-detail-page.editing-no-scroll .blog-content.editing-mode {
+    height: auto;
+  }
+
   .blog-container {
     flex-direction: column;
     align-items: stretch;
@@ -1473,6 +1852,10 @@ html {
   min-height: calc(100vh - 220px);
 }
 
+.blog-content.editing-mode {
+  position: relative;
+}
+
 :deep(.vditor) {
   border: none !important;
   background-color: transparent !important;
@@ -1494,8 +1877,12 @@ html {
   font-family: 'Lato', sans-serif !important;
   color: var(--text-primary) !important;
   padding: 0 !important;
-  font-size: 1.1rem !important;
-  line-height: 1.8 !important;
+  font-size: 1.05rem !important;
+  line-height: 1.6 !important;
+}
+
+:deep(.vditor-reset p) {
+  margin-bottom: 0.8em !important;
 }
 
 :deep(.vditor-reset h1),
@@ -1505,8 +1892,8 @@ html {
 :deep(.vditor-reset h5),
 :deep(.vditor-reset h6) {
   font-family: 'Playfair Display', serif !important;
-  margin-top: 2em !important;
-  margin-bottom: 1em !important;
+  margin-top: 1.5em !important;
+  margin-bottom: 0.8em !important;
   font-weight: 700 !important;
 }
 
@@ -1522,7 +1909,7 @@ html {
   background: transparent !important;
   font-style: italic !important;
   padding: 10px 20px !important;
-  margin: 20px 0 !important;
+  margin: 16px 0 !important;
 }
 
 /* Fix for TOC anchors - ensure headings have margin for fixed header */
@@ -1541,7 +1928,8 @@ html {
   }
 
   .editing-mode .vditor-edit-container {
-    min-height: 58vh;
+    height: calc(100vh - 120px) !important;
+    min-height: calc(100vh - 120px);
   }
 }
 
@@ -1598,5 +1986,79 @@ html {
 .grid-cell.active {
   background-color: var(--text-primary);
   border-color: var(--text-primary);
+}
+
+.table-hover-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.table-hover-action {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+}
+
+.table-hover-action--column,
+.table-hover-action--row {
+  min-width: 72px;
+}
+
+.table-hover-button {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--accent-color);
+  background: var(--bg-primary);
+  color: var(--accent-color);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  font-family: 'Lato', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.table-hover-button:hover {
+  background: var(--accent-color);
+  color: var(--bg-primary);
+  transform: scale(1.06);
+  box-shadow: 0 12px 30px rgba(0, 109, 119, 0.24);
+}
+
+.table-hover-button:focus-visible {
+  outline: 2px solid var(--accent-highlight);
+  outline-offset: 2px;
+}
+
+.table-hover-tip {
+  padding: 0.32rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.92);
+  color: #fff;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.72rem;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  pointer-events: none;
+}
+
+.table-hover-action:hover .table-hover-tip,
+.table-hover-action:focus-within .table-hover-tip {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>

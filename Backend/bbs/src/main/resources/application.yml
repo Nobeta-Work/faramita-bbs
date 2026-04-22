@@ -7,7 +7,7 @@ server:
 spring:
   # 运行环境配置
   profiles:
-    active: dev
+    active: prod
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver

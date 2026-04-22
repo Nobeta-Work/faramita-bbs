@@ -1,4 +1,4 @@
-# Faramita BBS（初渡 v0.2.0）
+# Faramita BBS（初渡 v0.2.1）
 
 一个前后端分离的笔记/论坛类开源项目。
 
@@ -59,4 +59,3 @@ npm run dev
 
 ---
 
-欢迎提交 Issue / PR，一起把 Faramita BBS 做得更好。
