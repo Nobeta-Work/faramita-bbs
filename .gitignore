@@ -2,7 +2,6 @@
 # 仅保留需要发布的主工程目录
 备份/
 version/
-API/
 docs/
 design/
 
@@ -12,11 +11,14 @@ secret.txt
 *.env.*
 !.env.example
 
-# 系统/编辑器
+# 系统/编辑器/ AI
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+.claude/
+.codex/
+.github/
 
 # 日志
 *.log
