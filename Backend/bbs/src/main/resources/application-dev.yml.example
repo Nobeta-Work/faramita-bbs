@@ -1,0 +1,24 @@
+faramita:
+  jwt:
+    secret: thisIsASecure256BitKeyForHmacSha256Algorithm
+    expire: 864000000 # 10天
+    header: Authorization
+  file:
+    avatar:
+      root-path: D:/Education/Project/Faramita BBS/Backend/resources/data/
+      max-size: 10485760  # 最大上传10MB
+      expire: 2  # 过期时间2h
+    image:
+      max-size: 15728640  # 最大上传15MB
+  github:
+    token: YOUR_GITHUB_TOKEN_HERE
+  datasource:
+    url: jdbc:mysql://localhost:3306/faramita_bbs?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

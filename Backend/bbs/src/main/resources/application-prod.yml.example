@@ -1,0 +1,24 @@
+faramita:
+  jwt:
+    secret: 7VjK8Xp2RmF9nQ4zL6hGtD3wYcSbE5uI0oP1aZxC7vN2jM4kH6fW8qA9sD3gY
+    expire: 86400000
+    header: Authorization
+  file:
+    avatar:
+      root-path: /data/faramita-bbs/avatar/
+      max-size: 10485760
+      expire: 2
+    image:
+      max-size: 15728640
+  github:
+    token: YOUR_GITHUB_TOKEN_HERE
+  datasource:
+    url: jdbc:mysql://1Panel-mysql-0Gie:3306/faramita_bbs?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: faramita_bbs
+    password: 153246789#faramita
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
