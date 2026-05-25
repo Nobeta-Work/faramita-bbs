@@ -7,7 +7,7 @@ server:
 spring:
   # 运行环境配置
   profiles:
-    active: prod
+    active: dev
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -19,6 +19,26 @@ spring:
     multipart:
       max-file-size: 20MB
       max-request-size: 25MB
+  data:
+    # Redis 配置
+    redis:
+      host: ${faramita.redis.host}
+      port: ${faramita.redis.port}
+      password: ${faramita.redis.password}
+      database: ${faramita.redis.database}
+      # 连接超时
+      connect-timeout: ${faramita.redis.connect-timeout}
+      # 命令执行超时
+      timeout: ${faramita.redis.timeout}
+
+      # Lettuce 配置
+      lettuce:
+        pool:
+          max-active: ${faramita.redis.lettuce.max-active} # 最大连接数
+          max-idle: ${faramita.redis.lettuce.max-idle} # 最大空闲连接
+          min-idle: ${faramita.redis.lettuce.min-idle} # 最小空闲连接
+          max-wait: ${faramita.redis.lettuce.max-wait} # 最大等待时间，超时报错
+
 
 # MyBatis-Plus配置
 mybatis:
@@ -39,17 +59,6 @@ pagehelper:
   reasonable: true
   default-count: true
   support-methods-arguments: true
-
-# Swagger3配置
-springdoc:
-  api-docs:
-    enabled: true
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui.html  # 设置Swagger UI的访问路径
-    disable-swagger-default-url: true 
-    display-request-duration: true  # 显示请求持续时间
-  packages-to-scan: online.faramita.bbs.controller  # 指定要扫描的包
 
 faramita:
   # 文件存储位置
