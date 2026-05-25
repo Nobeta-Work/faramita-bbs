@@ -5,7 +5,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import lombok.extern.slf4j.Slf4j;
-import online.faramita.bbs.service.FileService;
+import online.faramita.bbs.module.file.service.FileService;
 
 /**
  * 定时清理冗余头像文件
