@@ -40,3 +40,7 @@ src/main/resources/application-local.yml
 
 ### Runtime generated files ###
 src/main/resources/static/
+
+### AI Helper ###
+CLAUDE.md
+docs/
