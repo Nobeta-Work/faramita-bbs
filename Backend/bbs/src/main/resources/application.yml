@@ -50,8 +50,8 @@ mybatis:
 # jwt配置
 jwt: 
   secret: ${faramita.jwt.secret}
-  expire: ${faramita.jwt.expire}
-  header: ${faramita.jwt.header}
+  access-token-expire: ${faramita.jwt.access-token-expire}
+  refresh-token-expire: ${faramita.jwt.refresh-token-expire}
 
 # PageHelper配置
 pagehelper:

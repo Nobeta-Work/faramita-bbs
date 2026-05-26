@@ -30,14 +30,10 @@ public class User {
     private String race;        // 种族
     @Schema(title = "个性签名", description = "用户个性签名")
     private String signature;   // 个性签名
+
+    private Integer status;     // 状态 0:封禁 1:正常
     @Schema(title = "注册时间", description = "用户注册时间")
     private LocalDateTime createTime;     // 注册时间
     @Schema(title = "资料修改时间", description = "用户资料修改时间")
     private LocalDateTime updateTime;   // 资料修改时间
-    @Schema(title = "登录失败次数", description = "用户登录失败次数")
-    private Integer loginFailCount; // 登录失败次数
-    @Schema(title = "锁定时间", description = "用户锁定时间")
-    private LocalDateTime lockTime; // 锁定时间
-    @Schema(title = "是否锁定", description = "用户是否锁定")
-    private Integer isLocked; // 是否锁定（0-未锁定，1-已锁定）
 }

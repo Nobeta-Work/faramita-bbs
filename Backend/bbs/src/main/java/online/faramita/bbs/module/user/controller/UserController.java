@@ -1,6 +1,7 @@
 package online.faramita.bbs.module.user.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,34 +14,48 @@ import org.springframework.web.multipart.MultipartFile;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import online.faramita.bbs.common.constant.MessageConstant;
-import online.faramita.bbs.common.exception.PermissionException;
 import online.faramita.bbs.common.result.Result;
-import online.faramita.bbs.context.BaseContext;
-import online.faramita.bbs.dto.ProfileDTO;
+import online.faramita.bbs.module.auth.dto.UserAuthInfo;
 import online.faramita.bbs.module.user.service.UserService;
-import online.faramita.bbs.vo.LoginVO;
-import online.faramita.bbs.vo.ProfileVO;
+import online.faramita.bbs.module.user.vo.UserInfoVO;
 
 /**
  * 用户相关接口
  */
-@RequestMapping("api/{uid}")
+@RequestMapping("/api/users")
 @RestController
 @Slf4j
+@RequiredArgsConstructor
 @Tag(name = "用户相关接口", description = "个人资料页接口")
 public class UserController {
 
-    @Autowired
     private UserService userService;
 
     /**
-     * 查询个人资料页
+     * 获取当前用户个人资料
+     * @param loginUser
+     * @return
+     */
+    @GetMapping("/me")
+    public Result<UserInfoVO> getProfile(@AuthenticationPrincipal UserAuthInfo loginUser) {
+
+        Long userId = loginUser.getUser().getId();
+
+        UserInfoVO userInfoVO = userService.getUserProfileById(userId);
+
+        return Result.success(userInfoVO);
+
+    }
+
+    /**
+     * 查询其他用户资料页
      * @param uid 被查询用户id
      * @return
      */
-    @GetMapping("")
+    @GetMapping("/{uid}")
     @Operation(summary = "查询个人资料页")
     public Result<ProfileVO> getProfile(@PathVariable("uid") Long uid) {
         log.info(">查询页面:{}<", uid);

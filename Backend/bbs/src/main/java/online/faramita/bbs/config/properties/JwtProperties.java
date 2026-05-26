@@ -13,6 +13,6 @@ import lombok.Data;
 @ConfigurationProperties(prefix = "jwt")
 public class JwtProperties {
     private String secret;  // 加密密钥
-    private long expire;    // 有效时间
-    private String header;  // header名称
+    private Long accessTokenExpire; // 业务令牌有效时间 单位s
+    private Long refreshTokenExpire; // 刷新令牌有效时间 单位s
 }

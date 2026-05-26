@@ -1,4 +1,4 @@
-package online.faramita.bbs.module.user.service;
+package online.faramita.bbs.module.user.service.impl;
 
 
 import java.time.LocalDateTime;
@@ -14,36 +14,26 @@ import org.springframework.web.multipart.MultipartFile;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import online.faramita.bbs.common.constant.MessageConstant;
-import online.faramita.bbs.common.exception.AccountException;
-import online.faramita.bbs.common.exception.ResourceNotFoundException;
-import online.faramita.bbs.common.util.PasswordEncoderUtil;
-import online.faramita.bbs.dto.BlogQueryDTO;
-import online.faramita.bbs.dto.LoginDTO;
-import online.faramita.bbs.dto.ProfileDTO;
-import online.faramita.bbs.dto.RegisterDTO;
-import online.faramita.bbs.mapper.UserMapper;
 import online.faramita.bbs.module.blog.entity.Blog;
 import online.faramita.bbs.module.blog.mapper.BlogMapper;
 import online.faramita.bbs.module.file.entity.AvatarInfo;
 import online.faramita.bbs.module.file.mapper.FileMapper;
 import online.faramita.bbs.module.file.service.FileService;
 import online.faramita.bbs.module.user.entity.User;
-import online.faramita.bbs.vo.LoginVO;
-import online.faramita.bbs.vo.ProfileVO;
+import online.faramita.bbs.module.user.mapper.UserMapper;
+import online.faramita.bbs.module.user.service.UserService;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    @Autowired
     private UserMapper userMapper;
-    @Autowired
     private FileMapper fileMapper;
-    @Autowired  
     private BlogMapper blogMapper;
-    @Autowired
     private FileService fileService;
 
     /**

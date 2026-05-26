@@ -1,8 +1,8 @@
-package online.faramita.bbs.mapper;
+package online.faramita.bbs.module.user.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
 
+import online.faramita.bbs.module.auth.dto.RegisterDTO;
 import online.faramita.bbs.module.user.entity.User;
 
 @Mapper
@@ -13,36 +13,26 @@ public interface UserMapper {
      * @param username
      * @return
      */
-    @Select("select * from user where username = #{username}")
     User getByUsername(String username);
 
     /**
-     * 创建用户
-     * @param user
-     * @return 返回uuid
-     */
-    void insert(User user);
-
-    /**
-     * 更新用户数据
+     * 根据用户 id 更新用户
      * @param user
      */
-    void update(User user);
+    void updateById(User user);
 
     /**
-     * 根据id查询用户
-     * @param uid
-     * @return
+     * 更新指定用户 id 的密码
+     * @param userId
+     * @param password
      */
-    @Select("select * from user where id = ${id}")
-    User getById(Long id);
+    void updatePassword(Long userId, String password);
 
     /**
-     * 根据nickname查询用户
-     * @param nickname
-     * @return
+     * 创建用户实体
+     * @param registerDTO
      */
-    @Select("select * from user where nickname = #{nickname}")
-    User getByNickname(String nickname);
+    void register(RegisterDTO registerDTO);
+
 
 }
