@@ -2,55 +2,25 @@ package online.faramita.bbs.module.user.service;
 
 import org.springframework.web.multipart.MultipartFile;
 
-import online.faramita.bbs.dto.LoginDTO;
-import online.faramita.bbs.dto.ProfileDTO;
-import online.faramita.bbs.dto.RegisterDTO;
-import online.faramita.bbs.module.user.entity.User;
-import online.faramita.bbs.vo.LoginVO;
-import online.faramita.bbs.vo.ProfileVO;
+import online.faramita.bbs.module.user.dto.PasswordEditDTO;
+import online.faramita.bbs.module.user.dto.UserProfileDTO;
+import online.faramita.bbs.module.user.vo.AvatarVO;
+import online.faramita.bbs.module.user.vo.UserInfoVO;
+import online.faramita.bbs.module.user.vo.UserProfileVO;
 
 public interface UserService {
 
-    /**
-     * 账号登录
-     * @param loginDTO
-     * @return
-     */
-    User login(LoginDTO loginDTO);
 
-    /**
-     * 账号注册
-     * @param registerDTO
-     */
-    void register(RegisterDTO registerDTO);
 
-    /**
-     * 根据uid查询个人资料
-     * @param uid
-     * @return
-     */
-    ProfileVO getProfileByUid(Long uid);
+    UserProfileVO queryUserProfileById(Long userId);
 
-    /**
-     * 更新个人资料
-     * @param profileDTO
-     */
-    void updateProfile(ProfileDTO profileDTO);
+    UserInfoVO queryUserInfoById(Long id);
 
-    /**
-     * 上传文件并更新数据库
-     * @param uid
-     * @param file
-     * @return
-     */
-    String updateAvatar(Long uid, MultipartFile file);
+    void editUserProfile(Long userId, UserProfileDTO userProfileDTO);
 
-    /**
-     * 根据id查询用户详情
-     * @param id
-     * @return
-     */
-    LoginVO getCurrentUserInfo(Long id);
+    void editUserPassword(Long userId, PasswordEditDTO passwordEditDTO);
+
+    AvatarVO editUserAvatar(Long userId, MultipartFile file);
 
     
 

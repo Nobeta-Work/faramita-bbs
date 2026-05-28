@@ -13,8 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.extern.slf4j.Slf4j;
-import online.faramita.bbs.common.constant.MessageConstant;
-import online.faramita.bbs.common.exception.FileException;
+import online.faramita.bbs.common.enums.ResultCode;
+import online.faramita.bbs.common.exception.BusinessException;
 import online.faramita.bbs.common.util.GithubFileUtil;
 import online.faramita.bbs.config.FileConfig;
 import online.faramita.bbs.module.file.entity.AvatarInfo;
@@ -40,7 +40,7 @@ public class FileServiceImpl implements FileService {
         // 目标格式：`year/month/day/uuid.extension`
         String originalFileName = file.getOriginalFilename();
         if (originalFileName == null || originalFileName.lastIndexOf(".") < 0) {
-            throw new FileException(MessageConstant.FILE_TYPE_ERROR);
+            throw new BusinessException(ResultCode.FILE_TYPE_ERROR);
         }
 
         String extension = originalFileName.substring(originalFileName.lastIndexOf("."));
@@ -61,7 +61,7 @@ public class FileServiceImpl implements FileService {
         try {
             file.transferTo(dest);
         } catch (IOException e) {
-            throw new FileException(MessageConstant.FILE_ERROR);
+            throw new BusinessException(ResultCode.FILE_ERROR);
         }
         // 4.构筑 avatarInfo 写入数据库
         AvatarInfo fileInfo = AvatarInfo.builder()
@@ -115,35 +115,35 @@ public class FileServiceImpl implements FileService {
             return githubFileUtil.upload(file);
         } catch (IOException e) {
             log.error("Image upload failed", e);
-            throw new FileException(MessageConstant.FILE_ERROR);
+            throw new BusinessException(ResultCode.FILE_ERROR);
         }
     }
 
     private void validateAvatar(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new FileException(MessageConstant.FILE_IS_NULL);
+            throw new BusinessException(ResultCode.FILE_IS_NULL);
         }
         if (file.getSize() > fileConfig.getAvatar().getMaxSize()) {
-            throw new FileException(MessageConstant.FILE_OUT_SIZE);
+            throw new BusinessException(ResultCode.FILE_OUT_SIZE);
         }
 
         String contentType = file.getContentType();
         if (contentType == null || !fileConfig.getImage().getAcceptTypes().contains(contentType)) {
-            throw new FileException(MessageConstant.FILE_TYPE_ERROR);
+            throw new BusinessException(ResultCode.FILE_TYPE_ERROR);
         }
     }
 
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new FileException(MessageConstant.FILE_IS_NULL);
+            throw new BusinessException(ResultCode.FILE_IS_NULL);
         }
         if (file.getSize() > fileConfig.getImage().getMaxSize()) {
-            throw new FileException(MessageConstant.FILE_OUT_SIZE);
+            throw new BusinessException(ResultCode.FILE_OUT_SIZE);
         }
 
         String contentType = file.getContentType();
         if (contentType == null || !fileConfig.getImage().getAcceptTypes().contains(contentType)) {
-            throw new FileException(MessageConstant.FILE_TYPE_ERROR);
+            throw new BusinessException(ResultCode.FILE_TYPE_ERROR);
         }
     }
 }

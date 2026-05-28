@@ -23,6 +23,11 @@ public class GlobalExceptionHandler {
         return Result.fail(ex.getResultCode(), ex.getMessage());
     }
 
+    /**
+     * 捕获全局异常
+     * @param e
+     * @return
+     */
     public Result<Void> handleException(Exception e) {
         log.error("未知异常", e);
         return Result.fail(ResultCode.FAIL);

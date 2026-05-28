@@ -1,51 +1,28 @@
 package online.faramita.bbs.module.blog.service;
 
 import online.faramita.bbs.common.result.PageResult;
-import online.faramita.bbs.dto.BlogDTO;
-import online.faramita.bbs.dto.BlogQueryDTO;
-import online.faramita.bbs.dto.BlogUpdateDTO;
-import online.faramita.bbs.dto.PageQueryDTO;
-import online.faramita.bbs.module.blog.entity.Blog;
+import online.faramita.bbs.module.blog.dto.BlogEditDTO;
+import online.faramita.bbs.module.blog.dto.BlogPageQuery;
+import online.faramita.bbs.module.blog.dto.BlogSaveDTO;
+import online.faramita.bbs.module.blog.vo.BlogPrivateDetailVO;
+import online.faramita.bbs.module.blog.vo.BlogPublicBriefVO;
+import online.faramita.bbs.module.blog.vo.BlogPublicDetailVO;
 
 public interface BlogService {
 
-    /**
-     * 分页查询
-     * @param pageQueryDTO
-     * @return
-     */
-    PageResult<Blog> pageQuery(PageQueryDTO<BlogQueryDTO> pageQueryDTO);
+    PageResult<BlogPublicBriefVO> queryPublicBlogPage(BlogPageQuery blogPageQuery);
 
-    /**
-     * 创建博客
-     * @param uid
-     * @param blogDTO
-     * @return
-     */
-    String createBlog(Long uid, BlogDTO blogDTO);
+    Long addBlogByUserId(Long userId, BlogSaveDTO blogSaveDTO);
 
-    /**
-     * 博文查询
-     * @param uid
-     * @param bloguid
-     * @return
-     */
-    Blog getBlogByBloguid(Long uid, String bloguid);
+    BlogPublicDetailVO getPublicBlogById(Long id);
 
-    /**
-     * 根据bloguid删除博客
-     * @param bloguid
-     */
-    void deleteBlogByBloguid(String bloguid);
+    BlogPrivateDetailVO getPrivateBlogById(Long id);
+
+    void editBlogById(Long blogId, BlogEditDTO blogEditDTO);
+
+    void deleteBlogById(Long id);
 
     
-    /**
-     * 更新博客
-     * @param uid
-     * @param bloguid
-     * @param updateDTO
-     */
-    void updateBlog(Long uid, String bloguid, BlogUpdateDTO updateDTO);
 
     
 

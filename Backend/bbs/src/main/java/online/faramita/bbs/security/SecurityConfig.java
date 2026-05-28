@@ -63,11 +63,11 @@ public class SecurityConfig {
                 ).authenticated()
                 // 5. 博客接口
                 .requestMatchers(
-                    HttpMethod.GET, "/api/blogs/**"
-                ).permitAll()
-                .requestMatchers(
-                    "/api/workspace/blogs/**"
+                    "/api/blogs/me/**"
                 ).authenticated()
+                .requestMatchers(
+                    "/api/blogs/page", "/api/blogs/*"
+                ).permitAll()
                 // 6. 点赞接口
                 .requestMatchers(
                     "/api/like/**"

@@ -106,17 +106,24 @@
 			<artifactId>spring-boot-starter-cache</artifactId>
 		</dependency>
 		<!-- 阿里 Fastjson -->
-		 <dependency>
+		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>fastjson</artifactId>
 			<version>${fastjson.version}</version>
 		</dependency>
 		<!-- Hutool Http -->
-		 <dependency>
+		<dependency>
 			<groupId>cn.hutool</groupId>
 			<artifactId>hutool-http</artifactId>
 			<version>${hutool.version}</version>
-		 </dependency>
+		</dependency>
+		<!-- Hutool Core -->
+		 <!-- 2026-5-27 "v0.3.0 引入" -->
+		<dependency>
+			<groupId>cn.hutool</groupId>
+			<artifactId>hutool-core</artifactId>
+			<version>${hutool.version}</version>
+		</dependency>
 		<!-- ====== 测试依赖 ===== -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -1,6 +1,5 @@
 package online.faramita.bbs.module.user.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,15 +11,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import online.faramita.bbs.common.constant.MessageConstant;
 import online.faramita.bbs.common.result.Result;
 import online.faramita.bbs.module.auth.dto.UserAuthInfo;
+import online.faramita.bbs.module.user.dto.PasswordEditDTO;
+import online.faramita.bbs.module.user.dto.UserProfileDTO;
 import online.faramita.bbs.module.user.service.UserService;
+import online.faramita.bbs.module.user.vo.AvatarVO;
 import online.faramita.bbs.module.user.vo.UserInfoVO;
+import online.faramita.bbs.module.user.vo.UserProfileVO;
 
 /**
  * 用户相关接口
@@ -28,11 +30,11 @@ import online.faramita.bbs.module.user.vo.UserInfoVO;
 @RequestMapping("/api/users")
 @RestController
 @Slf4j
-@RequiredArgsConstructor
 @Tag(name = "用户相关接口", description = "个人资料页接口")
+@RequiredArgsConstructor
 public class UserController {
 
-    private UserService userService;
+    private final UserService userService;
 
     /**
      * 获取当前用户个人资料
@@ -40,87 +42,86 @@ public class UserController {
      * @return
      */
     @GetMapping("/me")
-    public Result<UserInfoVO> getProfile(@AuthenticationPrincipal UserAuthInfo loginUser) {
+    public Result<UserProfileVO> getCurrentUserProfile(@AuthenticationPrincipal UserAuthInfo loginUser) {
 
         Long userId = loginUser.getUser().getId();
 
-        UserInfoVO userInfoVO = userService.getUserProfileById(userId);
+        UserProfileVO userProfileVO = userService.queryUserProfileById(userId);
+
+        return Result.success(userProfileVO);
+
+    }
+
+    /**
+     * 查询其他用户个人信息
+     * @param id 被查询用户id
+     * @return
+     */
+    @GetMapping("/{id}")
+    public Result<UserInfoVO> getUserInfo(@PathVariable Long id) {
+        
+        UserInfoVO userInfoVO = userService.queryUserInfoById(id);
 
         return Result.success(userInfoVO);
-
     }
 
     /**
-     * 查询其他用户资料页
-     * @param uid 被查询用户id
+     * 当前用户更新个人资料
+     * @param loginUser
+     * @param userProfileDTO
      * @return
      */
-    @GetMapping("/{uid}")
-    @Operation(summary = "查询个人资料页")
-    public Result<ProfileVO> getProfile(@PathVariable("uid") Long uid) {
-        log.info(">查询页面:{}<", uid);
-        ProfileVO profileVO = userService.getProfileByUid(uid);
-        return Result.success(profileVO);
-    }
+    @PutMapping("/me")
+    public Result<Void> editCurrentUserProfile(
+        @AuthenticationPrincipal UserAuthInfo loginUser,
+        @RequestBody UserProfileDTO userProfileDTO
+    ) {
 
-    /**
-     * 更新用户头像(需身份校验)(直接)
-     * @param uid
-     * @param file
-     * @return
-     */
-    @Operation(summary = "更新用户头像(直接)")
-    @PostMapping("/upload/avatar")
-    public Result<String> updateAvatar(@PathVariable("uid") Long uid,
-    @RequestParam("file") MultipartFile file) {
-        // 校验请求者身份
-        validatePermission(uid);
+        Long userId = loginUser.getUser().getId();
 
-        // 上传文件并更新数据库
-        log.info(">头像更新:{}<",uid);
-        String fileUuid = userService.updateAvatar(uid, file);
-
-        log.info(">头像更新成功:{}<", uid);
-        return Result.success(fileUuid);
-    }
-
-    /**
-     * 更新个人资料(需身份校验)
-     * @param uid
-     * @param profileDTO
-     * @return
-     */
-    @Operation(summary = "更新个人资料")
-    @PutMapping("/profile")
-    public Result<Void> updateProfile(@PathVariable("uid") Long uid,
-    @RequestBody ProfileDTO profileDTO) {
-        // 身份校验
-        validatePermission(uid);
-
-        userService.updateProfile(profileDTO);
+        userService.editUserProfile(userId, userProfileDTO);
 
         return Result.success();
     }
 
     /**
-     * 根据token获得用户信息
+     * 用户更新密码接口
+     * @param loginUser
+     * @param passwordEditDTO
      * @return
      */
-    @GetMapping("/current")
-    public Result<LoginVO> getCurrentUserInfo() {
-        Long id = BaseContext.getCurrentId();
-        log.info(">根据token查询用户信息:{}<", id);
-        LoginVO loginVO = userService.getCurrentUserInfo(id);
-        return Result.success(loginVO);
+    @PutMapping("/me/password")
+    public Result<Void> editUserPassword(
+        @AuthenticationPrincipal UserAuthInfo loginUser,
+        @RequestBody PasswordEditDTO passwordEditDTO
+    ) {
+
+        Long userId = loginUser.getUser().getId();
+
+        userService.editUserPassword(userId, passwordEditDTO);
+
+        return Result.success();
     }
 
-    // ? 功能方法
-    // 身份校验
-    private void validatePermission(Long uid) {
-        Long id = BaseContext.getCurrentId();
-        if (id != null && id.equals(uid)) {
-            return;
-        }
-        throw new PermissionException(MessageConstant.NO_PERMISSION);
+    /**
+     * 用户头像更新接口
+     * @param loginUser
+     * @param file
+     * @return
+     */
+    @PostMapping("/me/avatar")
+    public Result<AvatarVO> editUserAvatar(
+        @AuthenticationPrincipal UserAuthInfo loginUser,
+        @NotNull(message = "文件不能为空")
+        @RequestParam MultipartFile file
+    ) {
+
+        Long userId = loginUser.getUser().getId();
+
+        AvatarVO avatarVO = userService.editUserAvatar(userId, file);
+
+        return Result.success(avatarVO);
+
     }
+
 }

@@ -23,6 +23,10 @@ public enum RedisKeys {
         "refresh_token:",
         604800L,
         "RefreshToken 缓存 refresh_token:{userId} refreshToken"
+    ), LIKE_BLOG(
+        "like:blog:",
+        86400L,
+        "博客的点赞状态集合 like:blog:{blogId} userId"
     );
 
 

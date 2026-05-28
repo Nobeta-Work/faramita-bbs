@@ -1,73 +1,49 @@
 package online.faramita.bbs.module.blog.mapper;
 
 
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
 
 import com.github.pagehelper.Page;
 
-import online.faramita.bbs.dto.BlogDTO;
-import online.faramita.bbs.dto.BlogQueryDTO;
-import online.faramita.bbs.entity.BlogCategory;
+import online.faramita.bbs.module.blog.dto.BlogEditDTO;
+import online.faramita.bbs.module.blog.dto.BlogPageQuery;
 import online.faramita.bbs.module.blog.entity.Blog;
 
 @Mapper
 public interface BlogMapper {
     
-    /**
-     * 动态查询博客列表
-     * @param blogQueryDTO
-     * @return
-     */
-    Page<Blog> findBlogs(BlogQueryDTO blogQueryDTO);
-
-    /**
-     * 创建blog小类
-     * @param blogDTO
-     */
-    void createCategoryByDTO(BlogDTO blogDTO);
     
-    /**
-     * 创建blog小类
-     * @param category
-     */
-    void createCategory(BlogCategory category);
 
     /**
-     * 创建blog博客
+     * 插入博客
      * @param blog
      */
     void insertBlog(Blog blog);
 
     /**
-     * 根据uid, big_category_id, name查询小类是否存在
-     * @param blogDTO
+     * 分页查询
+     * @param query
      * @return
      */
-    BlogCategory findCategoryByBigIdAndName(
-        @Param("authorId") Long authorId,
-        @Param("bigCategoryId") Long bigCategoryId,
-        @Param("littleCategoryName") String littleCategoryName
-    );
+    Page<Blog> selectBlogPage(BlogPageQuery query);
 
     /**
-     * 根据queryDTO获取Blog
-     * @param queryDTO
+     * 根据 id 查找博客
+     * @param id
      * @return
      */
-    Blog getBlogByDTO(BlogQueryDTO queryDTO);
+    Blog selectBlogById(Long id);
 
     /**
-     * 根据bloguid删除博客
-     * @param bloguid
+     * 根据 id 修改博客
+     * @param blogId
+     * @param blogEditDTO
      */
-    @Delete("delete from blog where bloguid = #{bloguid}")
-    void deleteBlogByBloguid(String bloguid);
+    void updateBlogById(Long blogId, BlogEditDTO blogEditDTO);
 
     /**
-     * 更新博客
-     * @param blog
+     * 根据 id 删除博客
+     * @param blogId
      */
-    void updateBlog(Blog blog);    
+    void deleteBlogById(Long blogId);    
 }

@@ -90,6 +90,7 @@ DROP COLUMN big_category_id,
 MODIFY id BIGINT NOT NULL COMMENT '主键id(雪花)',
 ADD COLUMN folder_id BIGINT NOT NULL DEFAULT 0 COMMENT '目录id(雪花) 0:根目录',
 ADD COLUMN like_count INT NOT NULL DEFAULT 0 COMMENT '总点赞数量',
+UNIQUE KEY `uk_author_folder_title` (`author_id`, `folder_id`, `title`) COMMENT '同一用户同一目录下禁止重名博客'
 KEY `idx_folder_id` (`folder_id`);
 
 -- 创建 tag 表
