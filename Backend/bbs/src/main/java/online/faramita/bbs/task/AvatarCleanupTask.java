@@ -1,9 +1,9 @@
 package online.faramita.bbs.task;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import online.faramita.bbs.module.file.service.FileService;
 
@@ -12,9 +12,10 @@ import online.faramita.bbs.module.file.service.FileService;
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class AvatarCleanupTask {
-    @Autowired
-    private FileService fileService;
+
+    private final FileService fileService;
 
     @Scheduled(cron = "0 0 0/8 * * ?")
     public void cleanupExpiredAvatars() {
@@ -22,4 +23,5 @@ public class AvatarCleanupTask {
         fileService.cleanExpiredUnreferencedAvatars();
         log.info("===== 清理完成 =====");
     }
+
 }

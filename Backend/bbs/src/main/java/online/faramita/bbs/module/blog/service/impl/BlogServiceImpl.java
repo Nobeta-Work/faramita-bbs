@@ -204,12 +204,13 @@ public class BlogServiceImpl implements BlogService{
                 // 5.1 缓存未命中，DB 回源
                 List<Long> likerIds = likeMapper.selectLikerIdsByBlogId(id);
                 
-                // TODO: 空 likerIds 防止缓存穿透
+                // TODO: 缓存穿透
 
                 String[] members = likerIds.stream().map(Object::toString).toArray(String[]::new);
-                if (members.length < 1) members = new String[]{"__placeholder__"};
-                redisTemplate.opsForSet().add(key, members);
+                if (members.length > 0) {
+                    redisTemplate.opsForSet().add(key, (Object[]) members);
                 redisTemplate.expire(key, Duration.ofSeconds(RedisKeys.LIKE_BLOG.getDefaultTtl()));
+                }
                 
             }
             // 5.2 缓存查找

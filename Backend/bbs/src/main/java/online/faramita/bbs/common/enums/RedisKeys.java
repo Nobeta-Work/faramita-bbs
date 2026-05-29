@@ -23,11 +23,20 @@ public enum RedisKeys {
         "refresh_token:",
         604800L,
         "RefreshToken 缓存 refresh_token:{userId} refreshToken"
-    ), LIKE_BLOG(
+    ),
+    
+    /** =========== 点赞模块 =========== */
+    LIKE_BLOG(
         "like:blog:",
         86400L,
-        "博客的点赞状态集合 like:blog:{blogId} userId"
+        "博客的点赞状态Set集合 like:blog:{blogId} : userId"
+    ),
+    LIKE_CHANGELOG_BLOG(
+        "like:changelog:blog",
+        0L,
+        "点赞变更消息List队列 like:change:blog : likeBlogChangelog"
     );
+
 
 
     private final String prefix;

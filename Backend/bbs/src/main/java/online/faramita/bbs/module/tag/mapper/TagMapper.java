@@ -5,7 +5,11 @@ import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
 
+import com.github.pagehelper.Page;
+
 import online.faramita.bbs.module.blog.dto.BlogTagBriefRelations;
+import online.faramita.bbs.module.tag.dto.TagPageQuery;
+import online.faramita.bbs.module.tag.entity.Tag;
 import online.faramita.bbs.module.tag.vo.TagBriefVO;
 
 @Mapper
@@ -33,5 +37,19 @@ public interface TagMapper {
     void updateBlogTagByTagIds(Long blogId, List<Long> tagIds);
 
     void deleteBlogTagRelationsByBlogId(Long blogId);
+
+    /**
+     * 创建 tag
+     * @param tag
+     * @return
+     */
+    void insertTag(Tag tag);
+
+    /**
+     * 查询 tag
+     * @param query
+     * @return
+     */
+    Page<Tag> selectTagPage(TagPageQuery query);
 
 }

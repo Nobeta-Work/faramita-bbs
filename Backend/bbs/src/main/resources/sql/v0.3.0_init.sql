@@ -131,3 +131,14 @@ CREATE TABLE `blog_tag` (
     KEY `idx_tag_id` (`tag_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT '博客-标签关系表';
+
+/* ========== 点赞系统 ========*/
+CREATE TABLE `like_blog` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    `blog_id` BIGINT NOT NULL COMMENT '博客id',
+    `user_id` BIGINT NOT NULL COMMENT '用户id',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    UNIQUE KEY `uk_blog_user` (`blog_id`, `user_id`) COMMENT '同一用户只能给一个博客点一次赞',
+    KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT '博客点赞记录表'
