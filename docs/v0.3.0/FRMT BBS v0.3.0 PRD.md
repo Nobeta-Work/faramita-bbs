@@ -82,6 +82,7 @@ erDiagram
         tinyint sex
         string race
         string signature
+        tinyint status
         datetime create_time
         datetime update_time
     }
@@ -104,11 +105,13 @@ erDiagram
         bigint id PK
         bigint user_id FK
         bigint role_id FK
+        datetime create_time
     }
     sys_role_perm {
         bigint id PK
         bigint role_id FK
         bigint perm_id FK
+        datetime create_time
     }
   
     sys_user ||--o{ sys_user_role : 拥有
@@ -430,7 +433,7 @@ spring:
 - 目录为**用户私有**（`author_id` 隔离），每个用户拥有独立目录树
 - 最大深度 **4 层**（level 1-4，对应一级/二级/三级/四级）
 - ID 使用 Snowflake BIGINT
-- `path` 路径格式：`/{root_id}/{parent_id}/.../{current_id}`
+- `path` 路径格式：`/{parent_id}/.../{current_id}`
 - `/` (`level=0, id=0`) 为逻辑根目录，没有数据实现，是所有目录、根目录下博客的直接父路径（对目录id `0` 的 CUD 是非法访问）。
 
 *`0` 的逻辑实现规约，避免所有用户创建根目录的存储开销（部分用户不会使用目录功能）；但会在业务层增加一层判断。*
@@ -480,13 +483,12 @@ spring:
   c. level+1
   else level = 1 (根目录 0 无数据)
 2. 查同 author_id + parent_id 下有无同名目录，有则拒绝
-3. 生成 Snowflake ID
-4. 若 parentId == 0:
+3. 若 parentId == 0:
   path = "/" + newId
   否则:
   path = parent.path + "/" + newId
-5. INSERT
-6. 返回 FolderTreeVO
+4. INSERT
+5. 返回 FolderTreeVO
 ```
 
 **2. 重命名目录**
@@ -634,13 +636,13 @@ MyBatis 查询用户所有目录，在 Service 层递归组装为树。
 
 **数据库设计：**
 
-新增表 `blog_like`：
+新增表 `like_blog`：
 
 > `blog` 表新增 `like_count` 字段。
 
 ```mermaid
 erDiagram
-    blog_like {
+    like_blog {
         bigint id PK
         bigint blog_id FK
         bigint user_id FK
@@ -660,7 +662,7 @@ erDiagram
 
 - Key ：`like:changelog:blog`
 - 类型 ：List
-- 元素约束：`{ blogId, userId, action:"LIKE"|"UNLIKE", timestamp }`
+- 元素约束：`{ blogId, userId, isLikeAction, timestamp }`
 - 操作：每次 Toggle 成功后 `RPUSH` 一条记录
 
 ---
@@ -675,14 +677,14 @@ erDiagram
 4. `SCARD like:blog:{blogId}` 获取最新计数
 5. 返回点赞信息
 
-**2. 异步落盘（定时任务）：**
+**2. 异步落盘（定时任务 - 高并发解决）：**
 
 1. 通过 `LRANGE` + `LTRIM` 批量消费 `like:changelog:blog`
 2. 按照 `action` 类型：
    - `LIKE` → INSERT `blog_like` （忽略重复）
    - `UNLIKE` → DELETE `blog_like`
 3. 根据消费变更，聚合每个 blogId 的净变化量，批量 UPDATE `blog.like_count`
-4. 执行周期：10s
+4. 执行周期：1min
 
 #### 3.2.7 前端修改
 
