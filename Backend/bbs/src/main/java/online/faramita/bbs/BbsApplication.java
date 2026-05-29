@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableScheduling	// 启动定时任务
 @SpringBootApplication
 @EnableTransactionManagement	// 启动事务AOP
-@MapperScan("online.faramita.bbs.mapper")
+@MapperScan("online.faramita.bbs.module.*.mapper")
 public class BbsApplication {
 
 	public static void main(String[] args) {

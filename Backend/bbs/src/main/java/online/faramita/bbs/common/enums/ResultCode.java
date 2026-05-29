@@ -30,7 +30,13 @@ public enum ResultCode {
     BLOG_TITLE_DUPLICATE(400, "同目录下存在同名博客"), 
     
     // =========== 目录模块 ===========
-    FOLDER_NOT_FOUND(404, "目录不存在")
+    FOLDER_NOT_FOUND(404, "目录不存在"), 
+    FOLDER_TOO_DEEP(400, "目录深度过高"), 
+    FOLDER_NAME_DUPLICATE(400, "同目录下存在同名子目录"), 
+    FOLDER_NAME_NOT_CHANGED(400, "目录名未改变"), 
+    PATH_NOT_AVALIABLE(400, "路径异常"), 
+    FOLDER_NOT_CHANGED(400, "无效改变"), 
+    FOLDER_OPERAION_NOT_ALLOWED(400, "操作异常")
     
     
     

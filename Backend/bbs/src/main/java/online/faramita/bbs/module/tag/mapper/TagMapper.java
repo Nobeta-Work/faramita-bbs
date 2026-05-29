@@ -32,4 +32,6 @@ public interface TagMapper {
      */
     void updateBlogTagByTagIds(Long blogId, List<Long> tagIds);
 
+    void deleteBlogTagRelationsByBlogId(Long blogId);
+
 }

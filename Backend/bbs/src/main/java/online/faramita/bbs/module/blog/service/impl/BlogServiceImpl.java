@@ -152,7 +152,7 @@ public class BlogServiceImpl implements BlogService{
         Blog blog = Blog.builder()
                 .id(blogId)
                 .authorId(userId)
-                .folderId(blogSaveDTO.getFolderId())
+                .folderId(folderId)
                 .isPublished(0)
                 .title(blogSaveDTO.getTitle())
                 .build();
@@ -249,7 +249,7 @@ public class BlogServiceImpl implements BlogService{
 
         // 2. 校验作者信息
         UserAuthInfo loginUser = SecurityUtil.getLoginUser();
-        if (loginUser == null || loginUser.getUser().getId().equals(blog.getAuthorId())) {
+        if (loginUser == null || !loginUser.getUser().getId().equals(blog.getAuthorId())) {
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
 
@@ -290,12 +290,15 @@ public class BlogServiceImpl implements BlogService{
         
         // 2. 校验权限
         UserAuthInfo loginUser = SecurityUtil.getLoginUser();
-        if (loginUser == null || loginUser.getUser().getId().equals(blog.getAuthorId())) {
+        if (loginUser == null || !loginUser.getUser().getId().equals(blog.getAuthorId())) {
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
 
         // 3. 删除数据
         blogMapper.deleteBlogById(blogId);
+
+        // 4. 删除 blog_tag 关系
+        tagMapper.deleteBlogTagRelationsByBlogId(blogId);
     }
 
     /**
@@ -305,7 +308,7 @@ public class BlogServiceImpl implements BlogService{
      */
     @Override
     public void editBlogById(Long blogId, BlogEditDTO blogEditDTO) {
-        // 1.根据bloguid查询原始博客信息
+        // 1.根据blogId查询原始博客信息
         Blog blog = blogMapper.selectBlogById(blogId);
         if (blog == null) {
             throw new BusinessException(ResultCode.RESOURCE_NOT_FOUND, "博客不存在");
@@ -314,7 +317,13 @@ public class BlogServiceImpl implements BlogService{
         // 2.权限校验
         // TODO: 仅作者校验，无管理员权限
         UserAuthInfo loginUser = (UserAuthInfo) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (loginUser == null || loginUser.getUser().getId().equals(blog.getAuthorId())) {
+        if (loginUser == null || !loginUser.getUser().getId().equals(blog.getAuthorId())) {
+            throw new BusinessException(ResultCode.FORBIDDEN);
+        }
+
+        // 3.目录校验
+        Folder folder = folderMapper.selectFolderById(blogEditDTO.getFolderId());
+        if (folder == null || !folder.getAuthorId().equals(loginUser.getUser().getId())) {
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
 
