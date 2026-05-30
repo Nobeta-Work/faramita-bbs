@@ -22,7 +22,6 @@ import online.faramita.bbs.common.result.PageResult;
 import online.faramita.bbs.module.blog.dto.BlogTagBriefRelations;
 import online.faramita.bbs.module.blog.entity.Blog;
 import online.faramita.bbs.module.blog.mapper.BlogMapper;
-import online.faramita.bbs.module.blog.vo.AuthorBriefVO;
 import online.faramita.bbs.module.blog.vo.BlogPrivateBriefVO;
 import online.faramita.bbs.module.folder.dto.FolderBlogsMoveDTO;
 import online.faramita.bbs.module.folder.dto.FolderSaveDTO;
@@ -34,6 +33,7 @@ import online.faramita.bbs.module.folder.vo.FolderTree;
 import online.faramita.bbs.module.tag.mapper.TagMapper;
 import online.faramita.bbs.module.tag.vo.TagBriefVO;
 import online.faramita.bbs.module.user.mapper.UserMapper;
+import online.faramita.bbs.module.user.vo.UserBriefVO;
 import online.faramita.bbs.security.util.SecurityUtil;
 
 @Service
@@ -75,15 +75,17 @@ public class FolderServiceImpl implements FolderService {
         }
 
         // 3. 生成目录实体
+        // TODO: Transaction
         Folder folder = Folder.builder()
                 .parentId(parentId)
                 .name(folderSaveDTO.getName())
                 .level(parentLevel + 1)
                 .authorId(userId)
+                .path("0")  // 0，完全非法 (path NOT NULL)
                 .build();
 
         // 4. 插入数据库，捕获重复异常
-        // TODO: Transaction
+        
         try {
             folderMapper.insertFolder(folder);
             Long id = folder.getId();
@@ -157,7 +159,7 @@ public class FolderServiceImpl implements FolderService {
             Folder parentFolder = folderMapper.selectFolderById(targetParentId);
             if (parentFolder == null) {
                 throw new BusinessException(ResultCode.FOLDER_NOT_FOUND);
-            } else if (!userId.equals(folder.getAuthorId())) {
+            } else if (!userId.equals(parentFolder.getAuthorId())) {
                 throw new BusinessException(ResultCode.FORBIDDEN);
             }
 
@@ -191,6 +193,7 @@ public class FolderServiceImpl implements FolderService {
 
         // 3.3 递归更新所有子孙的 level 和 path
 
+        folderMapper.updateFolderParentIdWithoutChildren(id, targetParentId);
         folderMapper.updateSubtreeFolderLevelAndPath(userId, id, level, path);
     }
 
@@ -288,8 +291,8 @@ public class FolderServiceImpl implements FolderService {
 
         List<Long> blogIds = blogPage.stream().map(Blog::getId).toList();
         Set<Long> authorIds = blogPage.stream().map(Blog::getAuthorId).collect(Collectors.toSet());
-        Map<Long, AuthorBriefVO> authorMap = userMapper.selectAuthorBriefByIds(authorIds)
-                .stream().collect(Collectors.toMap(AuthorBriefVO::getId, Function.identity()));
+        Map<Long, UserBriefVO> authorMap = userMapper.selectAuthorBriefByIds(authorIds)
+                .stream().collect(Collectors.toMap(UserBriefVO::getId, Function.identity()));
         Map<Long, List<TagBriefVO>> tagMap = tagMapper.selectBlogTagBriefRelationsByBlogIds(blogIds)
                 .stream().collect(Collectors.groupingBy(
                     BlogTagBriefRelations::getBlogId,

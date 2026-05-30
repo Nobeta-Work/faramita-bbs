@@ -4,10 +4,11 @@ import java.util.Collection;
 import java.util.Set;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
-import online.faramita.bbs.module.blog.vo.AuthorBriefVO;
 import online.faramita.bbs.module.user.dto.UserProfileDTO;
 import online.faramita.bbs.module.user.entity.User;
+import online.faramita.bbs.module.user.vo.UserBriefVO;
 
 @Mapper
 public interface UserMapper {
@@ -17,42 +18,42 @@ public interface UserMapper {
      * @param userId
      * @return
      */
-    User selectUserById(Long userId);
+    User selectUserById(@Param("userId") Long userId);
 
     /**
      * 更新指定用户的密码
      * @param userId
      * @param password
      */
-    void updatePassword(Long userId, String password);
+    void updateUserPassword(@Param("userId") Long userId, @Param("password") String password);
 
     /**
      * 根据 id 修改用户个人资料
      * @param userId
      * @param profileDTO
      */
-    void updateUserProfileById(Long userId, UserProfileDTO profileDTO);
+    void updateUserProfileById(@Param("userId") Long userId, @Param("dto") UserProfileDTO dto);
 
     /**
      * 更新指定用户的头像字段
      * @param userId
      * @param avatarKey
      */
-    void updateUserAvatar(Long userId, String avatarKey);
+    void updateUserAvatar(@Param("userId") Long userId, @Param("avatarKey") String avatarKey);
 
     /**
      * 根据 id 批量查询用户简要信息
      * @param userIds
      * @return
      */
-    Collection<AuthorBriefVO> selectAuthorBriefByIds(Set<Long> userIds);
+    Collection<UserBriefVO> selectAuthorBriefByIds(@Param("userIds") Set<Long> userIds);
 
     /**
      * 根据 id 查询用户简要信息
      * @param authorId
      * @return
      */
-    AuthorBriefVO selectAuthorBriefById(Long authorId);
+    UserBriefVO selectAuthorBriefById(@Param("authorId") Long authorId);
 
     
 

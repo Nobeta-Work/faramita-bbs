@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import online.faramita.bbs.common.enums.ResultCode;
 import online.faramita.bbs.common.exception.BusinessException;
-import online.faramita.bbs.module.auth.mapper.RoleMapper;
+import online.faramita.bbs.module.auth.mapper.AuthMapper;
 import online.faramita.bbs.module.file.entity.AvatarInfo;
 import online.faramita.bbs.module.file.mapper.FileMapper;
 import online.faramita.bbs.module.file.service.FileService;
@@ -30,7 +30,7 @@ import online.faramita.bbs.module.user.vo.UserProfileVO;
 public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
-    private final RoleMapper roleMapper;
+    private final AuthMapper authMapper;
     private final FileMapper fileMapper;
     private final FileService fileService;
     private final PasswordEncoder passwordEncoder;
@@ -51,7 +51,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // 2. 根据 id 查询 roles
-        List<String> roles = roleMapper.selectRoleCodesByUserId(userId);
+        List<String> roles = authMapper.selectRoleCodesByUserId(userId);
 
         // 3. 实体转换
         UserProfileVO vo = UserProfileVO.builder()
@@ -141,7 +141,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // 3. 更新数据库
-        userMapper.updatePassword(userId, passwordEncoder.encode(newPassword));
+        userMapper.updateUserPassword(userId, passwordEncoder.encode(newPassword));
         
     }
 

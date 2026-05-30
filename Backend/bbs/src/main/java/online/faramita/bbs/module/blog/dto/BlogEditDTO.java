@@ -4,6 +4,7 @@ import java.util.List;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -20,7 +21,11 @@ public class BlogEditDTO {
     private Integer isPublished;
 
     @Size(min = 1, max = 20, message = "标题长度介于 1-20 字")
+    @NotBlank
     private String title;
+
+    @Size(max = 200, message = "摘要文字不能大于200字")
+    private String summary;
 
     private String content;
 

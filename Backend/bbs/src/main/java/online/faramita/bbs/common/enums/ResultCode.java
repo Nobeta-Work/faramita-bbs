@@ -19,6 +19,7 @@ public enum ResultCode {
     RESOURCE_NOT_FOUND(404, "该资源为空"),
     OLD_PASSWORD_ERROR(400, "密码错误"),
     NEW_PASSWORD_SAME_AS_OLD(400, "新旧密码不能相同"),
+    USERNAME_DUPLICATE(400, "用户名重复"),
     
     // =========== 文件模块 ===========
     FILE_ERROR(500, "文件传输失败"),
@@ -39,7 +40,7 @@ public enum ResultCode {
     FOLDER_OPERAION_NOT_ALLOWED(400, "操作异常"), 
     
     // =========== 标签模块 ===========
-    TAG_NAME_DUPLICATE(400, "标签名重复")
+    TAG_NAME_DUPLICATE(400, "标签名重复"),
     
     
     

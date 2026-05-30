@@ -1,7 +1,5 @@
 package online.faramita.bbs.module.auth.mapper;
 
-import java.util.List;
-
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
@@ -12,6 +10,6 @@ public interface RoleMapper {
      * @param id
      * @return
      */
-    List<String> selectRoleCodesByUserId(Long id);
+    // List<String> selectRoleCodesByUserId(Long id);
 
 }

@@ -1,11 +1,11 @@
-package online.faramita.bbs.module.blog.vo;
+package online.faramita.bbs.module.user.vo;
 
 import lombok.Builder;
 import lombok.Data;
 
 @Data
 @Builder
-public class AuthorBriefVO {
+public class UserBriefVO {
 
     private Long id;
     private String nickname;

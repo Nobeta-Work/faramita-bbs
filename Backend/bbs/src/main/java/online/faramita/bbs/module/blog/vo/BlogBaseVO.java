@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import online.faramita.bbs.module.tag.vo.TagBriefVO;
+import online.faramita.bbs.module.user.vo.UserBriefVO;
 
 @Data
 @SuperBuilder
@@ -23,6 +24,6 @@ public abstract class BlogBaseVO {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
-    private AuthorBriefVO author;
+    private UserBriefVO author;
     private List<TagBriefVO> tags;
 }

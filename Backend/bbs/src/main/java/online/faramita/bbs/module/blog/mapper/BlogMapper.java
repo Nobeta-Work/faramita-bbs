@@ -4,6 +4,7 @@ package online.faramita.bbs.module.blog.mapper;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import com.github.pagehelper.Page;
 
@@ -35,27 +36,29 @@ public interface BlogMapper {
      * @param id
      * @return
      */
-    Blog selectBlogById(Long id);
+    Blog selectBlogById(@Param("id") Long id);
 
     /**
      * 根据 id 修改博客
      * @param blogId
      * @param blogEditDTO
      */
-    void updateBlogById(Long blogId, BlogEditDTO blogEditDTO);
+    void updateBlogById(@Param("blogId") Long blogId, @Param("dto") BlogEditDTO dto);
 
     /**
      * 根据 id 删除博客
      * @param blogId
      */
-    void deleteBlogById(Long blogId);
+    void deleteBlogById(@Param("blogId") Long blogId);
 
     /**
      * 重置博客目录到根目录
      * @param userId
      * @param ids
      */
-    void batchResetBlogFolderByAuthorIdAndFolderIds(Long userId, List<Long> ids);
+    void batchResetBlogFolderByAuthorIdAndFolderIds(
+            @Param("userId") Long userId,
+            @Param("folderIds") List<Long> folderIds);
 
     /**
      * 根据目录id查询博客
@@ -64,7 +67,10 @@ public interface BlogMapper {
      * @param query
      * @return
      */
-    Page<Blog> selectBlogPageByFolderId(Long authorId, Long id, PageQuery query);
+    Page<Blog> selectBlogPageByFolderId(
+            @Param("authorId") Long authorId,
+            @Param("folderId") Long folderId,
+            @Param("query") PageQuery query);
 
     /**
      * 批量移动指定博客到指定目录下
@@ -73,5 +79,8 @@ public interface BlogMapper {
      * @param targetId
      * @return 影响行数
      */
-    int updateBlogFolderByAuthorIdAndIds(Long userId, List<Long> blogIds, Long targetId);    
+    int updateBlogFolderByAuthorIdAndIds(
+            @Param("userId") Long userId,
+            @Param("blogIds") List<Long> blogIds,
+            @Param("targetId") Long targetId);    
 }

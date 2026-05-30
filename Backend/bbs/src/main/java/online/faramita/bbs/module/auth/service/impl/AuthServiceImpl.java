@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,6 +22,7 @@ import online.faramita.bbs.module.auth.mapper.AuthMapper;
 import online.faramita.bbs.module.auth.dto.RegisterDTO;
 import online.faramita.bbs.module.auth.service.AuthService;
 import online.faramita.bbs.module.auth.vo.TokenVO;
+import online.faramita.bbs.module.user.entity.User;
 import online.faramita.bbs.module.user.mapper.UserMapper;
 import online.faramita.bbs.security.util.TokenProvider;
 
@@ -53,7 +55,7 @@ public class AuthServiceImpl implements AuthService {
         Long userId = loginUser.getUser().getId();
 
         // !: 兼容功能：覆写密码
-        userMapper.updatePassword(userId, loginUser.getPassword());
+        userMapper.updateUserPassword(userId, loginUser.getPassword());
         
         // 3. 生成双 Token
         String accessToken = tokenProvider.generateAccessToken(loginUser);
@@ -91,7 +93,27 @@ public class AuthServiceImpl implements AuthService {
         registerDTO.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
 
         // 2. 注册用户
-        authMapper.registerUser(registerDTO);
+        // 2.1 新建用户认证信息
+        User user = User.builder()
+                .username(registerDTO.getUsername())
+                .password(registerDTO.getPassword())
+                .nickname(registerDTO.getNickname())
+                .sex(registerDTO.getSex())
+                .race(registerDTO.getRace())
+                .status(1)
+                .build();
+        
+        try {
+            authMapper.insertUser(user);
+        } catch (DuplicateKeyException e) {
+            throw new BusinessException(ResultCode.USERNAME_DUPLICATE);
+        }
+
+        // 2.2 创建默认角色配置
+        int row = authMapper.insertUserDefaultRole(user.getId());
+        if (row != 1) {
+            throw new BusinessException(ResultCode.FAIL, "用户默认角色配置失败");
+        }
     }
 
 

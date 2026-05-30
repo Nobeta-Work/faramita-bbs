@@ -3,6 +3,7 @@ package online.faramita.bbs.module.folder.mapper;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import online.faramita.bbs.module.folder.entity.Folder;
 
@@ -14,7 +15,7 @@ public interface FolderMapper {
      * @param folderId
      * @return
      */
-    Folder selectFolderById(Long folderId);
+    Folder selectFolderById(@Param("folderId") Long folderId);
 
     /**
      * 插入目录
@@ -29,21 +30,21 @@ public interface FolderMapper {
      * @param id
      * @param name
      */
-    int updateFolderName(Long id, String name);
+    int updateFolderName(@Param("id") Long id, @Param("name") String name);
 
     /**
      * 修改指定 id 目录的路径
      * @param id
      * @param path
      */
-    int updateFolderPathById(Long id, String path);
+    int updateFolderPathById(@Param("id") Long id, @Param("path") String path);
 
     /**
      * 查询最大递归深度
      * @param id
      * @return
      */
-    Integer selectMaxLevelInSubtree(Long id);
+    Integer selectMaxLevelInSubtree(@Param("folderId") Long folderId);
 
     /**
      * 递归更新子树等级和路径
@@ -52,7 +53,11 @@ public interface FolderMapper {
      * @param parentLevel 父目录新 level
      * @param parentPath  父目录新path
      */
-    int updateSubtreeFolderLevelAndPath(Long authorId, Long parentId, Integer parentLevel, String parentPath);
+    int updateSubtreeFolderLevelAndPath(
+            @Param("authorId") Long authorId,
+            @Param("parentId") Long parentId,
+            @Param("parentLevel") Integer parentLevel,
+            @Param("parentPath") String parentPath);
 
     /**
      * 查询子树所有 id
@@ -60,14 +65,18 @@ public interface FolderMapper {
      * @param path
      * @return
      */
-    List<Long> selectSubtreeFolderIdsByAuthorIdAndPath(Long userId, String path);
+    List<Long> selectSubtreeFolderIdsByAuthorIdAndPath(
+            @Param("userId") Long userId,
+            @Param("path") String path);
 
     /**
      * 批量删除目录
      * @param userId
      * @param ids
      */
-    void batchDeleteFolderByAuthorIdAndIds(Long userId, List<Long> ids);
+    void batchDeleteFolderByAuthorIdAndIds(
+            @Param("userId") Long userId,
+            @Param("ids") List<Long> ids);
 
     /**
      * 查询子树所有目录
@@ -75,7 +84,16 @@ public interface FolderMapper {
      * @param parentId
      * @return
      */
-    List<Folder> selectSubtreeFoldersByAuthorIdAndParentId(Long userId, Long parentId);
+    List<Folder> selectSubtreeFoldersByAuthorIdAndParentId(
+            @Param("userId") Long userId,
+            @Param("parentId") Long parentId);
+
+    /**
+     * 不改变子目录，只修改当前目录的父目录
+     * @param id
+     * @param targetParentId
+     */
+    void updateFolderParentIdWithoutChildren(@Param("id") Long id, @Param("parentId") Long parentId);
 
 
 

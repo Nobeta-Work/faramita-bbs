@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="online.faramita.bbs.module.user.mapper.UserMapper">
+
+    <sql id="UserColumns">
+        id,
+        username,
+        password,
+        nickname,
+        avatar,
+        sex,
+        race,
+        signature,
+        status,
+        create_time,
+        update_time
+    </sql>
+
+    <!-- selectUserById --> 
+
+    <select id="selectUserById" parameterType="long"
+            resultType="online.faramita.bbs.module.user.entity.User">
+        SELECT
+            <include refid="UserColumns"></include>
+        FROM sys_user
+        WHERE id = #{userId}
+        LIMIT 1
+    </select>
+
+    <!-- updatePassword --> 
+
+    <update id="updateUserPassword">
+        UPDATE sys_user
+        SET password = #{password}
+        WHERE id = #{userId}
+    </update>
+
+    <!-- updateUserAvatar --> 
+
+    <update id="updateUserAvatar">
+        UPDATE sys_user
+        SET avatar = #{avatarKey}
+        WHERE id = #{userId}
+    </update>
+
+    <!-- updateUserProfileById --> 
+
+    <update id="updateUserProfileById">
+        UPDATE sys_user
+        SET
+            nickname = #{dto.nickname},
+            sex = #{dto.sex},
+            race = #{dto.race}
+        WHERE id = #{userId}
+    </update>
+
+    <!-- selectAuthorBriefByIds --> 
+
+    <select id="selectAuthorBriefByIds"
+            resultType="online.faramita.bbs.module.user.vo.AuthorBriefVO">
+        SELECT
+            id, nickname, avatar
+        FROM sys_user
+        WHERE id IN
+            <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+                #{userId}
+            </foreach>
+    </select>
+
+    <!-- selectAuthorBriefById --> 
+
+    <select id="selectAuthorBriefById"
+            resultType="online.faramita.bbs.module.user.vo.AuthorBriefVO">
+        SELECT
+            id, nickname, avatar
+        FROM sys_user
+        WHERE id = #{userId}
+    </select>
+</mapper>

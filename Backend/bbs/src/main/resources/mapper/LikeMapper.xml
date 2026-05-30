@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="online.faramita.bbs.module.like.mapper.LikeMapper">
+
+
+    <!-- selectLikerIdsByBlogId --> 
+
+    <select id="selectLikerIdsByBlogId"
+            resultType="long">
+        SELECT user_id
+        FROM like_blog
+        WHERE blog_id = #{blogId}
+    </select>
+
+    <!-- batchInsertBlogLikeByChanges --> 
+
+    <insert id="batchInsertBlogLikeByChanges">
+        INSERT IGNORE INTO like_blog (
+            blog_id,
+            user_id,
+            create_time
+        ) VALUES 
+            <foreach collection="logs" item="log" open="" separator="," close="">
+                (#{log.blogId}, #{log.userId}, #{log.timestamp})
+            </foreach>
+    </insert>
+
+    <!-- batchDeleteBlogLikeByChanges --> 
+
+    <delete id="batchDeleteBlogLikeByChanges">
+        DELETE FROM like_blog
+        WHERE (blog_id, user_id) IN
+            <foreach collection="logs" item="log" open="(" separator="," close=")">
+                (#{log.blogId}, #{log.userId})
+            </foreach>
+    </delete>
+
+    <!-- refreshBlogLikeCountByBlogIds --> 
+
+    <update id="refreshBlogLikeCountByBlogIds">
+        UPDATE blog b
+        LEFT JOIN (
+            SELECT
+                blog_id, COUNT(*) as like_count
+            FROM like_blog
+            WHERE blog_id IN
+                <foreach collection="blogIds" item="blogId" open="(" separator="," close=")">
+                    #{blogId}
+                </foreach>
+            GROUP BY blog_id
+        ) lb ON lb.blog_id = b.id
+        SET b.like_count = IFNULL(lb.like_count, 0)
+        WHERE b.id IN
+            <foreach collection="blogIds" item="blogId" open="(" separator="," close=")">
+                #{blogId}
+            </foreach>
+    </update>
+</mapper>

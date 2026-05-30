@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="online.faramita.bbs.module.folder.mapper.FolderMapper">
+
+    <sql id="FolderColumns">
+        id,
+        author_id,
+        parent_id,
+        name,
+        path,
+        level,
+        sort_order,
+        create_time,
+        update_time
+    </sql>
+    <sql id="FolderColumnsWithAlias">
+        f.id,
+        f.author_id,
+        f.parent_id,
+        f.name,
+        f.path,
+        f.level,
+        f.sort_order,
+        f.create_time,
+        f.update_time
+    </sql>
+
+    <!-- selectFolderById --> 
+
+    <select id="selectFolderById"
+            resultType="online.faramita.bbs.module.folder.entity.Folder">
+        SELECT
+            <include refid="FolderColumns"></include>
+        FROM folder
+        WHERE id = #{folderId}
+    </select>
+
+    <!-- insertFolder --> 
+
+    <insert id="insertFolder"
+            parameterType="online.faramita.bbs.module.folder.entity.Folder"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO folder (
+            author_id,
+            parent_id,
+            name,
+            path,
+            level
+        ) VALUES (
+            #{authorId},
+            #{parentId},
+            #{name},
+            #{path},
+            #{level}
+        )
+    </insert>
+
+
+    <!-- updateFolderName --> 
+
+    <update id="updateFolderName">
+        UPDATE folder
+        SET
+            name = #{name}
+        WHERE id = #{id}
+    </update>
+
+    <!-- updateFolderPathById --> 
+
+    <update id="updateFolderPathById">
+        UPDATE folder
+        SET
+            path = #{path}
+        WHERE id = #{id}
+    </update>
+
+    <!-- selectMaxLevelInSubtree --> 
+
+    <select id="selectMaxLevelInSubtree"
+            resultType="int">
+        SELECT MAX(f.level)
+        FROM folder f
+        INNER JOIN folder root ON root.id = #{folderId}
+        WHERE f.author_id = root.author_id
+            AND (
+                f.path = root.path
+                OR f.path LIKE CONCAT(root.path, '/%')
+            )
+    </select>
+
+    <!-- updateSubtreeFolderLevelAndPath --> 
+
+    <update id="updateSubtreeFolderLevelAndPath">
+        UPDATE folder f
+        INNER JOIN folder root ON root.id = #{parentId}
+        SET
+            f.level = f.level + (#{parentLevel} - root.level),
+            f.path = CONCAT(
+                #{parentPath},
+                SUBSTRING(f.path, CHAR_LENGTH(root.path) + 1)
+            )
+        WHERE f.author_id = #{authorId}
+            AND (
+                f.path = root.path
+                OR f.path LIKE CONCAT(root.path, '/%')
+            )
+    </update>
+
+    <!-- selectSubtreeFolderIdsByAuthorIdAndPath --> 
+
+    <select id="selectSubtreeFolderIdsByAuthorIdAndPath"
+            resultType="long">
+        SELECT id
+        FROM folder
+        WHERE author_id = #{userId}
+            AND (
+                path LIKE #{path}
+                OR path LIKE CONCAT(#{path}, '/%')
+            )
+    </select>
+
+    <!-- batchDeleteFolderByAuthorIdAndIds --> 
+
+    <delete id="batchDeleteFolderByAuthorIdAndIds">
+        DELETE FROM folder
+        WHERE author_id = #{userId}
+            AND id IN
+                <foreach collection="ids" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+    </delete>
+
+    <!-- selectSubtreeFoldersByAuthorIdAndParentId --> 
+
+    <select id="selectSubtreeFoldersByAuthorIdAndParentId"
+            resultType="online.faramita.bbs.module.folder.entity.Folder">
+        SELECT 
+            <include refid="FolderColumnsWithAlias"></include>
+        FROM folder f
+        <if test="parentId != 0">
+            INNER JOIN folder root ON root.id = #{parentId}
+        </if>
+        WHERE f.author_id = #{userId}
+            <if test="parentId != 0">
+                AND root.author_id = #{userId}
+                AND (
+                    f.path = root.path
+                    OR f.path LIKE CONCAT(root.path, '/%')
+                )
+            </if>
+    </select>
+
+    <!-- updateFolderParentIdWithoutChildren --> 
+
+    <update id="updateFolderParentIdWithoutChildren">
+        UPDATE folder
+        SET
+            parent_id = #{parentId}
+        WHERE id = #{id}
+    </update>
+</mapper>

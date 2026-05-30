@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="online.faramita.bbs.module.tag.mapper.TagMapper">
+
+    <sql id="TagColumns">
+        id,
+        name,
+        description,
+        create_time
+    </sql>
+
+    <!-- selectBlogTagBriefRelationsByBlogIds --> 
+
+    <select id="selectBlogTagBriefRelationsByBlogIds"
+            resultType="online.faramita.bbs.module.blog.dto.BlogTagBriefRelations">
+        SELECT
+            bt.blog_id, bt.tag_id, t.name AS tag_name
+        FROM tag t
+        INNER JOIN blog_tag bt ON bt.tag_id = t.id
+        WHERE bt.blog_id IN
+            <foreach collection="blogIds" item="blogId" open="(" separator="," close=")">
+                #{blogId}
+            </foreach>
+    </select>
+
+    <!-- selectTagBriefByBlogId --> 
+
+    <select id="selectTagBriefByBlogId"
+            resultType="online.faramita.bbs.module.tag.vo.TagBriefVO">
+        SELECT
+            t.id, t.name
+        FROM tag t
+        INNER JOIN blog_tag bt ON bt.tag_id = t.id
+        WHERE bt.blog_id = #{blogId}
+    </select>
+
+    <!-- deleteBlogTagRelationsByBlogId --> 
+
+    <delete id="deleteBlogTagRelationsByBlogId">
+        DELETE FROM blog_tag bt
+        WHERE bt.blog_id = #{blogId}
+    </delete>
+
+    <!-- insertTag --> 
+
+    <insert id="insertTag">
+        INSERT INTO tag (
+            id,
+            name,
+            description
+        ) VALUES (
+            #{id},
+            #{name},
+            #{description}
+        )
+    </insert>
+
+
+
+
+    <!-- selectTagPage --> 
+
+    <select id="selectTagPage"
+            resultType="online.faramita.bbs.module.tag.entity.Tag">
+        SELECT
+            <include refid="TagColumns"></include>
+        FROM tag
+        <if test="keyword != null and keyword != ''">
+            WHERE (
+                name LIKE CONCAT('%', #{keyword}, '%')
+                OR description LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- batchInsertBlogTagReliations --> 
+
+    <insert id="batchInsertBlogTagReliations">
+        INSERT INTO blog_tag (
+            blog_id,
+            tag_id
+        ) VALUES 
+            <foreach collection="tagIds" item="tagId" open="" separator="," close="">
+                (#{blogId}, #{tagId})
+            </foreach>
+    </insert>
+</mapper>

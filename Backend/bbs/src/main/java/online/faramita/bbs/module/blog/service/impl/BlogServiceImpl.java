@@ -31,7 +31,6 @@ import online.faramita.bbs.module.blog.dto.BlogTagBriefRelations;
 import online.faramita.bbs.module.blog.entity.Blog;
 import online.faramita.bbs.module.blog.mapper.BlogMapper;
 import online.faramita.bbs.module.blog.service.BlogService;
-import online.faramita.bbs.module.blog.vo.AuthorBriefVO;
 import online.faramita.bbs.module.blog.vo.BlogPrivateDetailVO;
 import online.faramita.bbs.module.blog.vo.BlogPublicBriefVO;
 import online.faramita.bbs.module.blog.vo.BlogPublicDetailVO;
@@ -41,6 +40,7 @@ import online.faramita.bbs.module.like.mapper.LikeMapper;
 import online.faramita.bbs.module.tag.mapper.TagMapper;
 import online.faramita.bbs.module.tag.vo.TagBriefVO;
 import online.faramita.bbs.module.user.mapper.UserMapper;
+import online.faramita.bbs.module.user.vo.UserBriefVO;
 import online.faramita.bbs.security.util.SecurityUtil;
 
 @Service
@@ -88,8 +88,8 @@ public class BlogServiceImpl implements BlogService{
         Set<Long> authorIds = blogPage.stream().map(Blog::getAuthorId).collect(Collectors.toSet());
 
         // 2.3 批量查询
-        Map<Long, AuthorBriefVO> authorMap = userMapper.selectAuthorBriefByIds(authorIds)
-                .stream().collect(Collectors.toMap(AuthorBriefVO::getId, Function.identity()));
+        Map<Long, UserBriefVO> authorMap = userMapper.selectAuthorBriefByIds(authorIds)
+                .stream().collect(Collectors.toMap(UserBriefVO::getId, Function.identity()));
         Map<Long, List<TagBriefVO>> tagMap = tagMapper.selectBlogTagBriefRelationsByBlogIds(blogIds)
                 .stream().collect(Collectors.groupingBy(
                     BlogTagBriefRelations::getBlogId,
@@ -188,7 +188,7 @@ public class BlogServiceImpl implements BlogService{
         }
 
         // 3. 查找作者信息
-        AuthorBriefVO author = userMapper.selectAuthorBriefById(blog.getAuthorId());
+        UserBriefVO author = userMapper.selectAuthorBriefById(blog.getAuthorId());
 
         // 4. 查找标签信息
         List<TagBriefVO> tags = tagMapper.selectTagBriefByBlogId(id);
@@ -255,7 +255,7 @@ public class BlogServiceImpl implements BlogService{
         }
 
         // 3. 查找作者信息
-        AuthorBriefVO author = userMapper.selectAuthorBriefById(blog.getAuthorId());
+        UserBriefVO author = userMapper.selectAuthorBriefById(blog.getAuthorId());
 
         // 4. 查找标签信息
         List<TagBriefVO> tags = tagMapper.selectTagBriefByBlogId(id);
@@ -331,8 +331,17 @@ public class BlogServiceImpl implements BlogService{
         // 4. blog 更新
         blogMapper.updateBlogById(blogId, blogEditDTO);
 
-        // 5. tag 更新
-        tagMapper.updateBlogTagByTagIds(blogId, blogEditDTO.getTagIds());
+        // 5. blog_tag 双步更新
+        List<Long> tagIds = blogEditDTO.getTagIds();
+
+        tagMapper.deleteBlogTagRelationsByBlogId(blogId);
+
+        if (tagIds == null || tagIds.isEmpty()) {
+            return;
+        }
+
+        
+        tagMapper.batchInsertBlogTagReliations(blogId, tagIds);
     }
 
 

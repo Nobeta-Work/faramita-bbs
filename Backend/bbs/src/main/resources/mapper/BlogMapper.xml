@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="online.faramita.bbs.module.blog.mapper.BlogMapper">
+
+    <sql id="BlogColumns">
+        id,
+        title,
+        content,
+        summary,
+        author_id,
+        folder_id,
+        is_published,
+        like_count,
+        create_time,
+        update_time
+    </sql>
+
+    
+
+    <!-- insertBlog --> 
+
+    <insert id="insertBlog" parameterType="online.faramita.bbs.module.blog.entity.Blog">
+        INSERT INTO blog (
+            id,
+            author_id,
+            folder_id,
+            is_published,
+            title
+        ) VALUES (
+            #{id},
+            #{authorId},
+            #{folderId},
+            #{isPublished},
+            #{title}
+        )
+    </insert>
+
+    <!-- selectBlogPage --> 
+
+    <select id="selectBlogPage"
+            resultType="online.faramita.bbs.module.blog.entity.Blog">
+        SELECT
+            <include refid="BlogColumns"></include>
+        FROM blog
+        WHERE is_published = 1
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    title LIKE CONCAT('%', #{keyword}, '%')
+                    OR summary LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="authorId != null">
+                AND author_id = #{authorId}
+            </if>
+            <if test="tagIds != null and tagIds.size() > 0">
+                <bind name="tagCount" value="tagIds.size()" />
+                AND id IN (
+                    SELECT bt.blog_id
+                    FROM blog_tag bt
+                    WHERE bt.tag_id IN
+                        <foreach collection="tagIds" item="tagId" open="(" separator="," close=")">
+                            #{tagId}
+                        </foreach>
+                    GROUP BY bt.blog_id
+                    HAVING COUNT(DISTINCT bt.tag_id) = #{tagCount}
+                )
+            </if>
+        ORDER BY
+            <choose>
+                <when test="sortField == 'updateTime'">
+                    update_time
+                </when>
+                <when test="sortField == 'likeCount'">
+                    like_count
+                </when>
+                <otherwise>
+                    create_time
+                </otherwise>
+            </choose>
+
+            <choose>
+                <when test="sortOrder != null and sortOrder.toLowerCase() == 'asc'">
+                    ASC
+                </when>
+                <otherwise>
+                    DESC
+                </otherwise>
+            </choose>
+    </select>
+
+
+    <!-- selectBlogById --> 
+
+    <select id="selectBlogById" parameterType="long"
+            resultType="online.faramita.bbs.module.blog.entity.Blog">
+        SELECT
+            <include refid="BlogColumns"></include>
+        FROM blog
+        WHERE id = #{id}
+    </select>
+
+    <!-- updateBlogById --> 
+
+    <update id="updateBlogById">
+        UPDATE blog
+        SET 
+            <if test="dto.folderId != null">
+                folder_id = #{dto.folderId},
+            </if>
+            <if test="dto.isPublished != null">
+                is_published = #{dto.isPublished},
+            </if>
+            title = #{dto.title},
+            summary = #{dto.summary},
+            content = #{dto.content}
+        WHERE id = #{blogId}
+    </update>
+
+    <!-- deleteBlogById --> 
+
+    <delete id="deleteBlogById">
+        DELETE FROM blog
+        WHERE id = #{blogId}
+    </delete>
+
+    <!-- batchResetBlogFolderByAuthorIdAndFolderIds --> 
+
+    <update id="batchResetBlogFolderByAuthorIdAndFolderIds">
+        UPDATE blog
+        SET
+            folder_id = 0
+        WHERE author_id = #{userId}
+            AND folder_id IN
+                <foreach collection="folderIds" item="folderId" open="(" separator="," close=")">
+                    #{folderId}
+                </foreach>
+    </update>
+
+    <!-- selectBlogPageByFolderId --> 
+
+    <select id="selectBlogPageByFolderId"
+            resultType="online.faramita.bbs.module.blog.entity.Blog">
+        SELECT
+            <include refid="BlogColumns"></include>
+        FROM blog
+        WHERE folder_id = #{folderId} AND author_id = #{authorId}
+        ORDER BY
+            <choose>
+                <when test="query.sortField == 'updateTime'">
+                    update_time
+                </when>
+                <otherwise>
+                    create_time
+                </otherwise>
+            </choose>
+
+            <choose>
+                <when test="query.sortOrder != null and query.sortOrder.toLowerCase() == 'asc'">
+                    ASC
+                </when>
+                <otherwise>
+                    DESC
+                </otherwise>
+            </choose>
+    </select>
+
+    <!-- updateBlogFolderByAuthorIdAndIds --> 
+
+    <update id="updateBlogFolderByAuthorIdAndIds">
+        UPDATE blog
+        SET
+            folder_id = #{targetId}
+        WHERE author_id = #{userId}
+            AND id IN
+            <foreach collection="blogIds" item="blogId" open="(" separator="," close=")">
+                #{blogId}
+            </foreach>
+    </update>
+</mapper>
