@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import online.faramita.bbs.common.enums.RedisKeys;
 import online.faramita.bbs.common.enums.ResultCode;
 import online.faramita.bbs.common.exception.BusinessException;
+import online.faramita.bbs.config.RedisScriptConfig;
 import online.faramita.bbs.module.blog.entity.Blog;
 import online.faramita.bbs.module.blog.mapper.BlogMapper;
 import online.faramita.bbs.module.like.entity.LikeBlogChangelog;
@@ -25,7 +26,7 @@ import online.faramita.bbs.module.like.service.LikeService;
 public class LikeServiceImpl implements LikeService {
 
     private final LikeMapper likeMapper;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
     private final BlogMapper blogMapper;
 
     /**
@@ -42,7 +43,7 @@ public class LikeServiceImpl implements LikeService {
         }
         // 1. 查看缓存
         String key = RedisKeys.LIKE_BLOG.getFullKey(blogId);
-        if (!redisTemplate.hasKey(key)) {
+        if (!stringRedisTemplate.hasKey(key)) {
             // 1.1 缓存不存在，读取  DB 回写
             // TODO: 缓存穿透
             Duration ttl = Duration.ofSeconds(RedisKeys.LIKE_BLOG.getDefaultTtl());
@@ -51,42 +52,28 @@ public class LikeServiceImpl implements LikeService {
             String[] members = userIds.stream()
                     .map(String::valueOf).toArray(String[]::new);
             if (members.length > 0) {
-                redisTemplate.opsForSet().add(
+                stringRedisTemplate.opsForSet().add(
                     key, 
-                    (Object[]) members
+                    members
                 );
-                redisTemplate.expire(key, ttl);
+                stringRedisTemplate.expire(key, ttl);
             }
         }
 
         // 2. 缓存存在，读取用户是否点赞
-        boolean isLiked = redisTemplate.opsForSet().isMember(
-            key, userId.toString()
+        String logKey = RedisKeys.LIKE_CHANGELOG_BLOG.getPrefix();
+        List<String> keys = List.of(key, logKey);
+        Long count = stringRedisTemplate.execute(
+            RedisScriptConfig.likeToggleScript(),
+            keys,
+            userId.toString(),
+            blogId.toString(),
+            LocalDateTime.now().toString(),
+            RedisKeys.LIKE_BLOG.getDefaultTtl().toString()
         );
 
-        // 2.1 反向操作
-        // TODO: Atomic
-        if (isLiked) {
-            // 取消点赞
-            redisTemplate.opsForSet().remove(key, userId.toString());
-        } else {
-            // 点赞
-            redisTemplate.opsForSet().add(key, userId.toString());
-        }
-
-        // 2.2 构造变更记录
-        LikeBlogChangelog log = LikeBlogChangelog.builder()
-                .blogId(blogId)
-                .userId(userId)
-                .isLikeAction(!isLiked)
-                .timestamp(LocalDateTime.now())
-                .build();
-
-        // 2.3 写入任务队列
-        redisTemplate.opsForList().rightPush(RedisKeys.LIKE_CHANGELOG_BLOG.getPrefix(), log);
-
         // 3. 返回当前点赞数量
-        return redisTemplate.opsForSet().size(key).intValue();
+        return count.intValue();
     }
 
 
