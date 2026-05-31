@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import online.faramita.bbs.common.enums.RedisKeys;
@@ -94,6 +95,7 @@ public class LikeServiceImpl implements LikeService {
      * 异步回写数据库
      */
     @Override
+    @Transactional
     public void flushLikeBlogChangelog(List<LikeBlogChangelog> logs) {
         
         // 除旧迎新 Map<blogId:userId, log>

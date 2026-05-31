@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
@@ -52,6 +53,7 @@ public class FolderServiceImpl implements FolderService {
      * @param folderSaveDTO
      */
     @Override
+    @Transactional
     public void createFolder(Long userId, FolderSaveDTO folderSaveDTO) {
         
         // 1. 校验 parentFolder
@@ -75,7 +77,7 @@ public class FolderServiceImpl implements FolderService {
         }
 
         // 3. 生成目录实体
-        // TODO: Transaction
+        // Transaction
         Folder folder = Folder.builder()
                 .parentId(parentId)
                 .name(folderSaveDTO.getName())
@@ -132,6 +134,7 @@ public class FolderServiceImpl implements FolderService {
      * @return
      */
     @Override
+    @Transactional
     public void moveFolderById(Long id, Long targetParentId) {
         // 1. 校验 folder 存在, authorId 匹配
         Folder folder = folderMapper.selectFolderById(id);
@@ -182,9 +185,6 @@ public class FolderServiceImpl implements FolderService {
             parentPath = parentFolder.getPath();
         }
 
-
-        // 3. TODO: Transaction
-
         // 3.1 重新计算 folder.level
         Integer level = parentLevel + 1;
 
@@ -203,6 +203,7 @@ public class FolderServiceImpl implements FolderService {
      * @return
      */
     @Override
+    @Transactional
     public void deleteFolder(Long id) {
         Long userId = SecurityUtil.getLoginUserId();
         // 1. 校验 folder 存在，authorId 匹配
@@ -211,7 +212,7 @@ public class FolderServiceImpl implements FolderService {
             throw new BusinessException(ResultCode.FOLDER_OPERAION_NOT_ALLOWED);
         }
 
-        // 2. TODO: Transaction
+        // 2. Transaction
         // 2.1 收集所有要删除的子树目录 ids
         List<Long> ids = folderMapper.selectSubtreeFolderIdsByAuthorIdAndPath(userId, folder.getPath());
 
@@ -337,6 +338,7 @@ public class FolderServiceImpl implements FolderService {
      * @return
      */
     @Override
+    @Transactional
     public void moveBlogsToFolder(FolderBlogsMoveDTO folderBlogsMoveDTO) {
         
         // 1. 提取信息
@@ -346,12 +348,12 @@ public class FolderServiceImpl implements FolderService {
 
         if (targetId > 0) {
             Folder folder = folderMapper.selectFolderById(targetId);
-            if (!folder.getAuthorId().equals(userId)) {
+            if (folder == null || !folder.getAuthorId().equals(userId)) {
                 throw new BusinessException(ResultCode.FORBIDDEN);
             }
         }
 
-        // 2. TODO: Transaction
+        // 2. Transaction
         // 2.1 改库，权限校验下沉 sql
         int cnt = blogMapper.updateBlogFolderByAuthorIdAndIds(userId, blogIds, targetId);
         // 2.2 乐观锁思想，修改数量不匹配，回滚

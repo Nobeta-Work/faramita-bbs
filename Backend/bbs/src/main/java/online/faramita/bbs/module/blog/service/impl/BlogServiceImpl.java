@@ -12,6 +12,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
@@ -282,6 +283,7 @@ public class BlogServiceImpl implements BlogService{
      * @param blogId
      */
     @Override
+    @Transactional
     public void deleteBlogById(Long blogId) {
         // 1. 查询 blog
         Blog blog = blogMapper.selectBlogById(blogId);
@@ -307,6 +309,7 @@ public class BlogServiceImpl implements BlogService{
      * @param blogId
      * @param blogEditDTO
      */
+    @Transactional
     @Override
     public void editBlogById(Long blogId, BlogEditDTO blogEditDTO) {
         // 1.根据blogId查询原始博客信息
@@ -323,9 +326,11 @@ public class BlogServiceImpl implements BlogService{
         }
 
         // 3.目录校验
-        Folder folder = folderMapper.selectFolderById(blogEditDTO.getFolderId());
-        if (folder == null || !folder.getAuthorId().equals(loginUser.getUser().getId())) {
-            throw new BusinessException(ResultCode.FORBIDDEN);
+        if (blog.getFolderId() > 0) {
+            Folder folder = folderMapper.selectFolderById(blogEditDTO.getFolderId());
+            if (folder == null || !folder.getAuthorId().equals(loginUser.getUser().getId())) {
+                throw new BusinessException(ResultCode.FORBIDDEN);
+            }
         }
 
         // 4. blog 更新

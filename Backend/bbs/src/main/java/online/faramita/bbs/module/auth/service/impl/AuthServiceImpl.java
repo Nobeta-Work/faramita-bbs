@@ -11,6 +11,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import online.faramita.bbs.common.enums.RedisKeys;
@@ -88,6 +89,7 @@ public class AuthServiceImpl implements AuthService {
      * 注册接口
      */
     @Override
+    @Transactional
     public void register(RegisterDTO registerDTO) {
         // 1. 加密密码
         registerDTO.setPassword(passwordEncoder.encode(registerDTO.getPassword()));

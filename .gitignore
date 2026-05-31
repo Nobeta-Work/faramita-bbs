@@ -18,6 +18,9 @@ Thumbs.db
 .claude/
 .codex/
 .github/
+docs/
+CLAUDE.md
+AGENTS.md
 
 # 日志
 *.log
