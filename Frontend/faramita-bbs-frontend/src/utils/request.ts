@@ -1,28 +1,114 @@
-import axios, { type InternalAxiosRequestConfig, type AxiosResponse} from "axios";
-import { useUserStore } from "@/stores/user";
-import router from "@/router";
+import axios, {
+    type AxiosError,
+    type AxiosRequestConfig,
+    type AxiosResponse,
+    type InternalAxiosRequestConfig,
+} from 'axios'
 import { createDiscreteApi } from 'naive-ui'
+import router from '@/router'
+import { useUserStore } from '@/stores/user'
+import {
+    API_SUCCESS_CODE,
+    LEGACY_API_SUCCESS_CODE,
+    type ApiResponse,
+    type TokenVO,
+} from '@/types'
+import { serializeQueryParams } from './params'
 
-const { message, dialog } = createDiscreteApi(
-  ['message', 'dialog']
-)
+const { message, dialog } = createDiscreteApi(['message', 'dialog'])
 
-// 1.创建Axios实例
+interface RetriableRequestConfig extends InternalAxiosRequestConfig {
+    _retry?: boolean
+}
+
 const service = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
     timeout: 10000,
+    paramsSerializer: {
+        serialize: serializeQueryParams,
+    },
 })
 
-// 2.请求拦截器
+let refreshPromise: Promise<string | null> | null = null
+
+function isApiResponse<T = unknown>(value: unknown): value is ApiResponse<T> {
+    return typeof value === 'object' && value !== null && 'code' in value
+}
+
+function getResponseMessage(response: ApiResponse): string {
+    return response.msg || response.message || 'Error'
+}
+
+function isSuccessCode(code: number): boolean {
+    return code === API_SUCCESS_CODE || code === LEGACY_API_SUCCESS_CODE
+}
+
+async function requestNewAccessToken(refreshToken: string): Promise<string | null> {
+    const refreshResponse = await axios.request<ApiResponse<TokenVO>>({
+        baseURL: import.meta.env.VITE_API_BASE_URL,
+        url: '/auth/refresh',
+        method: 'post',
+        params: { refreshToken },
+        paramsSerializer: {
+            serialize: serializeQueryParams,
+        },
+    })
+
+    const payload = refreshResponse.data
+    if (!isApiResponse<TokenVO>(payload) || !isSuccessCode(payload.code) || !payload.data) {
+        return null
+    }
+
+    const userStore = useUserStore()
+    userStore.setTokens(payload.data)
+    return payload.data.accessToken
+}
+
+async function replayWithFreshToken(config: RetriableRequestConfig): Promise<unknown | null> {
+    const userStore = useUserStore()
+
+    if (config._retry || !userStore.refreshToken) {
+        return null
+    }
+
+    config._retry = true
+
+    refreshPromise = refreshPromise ?? requestNewAccessToken(userStore.refreshToken)
+    const accessToken = await refreshPromise.finally(() => {
+        refreshPromise = null
+    })
+
+    if (!accessToken) {
+        return null
+    }
+
+    config.headers = config.headers || {}
+    config.headers.Authorization = `Bearer ${accessToken}`
+    return service.request(config)
+}
+
+function promptLogin(messageText = '您未登录或身份已失效，请重新登录'): void {
+    const userStore = useUserStore()
+
+    dialog.warning({
+        title: '访问拒绝',
+        content: messageText,
+        positiveText: '点击登录',
+        negativeText: '取消',
+        onPositiveClick: () => {
+            userStore.logout()
+            router.push('/login')
+        },
+    })
+}
+
 service.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-        // 2.1 请求前处理
         const userStore = useUserStore()
 
-        // 2.1.1 添加token
         if (userStore.token) {
             config.headers = config.headers || {}
-            config.headers['Authorization'] = `Bearer ${userStore.token}`
+            config.headers.Authorization = `Bearer ${userStore.token}`
         }
 
         return config
@@ -30,65 +116,62 @@ service.interceptors.request.use(
     (error) => {
         console.error('Request Error:', error)
         return Promise.reject(error)
-    }
+    },
 )
 
-// 3.响应拦截器
 service.interceptors.response.use(
-    (response: AxiosResponse) => {
-        // 3.0检查是否为 Blob响应
+    async (response: AxiosResponse) => {
         if (response.config.responseType === 'blob') {
             return response
         }
 
         const res = response.data
-        // 3.1获取响应code
-        if (res.code !== 1) {
-            // 3.1.1响应逻辑性失败
-            console.error(res.message || 'Error')
-            if (res.message) {
-                message.error(res.message)
-            }
-            // 3.1.2处理401错误响应
-            if (res.code === 401) {
-                dialog.warning({
-                    title: '访问拒绝',
-                    content: '您未登录或身份已失效，请重新登录',
-                    positiveText: '点击登录',
-                    negativeText: '取消',
-                    onPositiveClick: () => {
-                        const userStore = useUserStore()
-                        userStore.logout()
-                        router.push('/login')
-                    }
-                })
-            }
-
-            return Promise.reject(new Error(res.message || 'Error'))
+        if (!isApiResponse(res)) {
+            return res
         }
 
-        // 返回响应数据
-        return res.data
+        if (isSuccessCode(res.code)) {
+            return res.data
+        }
+
+        if (res.code === 401) {
+            const replayed = await replayWithFreshToken(response.config as RetriableRequestConfig)
+            if (replayed !== null) {
+                return replayed
+            }
+
+            promptLogin(getResponseMessage(res))
+        } else {
+            message.error(getResponseMessage(res))
+        }
+
+        return Promise.reject(new Error(getResponseMessage(res)))
     },
-    (error) => {
-        console.error('Response Error:' + error)
-        
-        // 处理错误类型
+    async (error: AxiosError) => {
+        console.error('Response Error:', error)
+
+        const response = error.response
+        if (response?.status === 401 && response.config) {
+            const replayed = await replayWithFreshToken(response.config as RetriableRequestConfig)
+            if (replayed !== null) {
+                return replayed
+            }
+
+            promptLogin()
+            return Promise.reject(error)
+        }
+
         if (error.message.includes('Network Error')) {
             message.error('网络连接失败，请检查网络设置')
         } else if (error.message.includes('timeout')) {
             message.error('请求超时，请稍后重试')
-        } else if (error.response) {
-            // 处理HTTP错误状态码
-            switch (error.response.status) {
+        } else if (response) {
+            switch (response.status) {
                 case 400:
                     message.error('请求参数错误')
                     break
-                case 401:
-                    message.error('未授权，请登录')
-                    break
                 case 403:
-                    message.error("拒绝访问")
+                    message.error('拒绝访问')
                     break
                 case 404:
                     message.error('请求资源不存在')
@@ -101,9 +184,13 @@ service.interceptors.response.use(
             }
         }
 
-        // 返回
         return Promise.reject(error)
-    }
+    },
 )
 
-export default service
+export function request<T = unknown>(config: AxiosRequestConfig): Promise<T> {
+    return service.request<unknown, T>(config)
+}
+
+export { service as requestClient }
+export default request
