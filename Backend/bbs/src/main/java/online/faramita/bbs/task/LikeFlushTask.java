@@ -99,6 +99,10 @@ public class LikeFlushTask {
     // ? =================== 功能方法 ===================
     // 确保消费组已经创建
     private boolean ensureConsumerGroup(String key) {
+        if (!Boolean.TRUE.equals(stringRedisTemplate.hasKey(key))) {
+            return false;
+        }
+
         try {
             // 尝试创建消费组 XGROUP CREATE
             stringRedisTemplate.opsForStream()
@@ -106,7 +110,7 @@ public class LikeFlushTask {
             // 创建成功
             return true;
         } catch (Exception e) {
-            String message = String.valueOf(e.getMessage());
+            String message = collectExceptionMessages(e);
 
             // 异常：BUSYGROUP -> 消费组已创建，放行
             if (message.contains("BUSYGROUP")) {
@@ -114,11 +118,21 @@ public class LikeFlushTask {
             }
 
             // 异常：no such key -> 整个 Stream 队列还没创建（未生产过消息）
-            if (message.contains("no such key")) {
+            if (message.contains("no such key") || message.contains("requires the key to exist")) {
                 return false;
             }
 
             throw e;
         }
+    }
+
+    private String collectExceptionMessages(Throwable e) {
+        StringBuilder message = new StringBuilder();
+        Throwable current = e;
+        while (current != null) {
+            message.append(current.getMessage()).append('\n');
+            current = current.getCause();
+        }
+        return message.toString();
     }
 }

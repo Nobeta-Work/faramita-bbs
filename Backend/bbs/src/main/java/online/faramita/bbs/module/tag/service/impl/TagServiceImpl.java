@@ -37,12 +37,13 @@ public class TagServiceImpl implements TagService {
         // 1. 处理参数
         Long id = SnowflakeUtil.nextId();
         dto.setName(dto.getName().trim());
+        String description = dto.getDescription() == null ? "" : dto.getDescription().trim();
 
         // 2. 构造 Tag 实体
         Tag tag = Tag.builder()
                 .id(id)
                 .name(dto.getName())
-                .description(dto.getDescription())
+                .description(description)
                 .build();
 
         // 3. INSERT 收集重复异常
@@ -71,9 +72,13 @@ public class TagServiceImpl implements TagService {
     @Override
     public PageResult<TagBriefVO> queryTagPage(TagPageQuery query) {
 
-        // 0. 限制参数
-        query.setPageNum(1);
-        query.setPageSize(5);
+        // 0. 默认分页参数
+        if (query.getPageNum() == null) {
+            query.setPageNum(1);
+        }
+        if (query.getPageSize() == null) {
+            query.setPageSize(10);
+        }
 
 
         // 1. 提取分页参数
@@ -81,7 +86,8 @@ public class TagServiceImpl implements TagService {
         Integer pageSize = query.getPageSize();
 
         // 2. 处理 keyword
-        query.setKeyword(query.getKeyword().trim());
+        String keyword = query.getKeyword();
+        query.setKeyword(keyword == null ? null : keyword.trim());
 
         // 3. 分页查询 tag
         PageHelper.startPage(pageNum, pageSize);
@@ -100,8 +106,10 @@ public class TagServiceImpl implements TagService {
 
         // 6. 返回
         return PageResult.<TagBriefVO>builder()
+                    .total(tags.getTotal())
                     .pageNum(pageNum)
                     .pageSize(pageSize)
+                    .pages(tags.getPages())
                     .records(tagList)
                     .build();
     }

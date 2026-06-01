@@ -1,1885 +1,521 @@
-# 全局公共参数
+# Faramita BBS v0.3.0 API
 
-**全局Header参数**
+> 创建人: Nobeta  
+> 更新人: Nobeta  
+> 最后更新: 2026-06-01
 
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
+本文档按当前 v0.3.0 后端 Controller、DTO、VO 整理。下列路径均不包含 Spring Boot context path，本地完整地址为 `/bbs` + API 路径。
 
-**全局Query参数**
+## 1. 通用约定
 
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
+### 1.1 认证
 
-**全局Body参数**
+需要登录的接口在 Header 中携带：
 
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**全局认证方式**
-
-> 无需认证
-
-# 状态码说明
-
-| 状态码 | 中文描述 |
-| --- | ---- |
-| 暂无参数 |
-
-# Faramita BBS v0.3.0
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 20:32:07
-
-> 更新时间: 2026-05-25 01:16:05
-
-**Faramita BBS v0.3.0 接口**
-
-**目录Header参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录Query参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录认证信息**
-
-> 继承父级
-
-**Query**
-
-## 认证模块
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 20:32:42
-
-> 更新时间: 2026-05-24 20:32:42
-
-```text
-暂无描述
+```http
+Authorization: Bearer <accessToken>
 ```
 
-**目录Header参数**
+公开接口：
 
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
+| 方法 | 路径 |
+| --- | --- |
+| `POST` | `/api/auth/login` |
+| `POST` | `/api/auth/register` |
+| `POST` | `/api/auth/refresh` |
+| `GET` | `/api/users/{id}` |
+| `GET` | `/api/tags` |
+| `GET` | `/api/blogs/page` |
+| `GET` | `/api/blogs/{id}` |
 
-**目录Query参数**
+### 1.2 响应格式
 
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
+普通响应：
 
-**目录Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录认证信息**
-
-> 继承父级
-
-**Query**
-
-### 登陆接口
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 20:50:25
-
-> 更新时间: 2026-05-26 00:58:59
-
-**标签**
-
-> 认证模块
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/auth/login
-
-**请求方式**
-
-> POST
-
-**Content-Type**
-
-> form-data
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| username | 5201314 | string | 是 | 账号，4-30位字符，正则匹配 "^[a-zA-Z0-9@#!?._-]+$" |
-| password | 123456 | string | 是 | 密码 |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
+```json
 {
-	"code": 200,
-	"message": "amet",
-	"data": {
-		"accessToken": "abc",
-		"refreshToken": "abc",
-		"expireIn": 1800
-	}
+  "code": 200,
+  "msg": "操作成功",
+  "data": {}
 }
 ```
 
-* 失败(404)
+分页响应中的 `data`：
 
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 注册接口
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 20:52:25
-
-> 更新时间: 2026-05-26 18:07:33
-
-**标签**
-
-> 认证模块
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/auth/register
-
-**请求方式**
-
-> POST
-
-**Content-Type**
-
-> form-data
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| username | 5201314 | string | 是 | 账号 4-30位字符 正则匹配 "^[a-zA-Z0-9@#._-]+$" |
-| password | 123456 | string | 是 | 密码 6-30位字符 |
-| nickname | 非人哉 | string | 是 | 昵称 |
-| sex | 0 | integer | 是 | 性别 0:未知,1:男,2:女 默认:0 |
-| race | 天使 | string | 是 | 种族 1-10位 |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
+```json
 {
-	"code": 200,
-	"message": "amet",
-	"data": {
-		"accessToken": "abc",
-		"refreshToken": "abc",
-		"expireIn": 1800
-	}
+  "total": 0,
+  "pageNum": 1,
+  "pageSize": 10,
+  "pages": 0,
+  "records": []
 }
 ```
 
-* 失败(404)
+常用状态码：
 
-```javascript
-暂无数据
-```
+| code | msg |
+| --- | --- |
+| `200` | 操作成功 |
+| `400` | 参数或业务校验失败 |
+| `401` | 未登陆，请先授权 |
+| `403` | 权限不足 |
+| `404` | 资源不存在 |
+| `500` | 服务器异常 |
 
-**Query**
+### 1.3 请求格式
 
-### 刷新令牌     
+- `@RequestBody` 接口使用 `application/json`。
+- 文件上传使用 `multipart/form-data`。
+- `@RequestParam` 使用 query 参数。
+- 分页默认按 `pageNum`、`pageSize`、`sortField`、`sortOrder` 传参；`sortOrder` 支持 `asc`、`desc`。
+
+## 2. 认证模块
 
-> 创建人: Nobeta
+### 2.1 登录
+
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `POST` |
+| 路径 | `/api/auth/login` |
+| 认证 | 公开 |
+| Content-Type | `application/json` |
 
-> 更新人: Nobeta
+请求体：
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `username` | string | 是 | 4-20 位，支持字母、数字、`! @ # . _ -` |
+| `password` | string | 是 | 4-20 位，支持字母、数字、`! @ # . _ -` |
 
-> 创建时间: 2026-05-24 20:58:53
+成功响应 `data`：
 
-> 更新时间: 2026-05-24 21:05:21
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `accessToken` | string | 访问令牌 |
+| `refreshToken` | string | 刷新令牌 |
+| `expireIn` | datetime | Access Token 过期时间 |
 
-**标签**
+### 2.2 注册
 
-> 认证模块
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `POST` |
+| 路径 | `/api/auth/register` |
+| 认证 | 公开 |
+| Content-Type | `application/json` |
 
-**旧 refreshToken 在刷新成功后立即失效（Redis 删除旧 jti），实现 Rotate Refresh Token。,如果旧 refreshToken 已失效/不在 Redis 中 → 返回 401，前端跳登录页。,新 accessToken + 新 refreshToken 一起下发。**
+请求体：
 
-**接口状态**
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `username` | string | 是 | 4-20 位，支持字母、数字、`! @ # . _ -` |
+| `password` | string | 是 | 4-20 位，支持字母、数字、`! @ # . _ -` |
+| `nickname` | string | 是 | 1-10 位 |
+| `sex` | integer | 否 | `0` 未知，`1` 男，`2` 女；默认 `0` |
+| `race` | string | 否 | 1-10 位；默认值以后端常量为准 |
 
-> 开发中
+成功响应：`data = null`。
 
-**接口URL**
+### 2.3 刷新令牌
 
-> /api/auth/refresh
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `POST` |
+| 路径 | `/api/auth/refresh` |
+| 认证 | 公开 |
+| 参数位置 | Query |
 
-**请求方式**
+Query 参数：
 
-> POST
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `refreshToken` | string | 是 | 刷新令牌 |
 
-**Content-Type**
+成功响应 `data` 同登录接口。刷新成功后旧 Refresh Token 失效。
 
-> form-data
+### 2.4 登出
 
-**请求Body参数**
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `POST` |
+| 路径 | `/api/auth/logout` |
+| 认证 | Bearer Token |
+| Content-Type | 无请求体 |
 
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| refreshToken | abc | string | 是 | 刷新令牌 |
+成功响应：`data = null`。服务端会将当前 Access Token 加入黑名单，并清理当前用户的 Refresh Token 和登录缓存。
 
-**认证方式**
+## 3. 用户模块
 
-> 继承父级
+### 3.1 获取当前用户资料
 
-**响应示例**
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `GET` |
+| 路径 | `/api/users/me` |
+| 认证 | Bearer Token |
 
-* 成功(200)
+成功响应 `data`：
 
-```javascript
-{
-	"code": 200,
-	"message": "amet",
-	"data": {
-		"accessToken": "abc",
-		"refreshToken": "abc",
-		"expireIn": 1800
-	}
-}
-```
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | number | 用户 ID |
+| `username` | string | 登录账号 |
+| `nickname` | string | 昵称 |
+| `avatar` | string | 头像 |
+| `sex` | integer | 性别 |
+| `race` | string | 种族 |
+| `signature` | string | 签名 |
+| `roles` | array<string> | 角色码 |
+| `createTime` | datetime | 创建时间 |
 
-* 失败(404)
+### 3.2 获取用户公开资料
 
-```javascript
-暂无数据
-```
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `GET` |
+| 路径 | `/api/users/{id}` |
+| 认证 | 公开 |
+
+路径参数：
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `id` | number | 是 | 用户 ID |
+
+成功响应 `data`：`id`、`nickname`、`avatar`、`sex`、`race`、`signature`、`createTime`。
+
+### 3.3 修改当前用户资料
+
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `PUT` |
+| 路径 | `/api/users/me` |
+| 认证 | Bearer Token |
+| Content-Type | `application/json` |
+
+请求体：
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `nickname` | string | 是 | 1-10 位 |
+| `sex` | integer | 否 | `0`、`1`、`2` |
+| `race` | string | 否 | 1-10 位 |
+
+成功响应：`data = null`。
+
+### 3.4 修改密码
+
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `PUT` |
+| 路径 | `/api/users/me/password` |
+| 认证 | Bearer Token |
+| Content-Type | `application/json` |
 
-**Query**
+请求体：
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `oldPassword` | string | 是 | 4-20 位，支持字母、数字、`! @ # . _ -` |
+| `newPassword` | string | 是 | 4-20 位，支持字母、数字、`! @ # . _ -` |
 
-### 登出接口
+成功响应：`data = null`。修改成功后服务端会清理登录缓存，前端应重新登录。
 
-> 创建人: Nobeta
+### 3.5 更新头像
 
-> 更新人: Nobeta
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `POST` |
+| 路径 | `/api/users/me/avatar` |
+| 认证 | Bearer Token |
+| Content-Type | `multipart/form-data` |
 
-> 创建时间: 2026-05-24 21:01:32
+表单参数：
 
-> 更新时间: 2026-05-26 18:48:00
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `file` | file | 是 | 头像文件 |
+
+成功响应 `data`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `avatarKey` | string | 新头像 key |
 
-**标签**
+## 4. 博客模块
 
-> 认证模块
+### 4.1 查询公开博客分页
+
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `GET` |
+| 路径 | `/api/blogs/page` |
+| 认证 | 公开，可选 Bearer Token |
 
-**将当前 accessToken （来自 Header）的 jti 加入黑名单（Redis SET，TTL = accessToken 剩余有效期）。,根据用户 id 从 Redis 删除 refreshToken 对应记录。,即使 token 格式非法也返回 200（幂等设计，防前端重试问题）。**
+Query 参数：
 
-**接口状态**
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `pageNum` | integer | 是 | 页码，最小 1 |
+| `pageSize` | integer | 是 | 每页数量，1-100 |
+| `sortField` | string | 否 | `createTime`、`updateTime`、`likeCount` |
+| `sortOrder` | string | 否 | `asc` 或 `desc`，默认 `desc` |
+| `keyword` | string | 否 | 标题或摘要关键词 |
+| `authorId` | number | 否 | 作者 ID |
+| `tagIds` | array<number> | 否 | 标签 ID 列表，可重复传 `tagIds=1&tagIds=2` |
 
-> 开发中
+成功响应 `data.records[]`：
 
-**接口URL**
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | number | 博客 ID |
+| `title` | string | 标题 |
+| `summary` | string | 摘要 |
+| `isPublished` | integer | 发布状态 |
+| `likeCount` | integer | 点赞数 |
+| `createTime` | datetime | 创建时间 |
+| `updateTime` | datetime | 更新时间 |
+| `author` | object | `UserBriefVO` |
+| `tags` | array<object> | `TagBriefVO` 列表 |
 
-> /api/auth/logout
+### 4.2 创建个人博客
 
-**请求方式**
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `POST` |
+| 路径 | `/api/blogs/me` |
+| 认证 | Bearer Token |
+| Content-Type | `application/json` |
 
-> POST
+请求体：
 
-**Content-Type**
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `title` | string | 是 | 1-50 字 |
+| `folderId` | number | 否 | 目录 ID，默认 `0` |
 
-> form-data
+成功响应 `data`：新博客 ID。
 
-**认证方式**
+### 4.3 查询公开博客详情
 
-> Bearer Token
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `GET` |
+| 路径 | `/api/blogs/{id}` |
+| 认证 | 公开 |
 
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
+成功响应 `data`：公开博客基础字段 + `content`、`isLiked`。
 
-> Authorization: Bearer your_access_token
+### 4.4 查询个人博客详情
 
-**响应示例**
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `GET` |
+| 路径 | `/api/blogs/me/{id}` |
+| 认证 | Bearer Token |
 
-* 成功(200)
+成功响应 `data`：公开博客基础字段 + `folderId`、`content`。
 
-```javascript
-{
-	"code": 200,
-	"message": "amet",
-	"data": {
-		"accessToken": "abc",
-		"refreshToken": "abc",
-		"expireIn": 1800
-	}
-}
-```
+### 4.5 修改个人博客
 
-* 失败(404)
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `PUT` |
+| 路径 | `/api/blogs/me/{id}` |
+| 认证 | Bearer Token |
+| Content-Type | `application/json` |
 
-```javascript
-暂无数据
-```
+请求体：
 
-**Query**
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `folderId` | number | 是 | 大于等于 0 |
+| `isPublished` | integer | 否 | `0` 草稿，`1` 发布 |
+| `title` | string | 是 | 1-20 字 |
+| `summary` | string | 否 | 最多 200 字 |
+| `content` | string | 否 | Markdown 内容 |
+| `tagIds` | array<number> | 否 | 标签 ID 列表 |
 
-## 用户模块
+成功响应：`data = null`。
 
-> 创建人: Nobeta
+### 4.6 删除个人博客
 
-> 更新人: Nobeta
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `DELETE` |
+| 路径 | `/api/blogs/me/{id}` |
+| 认证 | Bearer Token |
 
-> 创建时间: 2026-05-24 21:05:46
+成功响应：`data = null`。
 
-> 更新时间: 2026-05-24 21:05:46
+## 5. 目录模块
 
-```text
-暂无描述
-```
+### 5.1 创建目录
 
-**目录Header参数**
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `POST` |
+| 路径 | `/api/folders` |
+| 认证 | Bearer Token |
+| Content-Type | `application/json` |
 
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
+请求体：
 
-**目录Query参数**
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `parentId` | number | 是 | 父目录 ID；`0` 表示逻辑根目录 |
+| `name` | string | 是 | 1-20 字 |
 
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
+成功响应：`data = null`。
 
-**目录Body参数**
+### 5.2 重命名目录
 
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `PUT` |
+| 路径 | `/api/folders/{id}` |
+| 认证 | Bearer Token |
+| Content-Type | `application/json` |
 
-**目录认证信息**
+请求体：
 
-> 继承父级
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `name` | string | 是 | 1-20 字 |
 
-**Query**
+成功响应：`data = null`。
 
-### 获取当前用户信息
+### 5.3 移动目录
 
-> 创建人: Nobeta
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `PUT` |
+| 路径 | `/api/folders/{id}/move` |
+| 认证 | Bearer Token |
+| Content-Type | `application/json` |
 
-> 更新人: Nobeta
+请求体：
 
-> 创建时间: 2026-05-24 21:17:30
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `targetParentId` | number | 是 | 目标父目录 ID；`0` 表示逻辑根目录 |
 
-> 更新时间: 2026-05-25 01:58:24
+成功响应：`data = null`。
 
-**标签**
+### 5.4 删除目录
 
-> 用户模块
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `DELETE` |
+| 路径 | `/api/folders/{id}` |
+| 认证 | Bearer Token |
 
-```text
-暂无描述
-```
+成功响应：`data = null`。目录下博客不会被删除，会移动到逻辑根目录。
 
-**接口状态**
+### 5.5 获取当前用户目录树
 
-> 开发中
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `GET` |
+| 路径 | `/api/folders/me` |
+| 认证 | Bearer Token |
 
-**接口URL**
+成功响应 `data`：
 
-> /api/users/me
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | number | 目录 ID；逻辑根目录为 `0` |
+| `name` | string | 目录名 |
+| `level` | integer | 层级 |
+| `children` | array<object> | 子目录 |
+| `sortOrder` | integer | 排序值，v0.3.0 暂不支持修改 |
 
-**请求方式**
+### 5.6 查询目录下博客
 
-> GET
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `GET` |
+| 路径 | `/api/folders/{id}/blogs` |
+| 认证 | Bearer Token |
 
-**Content-Type**
+Query 参数：`pageNum`、`pageSize`、`sortField`、`sortOrder`。成功响应为 `PageResult<BlogPrivateBriefVO>`。
 
-> none
+### 5.7 批量移动博客到目录
 
-**认证方式**
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `PUT` |
+| 路径 | `/api/folders/blogs/move` |
+| 认证 | Bearer Token |
+| Content-Type | `application/json` |
 
-> Bearer Token
+请求体：
 
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `blogIds` | array<number> | 是 | 非空 |
+| `targetId` | number | 是 | 目标目录 ID；`0` 表示逻辑根目录 |
 
-> Authorization: Bearer your_access_token
+成功响应：`data = null`。
 
-**响应示例**
+## 6. Tag 模块
 
-* 成功(200)
+### 6.1 查询 Tag 分页
 
-```javascript
-暂无数据
-```
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `GET` |
+| 路径 | `/api/tags` |
+| 认证 | 公开 |
 
-* 失败(404)
+Query 参数：
 
-```javascript
-暂无数据
-```
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `pageNum` | integer | 是 | 页码 |
+| `pageSize` | integer | 是 | 每页数量 |
+| `sortField` | string | 否 | 排序字段 |
+| `sortOrder` | string | 否 | `asc` 或 `desc` |
+| `keyword` | string | 否 | 标签名关键词，1-20 字 |
 
-**Query**
+成功响应为 `PageResult<TagBriefVO>`，`TagBriefVO` 字段为 `id`、`name`。
 
-### 获取其他用户公开 信息
+### 6.2 创建 Tag
 
-> 创建人: Nobeta
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `POST` |
+| 路径 | `/api/tags` |
+| 认证 | Bearer Token |
+| Content-Type | `application/json` |
 
-> 更新人: Nobeta
+请求体：
 
-> 创建时间: 2026-05-24 21:23:12
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `name` | string | 是 | 1-20 字 |
+| `description` | string | 否 | 1-200 字 |
 
-> 更新时间: 2026-05-25 01:58:24
+成功响应 `data`：`TagBriefVO`。
 
-**标签**
+## 7. 点赞模块
 
-> 用户模块
+### 7.1 博客点赞 Toggle
 
-```text
-暂无描述
-```
+| 项 | 内容 |
+| --- | --- |
+| 方法 | `POST` |
+| 路径 | `/api/like/blogs/{id}` |
+| 认证 | Bearer Token |
+| Content-Type | 无请求体 |
 
-**接口状态**
+路径参数：
 
-> 开发中
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `id` | number | 是 | 博客 ID |
 
-**接口URL**
+成功响应 `data`：当前博客最新点赞数。
 
-> /api/users/{id}
-
-**请求方式**
-
-> GET
-
-**Content-Type**
-
-> none
-
-**路径变量**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| id | 1 | number | 是 | 用户id |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 修改个人资料
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 22:07:20
-
-> 更新时间: 2026-05-25 01:58:24
-
-**标签**
-
-> 用户模块
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/users/me
-
-**请求方式**
-
-> PUT
-
-**Content-Type**
-
-> form-data
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| nickname | 白龙马儿 | string | 否 | 昵称 |
-| sex | 0 | integer | 否 | 性别 |
-| race | 人类 | string | 否 | 种族 |
-| signature | Hello World ! | string | 否 | 签名 |
-
-**认证方式**
-
-> Bearer Token
-
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
-
-> Authorization: Bearer your_access_token
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 修改密码接口
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 22:10:59
-
-> 更新时间: 2026-05-25 01:58:24
-
-**标签**
-
-> 用户模块
-
-**修改成功后，服务端使该用户所有 refreshToken 失效（Redis 清理），强制重新登录。,前端收到 200 后跳转登录页。,oldPassword 必须验证通过才允许改——防止 token 泄露后被恶意改密码（虽然有 token 就能改）。**
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/users/me/password
-
-**请求方式**
-
-> PUT
-
-**Content-Type**
-
-> form-data
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| oldPassword | 123456 | string | 是 | 旧密码
-6-30位字符 |
-| newPassword | 12345678 | string | 是 | 新密码
-6-30位字符 |
-
-**认证方式**
-
-> Bearer Token
-
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
-
-> Authorization: Bearer your_access_token
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 上传头像接口
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 22:15:52
-
-> 更新时间: 2026-05-25 01:58:24
-
-**标签**
-
-> 用户模块
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/users/me/avatar
-
-**请求方式**
-
-> POST
-
-**Content-Type**
-
-> form-data
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| file | - | file | 是 | 头像文件 |
-
-**认证方式**
-
-> Bearer Token
-
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
-
-> Authorization: Bearer your_access_token
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-## 目录模块
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 22:23:26
-
-> 更新时间: 2026-05-24 22:24:09
-
-```text
-暂无描述
-```
-
-**目录Header参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录Query参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录认证信息**
-
-> Bearer Token
-
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
-
-> Authorization: Bearer your_access_token
-
-**Query**
-
-### 创建目录
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 22:52:40
-
-> 更新时间: 2026-05-25 01:58:47
-
-**标签**
-
-> 目录模块
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/folders
-
-**请求方式**
-
-> POST
-
-**Content-Type**
-
-> form-data
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| parentFolderId | 0 | string | 是 | 父目录（当前目录）id |
-| name | 模块名 | string | 是 | 目录名 |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 重命名目录
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 22:59:07
-
-> 更新时间: 2026-05-25 01:58:47
-
-**标签**
-
-> 目录模块
-
-**修改完成后返回 200 状态码，前端重命名目录，否则回退。不返回重命名后的目录树，通过应用层逻辑一致，减少性能开销。**
-
-**[object Object]**
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/folders/{id}
-
-**请求方式**
-
-> PUT
-
-**Content-Type**
-
-> form-data
-
-**路径变量**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| id | 123 | number | 是 | 目录id |
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| name | 模块名 | string | 是 | 新目录名 |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 移动目录接口
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 23:08:14
-
-> 更新时间: 2026-05-29 15:16:03
-
-**标签**
-
-> 目录模块
-
-**前端在“剪切”（当前目录）或“移动”（当前目录）操作中获得操作目录 id,前端在“粘贴”（另一个当前目录）或“移动选择框”（目录树中选择）操作中获得目标目录 id,修改完成后返回 200 状态码，前端修改操作目录的父目录位置，自行渲染，否则回退。后端不返回修改后的目录树，通过应用层逻辑一致，减少性能开销。**
-
-**[object Object]**
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/folders/{id}/move
-
-**请求方式**
-
-> PUT
-
-**Content-Type**
-
-> form-data
-
-**路径变量**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| id | 123 | number | 是 | 操作目录id |
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| targetParentId | 456 | number | 是 | 目标目录id
-0 表示移动到根目录 |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 删除目录接口
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 23:22:43
-
-> 更新时间: 2026-05-25 01:58:47
-
-**标签**
-
-> 目录模块
-
-**级联删除子目录,自删除目录以下的所有博客移至根目录 0 下,修改完成后返回 200 状态码，前端直接删除目录即可，否则回退。后端不返回修改后的目录树，通过应用层逻辑一致，减少性能开销（删除场景是，在某一目录下，选择其中一个子目录，点击删除按钮。前端只需删除所有涉及的子目录，所有涉及的博客将在回到根目录时请求展示）。**
-
-**修改完成后返回 200 状态码，前端直接删除目录即可，否则回退。后端不返回修改后的目录树，通过应用层逻辑一致，减少性能开销（删除场景是，在某一目录下，选择其中一个子目录，点击删除按钮。前端只需删除所有涉及的子目录，所有涉及的博客将在回到根目录时请求展示）。**
-
-**[object Object]**
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/folders/{id}
-
-**请求方式**
-
-> DELETE
-
-**Content-Type**
-
-> none
-
-**路径变量**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| id | 123 | number | 是 | 目录id |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 获取当前用户目录树
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-24 23:24:21
-
-> 更新时间: 2026-05-25 01:58:47
-
-**标签**
-
-> 目录模块
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/folders/me
-
-**请求方式**
-
-> GET
-
-**Content-Type**
-
-> none
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 获取指定目录下博客列表
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 01:14:37
-
-> 更新时间: 2026-05-25 03:16:33
-
-**标签**
-
-> 目录模块
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/folders/{id}/blogs?page=1&pageSize=10
-
-**请求方式**
-
-> GET
-
-**Content-Type**
-
-> none
-
-**请求Query参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| page | 1 | integer | 是 | 页面 |
-| pageSize | 10 | integer | 是 | 每页数量 |
-
-**路径变量**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| id | - | string | 是 | - |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 批量移动博客切换目录
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 01:32:59
-
-> 更新时间: 2026-05-29 15:30:44
-
-**标签**
-
-> 目录模块
-
-**要求所有被操作的 blogs 属于同一目录下（可操作单个博客）,在“工作台”场景，目标目录即当前目录，且目录树本身没有变化，重新执行一次当前目录的获取博客列表即可。,在编辑场景，切换之前通过目录选择器已经缓存了目标目录数据，根据返回 200 自行修改博客目录数据即可。**
-
-**[object Object]**
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/folders/blogs/move
-
-**请求方式**
-
-> PUT
-
-**Content-Type**
-
-> form-data
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| blogIds | [123,456,789] | array | 是 | - |
-| targetFolderId | 0 | string | 是 | 目标目录id
-0 表示移动到根目录 |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-## 标签模块
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 01:33:24
-
-> 更新时间: 2026-05-25 01:59:12
-
-```text
-暂无描述
-```
-
-**目录Header参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录Query参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录认证信息**
-
-> 继承父级
-
-**Query**
-
-### 关键字搜索标签
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 01:49:22
-
-> 更新时间: 2026-05-29 16:53:38
-
-**标签**
-
-> 标签模块
-
-**查询 tag,小查询，但不分页**
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/tags?keyword=Jav&pageNum=1&pageSize=5
-
-**请求方式**
-
-> GET
-
-**Content-Type**
-
-> form-data
-
-**请求Query参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| keyword | Jav | string | 是 | 关键词 |
-| pageNum | 1 | string | 是 | - |
-| pageSize | 5 | string | 是 | - |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 创建标签接口
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 01:51:58
-
-> 更新时间: 2026-05-29 16:53:40
-
-**标签**
-
-> 标签模块
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/tags
-
-**请求方式**
-
-> POST
-
-**Content-Type**
-
-> form-data
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| name | Java | string | 是 | tag 名 |
-| description | - | string | 否 | v0.3.0 不做 description |
-
-**认证方式**
-
-> Bearer Token
-
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
-
-> Authorization: Bearer your_access_token
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-## 点赞模块
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 01:52:43
-
-> 更新时间: 2026-05-25 01:59:30
-
-```text
-暂无描述
-```
-
-**目录Header参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录Query参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录认证信息**
-
-> 继承父级
-
-**Query**
-
-### 博客点赞
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 01:56:25
-
-> 更新时间: 2026-05-29 17:14:52
-
-**标签**
-
-> 点赞模块
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/like/blogs/{id}
-
-**请求方式**
-
-> POST
-
-**Content-Type**
-
-> none
-
-**路径变量**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| id | - | string | 是 | - |
-
-**认证方式**
-
-> Bearer Token
-
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
-
-> Authorization: Bearer your_access_token
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-## 博客模块
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 02:08:27
-
-> 更新时间: 2026-05-25 02:08:27
-
-```text
-暂无描述
-```
-
-**目录Header参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录Query参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| 暂无参数 |
-
-**目录认证信息**
-
-> 继承父级
-
-**Query**
-
-### 博客分页查询接口
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 02:25:35
-
-> 更新时间: 2026-05-27 19:58:58
-
-**标签**
-
-> 博客模块
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/blogs/page?page=1&pageSize=10&keyword=Jav&sortField=createTime&sortOrder=desc&authorId=1&tagIds=[123,345]
-
-**请求方式**
-
-> GET
-
-**Content-Type**
-
-> none
-
-**请求Query参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| page | 1 | integer | 是 | 页码 从1开始 |
-| pageSize | 10 | integer | 是 | 每页条数 |
-| keyword | Jav | string | 否 | 关键词(tag/标题匹配) |
-| sortField | createTime | string | 否 | 排序字段 |
-| sortOrder | desc | string | 否 | 降序 |
-| authorId | 1 | string | 否 | 根据用户id查询所属博客(isPublished+authorId校验) |
-| tagIds | [123,345] | array | 否 | 通过 tag 实时搜索后键入，此处不允许创建 tag |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 创建博客接口
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 02:36:28
-
-> 更新时间: 2026-05-27 21:33:48
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/blogs/me
-
-**请求方式**
-
-> POST
-
-**Content-Type**
-
-> form-data
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| title | 静夜思 | string | 是 | 标题 |
-| folderId | 0 | string | 否 | 目录id。若在工作台的某目录下创建博客，在创建是归类。 |
-
-**认证方式**
-
-> Bearer Token
-
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
-
-> Authorization: Bearer your_access_token
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 公开博客详情
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 02:39:58
-
-> 更新时间: 2026-05-25 02:42:28
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/blogs/{id}
-
-**请求方式**
-
-> GET
-
-**Content-Type**
-
-> none
-
-**路径变量**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| id | 123 | number | 是 | 博客id |
-
-**认证方式**
-
-> 继承父级
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 博客编辑详情
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 02:47:56
-
-> 更新时间: 2026-05-27 21:32:53
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/blogs/me/{id}
-
-**请求方式**
-
-> GET
-
-**Content-Type**
-
-> none
-
-**路径变量**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| id | - | string | 是 | - |
-
-**认证方式**
-
-> Bearer Token
-
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
-
-> Authorization: Bearer your_access_token
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 修改博客接口
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 02:55:54
-
-> 更新时间: 2026-05-28 10:37:14
-
-**前端接受响应码 200 后自行更新页面，否则回滚。
-更新失败进入异常处理。**
-
-**[object Object]**
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/blogs/me/{id}
-
-**请求方式**
-
-> PUT
-
-**Content-Type**
-
-> form-data
-
-**路径变量**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| id | 123 | string | 是 | 博客id |
-
-**请求Body参数**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| folderId | 0 | number | 是 | 目录id。通过发起目录树查询获得目录树，选择。 |
-| isPublished | 0 | integer | 是 | 是否发布 |
-| title | 静夜思 | string | 是 | 标题 |
-| summary | 这是一首古诗 | string | 是 | 摘要 |
-| content | 床前明月光 | string | 是 | 内容 |
-| tagIds | [123,345] | array | 是 | 通过 tag 实时搜索后键入，此处允许创建 |
-
-**认证方式**
-
-> Bearer Token
-
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
-
-> Authorization: Bearer your_access_token
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
-
-### 删除博客接口
-
-> 创建人: Nobeta
-
-> 更新人: Nobeta
-
-> 创建时间: 2026-05-25 02:57:45
-
-> 更新时间: 2026-05-27 21:33:12
-
-```text
-暂无描述
-```
-
-**接口状态**
-
-> 开发中
-
-**接口URL**
-
-> /api/blogs/me/{id}
-
-**请求方式**
-
-> DELETE
-
-**Content-Type**
-
-> none
-
-**路径变量**
-
-| 参数名 | 示例值 | 参数类型 | 是否必填 | 参数描述 |
-| --- | --- | ---- | ---- | ---- |
-| id | 123 | string | 是 | 博客id |
-
-**认证方式**
-
-> Bearer Token
-
-> 在Header添加参数 Authorization，其值为在Bearer之后拼接空格和访问令牌
-
-> Authorization: Bearer your_access_token
-
-**响应示例**
-
-* 成功(200)
-
-```javascript
-暂无数据
-```
-
-* 失败(404)
-
-```javascript
-暂无数据
-```
-
-**Query**
+后端会通过 Lua 原子切换 Redis Set 中的用户点赞状态，并向 `like:changelog:blog` Redis Stream 写入 `blogId`、`userId`、`isLikeAction`、`timestamp`。数据库由定时任务异步刷新。

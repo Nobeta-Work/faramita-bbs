@@ -9,7 +9,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,7 +54,7 @@ public class BlogServiceImpl implements BlogService{
     private final TagMapper tagMapper;
     private final FolderMapper folderMapper;
     private final LikeMapper likeMapper;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
     /**
      * 分页查询
@@ -196,11 +196,12 @@ public class BlogServiceImpl implements BlogService{
 
         // 5. 查找 isLiked
         boolean isLiked = false;
+        Integer likeCount = blog.getLikeCount();
         UserAuthInfo loginUser = SecurityUtil.getLoginUser();
         if (loginUser != null) {
             Long userId = loginUser.getUser().getId();
             String key = RedisKeys.LIKE_BLOG.getFullKey(id);
-            if (!redisTemplate.hasKey(key)) {
+            if (!Boolean.TRUE.equals(stringRedisTemplate.hasKey(key))) {
                 // TODO: 未锁机制
                 // 5.1 缓存未命中，DB 回源
                 List<Long> likerIds = likeMapper.selectLikerIdsByBlogId(id);
@@ -209,16 +210,20 @@ public class BlogServiceImpl implements BlogService{
 
                 String[] members = likerIds.stream().map(Object::toString).toArray(String[]::new);
                 if (members.length > 0) {
-                    redisTemplate.opsForSet().add(key, (Object[]) members);
-                redisTemplate.expire(key, Duration.ofSeconds(RedisKeys.LIKE_BLOG.getDefaultTtl()));
+                    stringRedisTemplate.opsForSet().add(key, members);
+                    stringRedisTemplate.expire(key, Duration.ofSeconds(RedisKeys.LIKE_BLOG.getDefaultTtl()));
                 }
                 
             }
             // 5.2 缓存查找
-            isLiked = redisTemplate.opsForSet().isMember(
+            isLiked = Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(
                 key,
                 userId.toString()
-            );
+            ));
+            Long cachedLikeCount = stringRedisTemplate.opsForSet().size(key);
+            if (cachedLikeCount != null) {
+                likeCount = cachedLikeCount.intValue();
+            }
         }
 
         return BlogPublicDetailVO.builder()
@@ -228,7 +233,7 @@ public class BlogServiceImpl implements BlogService{
                 .isPublished(blog.getIsPublished())
                 .author(author)
                 .tags(tags)
-                .likeCount(blog.getLikeCount())
+                .likeCount(likeCount)
                 .createTime(blog.getCreateTime())
                 .updateTime(blog.getUpdateTime())
                 .content(blog.getContent())

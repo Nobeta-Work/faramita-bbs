@@ -25,13 +25,17 @@
             author_id,
             folder_id,
             is_published,
-            title
+            title,
+            summary,
+            content
         ) VALUES (
             #{id},
             #{authorId},
             #{folderId},
             #{isPublished},
-            #{title}
+            #{title},
+            '',
+            ''
         )
     </insert>
 
