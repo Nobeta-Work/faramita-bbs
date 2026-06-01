@@ -111,6 +111,11 @@ service.interceptors.request.use(
             config.headers.Authorization = `Bearer ${userStore.token}`
         }
 
+        if (config.data && !(config.data instanceof FormData)) {
+            config.headers = config.headers || {}
+            config.headers['Content-Type'] = 'application/json'
+        }
+
         return config
     },
     (error) => {

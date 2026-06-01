@@ -28,12 +28,32 @@ const routes: Array<RouteRecordRaw> = [
                 }
             },
             {
-                path: 'blog/:bloguid',
-                name: ROUTE_NAMES.blogLegacyDetail,
-                component: () => import('@/views/BlogDetailView.vue'),
+                path: 'blog/:id',
+                name: ROUTE_NAMES.blogPublicDetail,
+                component: () => import('@/views/BlogPublicDetailView.vue'),
                 meta: {
                     requiresAuth: false,
                     title: '博客详情 | Faramita BBS',
+                }
+            },
+            {
+                path: 'workspace',
+                name: ROUTE_NAMES.workspace,
+                component: () => import('@/views/WorkspaceView.vue'),
+                meta: {
+                    requiresAuth: true,
+                    roles: ['ROLE_USER'],
+                    title: '工作台 | Faramita BBS',
+                }
+            },
+            {
+                path: 'workspace/blogs/:id',
+                name: ROUTE_NAMES.workspaceBlog,
+                component: () => import('@/views/BlogPrivateDetailView.vue'),
+                meta: {
+                    requiresAuth: true,
+                    roles: ['ROLE_USER'],
+                    title: '编辑博客 | Faramita BBS',
                 }
             },
             {
@@ -96,10 +116,11 @@ router.beforeEach(async (to, _, next) => {
         document.title = to.meta.title as string
     }
 
-    // 如果有 token 但没有用户信息，说明是刷新页面，需要重新获取用户信息
+    // 如果有 token 但没有用户信息，说明是刷新页面，需要重新获取用户信息。
+    // 公共页面不能因为 /users/me 暂时失败就清空刚登录写入的 token。
     if (userStore.token && !userStore.userInfo) {
         try {
-            await userStore.fetchUserInfo()
+            await userStore.fetchUserInfo(requiresAuth)
         } catch (error) {
             console.error('Failed to fetch user info:', error)
         }

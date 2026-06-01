@@ -5,6 +5,40 @@
     <link rel="icon" type="image/png" href="/webIcon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" size="32x32"/>
     <title>Faramita BBS | 彼岸</title>
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" />
+    <script>
+      ;(() => {
+        try {
+          const isDark = localStorage.getItem('theme') === 'dark'
+          document.documentElement.classList.toggle('dark', isDark)
+          document.documentElement.dataset.theme = isDark ? 'dark' : 'light'
+          document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+          document
+            .querySelector('meta[name="theme-color"]')
+            ?.setAttribute('content', isDark ? '#0f1115' : '#ffffff')
+        } catch {
+          document.documentElement.dataset.theme = 'light'
+        }
+      })()
+    </script>
+    <style>
+      html,
+      body,
+      #app {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      html {
+        background: #fff;
+      }
+
+      html.dark {
+        background: #0f1115;
+        color: #e6e6e6;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>

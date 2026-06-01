@@ -9,6 +9,7 @@ import type {
     FolderTree,
     PageResult,
 } from '@/types'
+import { normalizePageResult } from '@/utils/page'
 import request from '@/utils/request'
 
 export function createFolder(data: FolderSaveDTO): Promise<void> {
@@ -49,15 +50,17 @@ export function getCurrentUserFolderTree(): Promise<FolderTree> {
     })
 }
 
-export function getFolderBlogPage(
+export async function getFolderBlogPage(
     id: ApiId,
     params: FolderBlogsPageQuery,
 ): Promise<PageResult<BlogPrivateBriefVO>> {
-    return request<PageResult<BlogPrivateBriefVO>>({
+    const page = await request<PageResult<BlogPrivateBriefVO>>({
         url: `/folders/${id}/blogs`,
         method: 'get',
         params,
     })
+
+    return normalizePageResult(page)
 }
 
 export function moveBlogsToFolder(data: FolderBlogsMoveDTO): Promise<void> {

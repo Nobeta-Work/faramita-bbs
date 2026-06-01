@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useMessage, type FormInst, type FormRules, NForm, NFormItem, NInput, NIcon } from 'naive-ui';
-import { login } from '@/api/user';
+import { login } from '@/api/auth';
 import { useUserStore } from '@/stores/user';
 import { PersonOutline, LockClosedOutline, ArrowForwardOutline } from '@vicons/ionicons5';
 import FaramitaLogo from '@/assets/images/logo/FaramitaBBSLogo.png';
@@ -14,6 +14,7 @@ fontLink.rel = 'stylesheet'
 document.head.appendChild(fontLink)
 
 const router = useRouter()
+const route = useRoute()
 const store = useUserStore()
 const message = useMessage()
 const formRef = ref<FormInst | null>(null)
@@ -128,10 +129,11 @@ const handleLogin = async () => {
         if (!errors) {
             loading.value = true
             try {
-                const res = await login(loginForm)
-                store.setUserInfo(res)
+                const tokens = await login(loginForm)
+                store.setTokens(tokens)
+                await store.fetchUserInfo(false)
                 message.success('Welcome back')
-                router.push('/')
+                router.push(typeof route.query.redirect === 'string' ? route.query.redirect : '/')
             } catch (error: any) {
                 message.error(error.message || 'Login failed')
             } finally {

@@ -1,12 +1,15 @@
 import type { PageResult, TagBriefVO, TagPageQuery, TagSaveDTO } from '@/types'
+import { normalizePageResult } from '@/utils/page'
 import request from '@/utils/request'
 
-export function getTagPage(params: TagPageQuery): Promise<PageResult<TagBriefVO>> {
-    return request<PageResult<TagBriefVO>>({
+export async function getTagPage(params: TagPageQuery): Promise<PageResult<TagBriefVO>> {
+    const page = await request<PageResult<TagBriefVO>>({
         url: '/tags',
         method: 'get',
         params,
     })
+
+    return normalizePageResult(page)
 }
 
 export function createTag(data: TagSaveDTO): Promise<TagBriefVO> {

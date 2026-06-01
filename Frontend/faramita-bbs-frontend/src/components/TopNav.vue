@@ -23,10 +23,9 @@ const renderDefaultAvatar = () => h(NIcon, null, { default: () => h(Person) })
 const activeKey = computed(() => {
   if (route.path === '/') return 'home'
   if (route.path.startsWith('/blog')) {
-    // If it's a specific blog detail, maybe we still want to highlight 'blog'?
-    // Usually yes.
     return 'blog'
   }
+  if (route.path.startsWith('/workspace')) return 'workspace'
   return null
 })
 
@@ -38,6 +37,10 @@ const menuOptions = [
   {
     label: () => h(RouterLink, { to: '/blog' }, { default: () => '博客' }),
     key: 'blog'
+  },
+  {
+    label: () => h(RouterLink, { to: '/workspace' }, { default: () => '工作台' }),
+    key: 'workspace'
   }
 ]
 
@@ -59,7 +62,7 @@ function handleUserSelect(key: string) {
     userStore.logout()
     router.push('/login')
   } else if (key === 'profile') {
-    if (userStore.userInfo?.id) { // changed uid to id based on User interface
+    if (userStore.userInfo?.id) {
       router.push(`/${userStore.userInfo.id}`)
     }
   }

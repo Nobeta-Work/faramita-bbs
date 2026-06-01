@@ -3,20 +3,6 @@ import type { ApiId } from './api'
 export type UserRole = 'ROLE_USER' | 'ROLE_ADMIN' | (string & {})
 export type UserSex = 0 | 1 | 2
 
-// Legacy user shape kept for current pages until Phase 2 rewires views.
-export interface User {
-    id: number
-    username: string
-    password: string
-    nickname: string
-    avatar: string
-    sex: number
-    race: string
-    signature: string
-    createTime: string
-    updateTime: string
-}
-
 export interface UserInfo {
     id: number | null
     username: string | null

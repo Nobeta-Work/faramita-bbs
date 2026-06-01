@@ -11,6 +11,13 @@ function readAccessToken(): string | null {
     return localStorage.getItem(ACCESS_TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY)
 }
 
+function normalizeRoles(roles?: UserRole[]): UserRole[] {
+    return (roles ?? []).map((role) => {
+        const value = String(role)
+        return (value.startsWith('ROLE_') ? value : `ROLE_${value}`) as UserRole
+    })
+}
+
 export const useUserStore = defineStore('user', {
     state: (): UserState => ({
         token: readAccessToken(),
@@ -75,11 +82,12 @@ export const useUserStore = defineStore('user', {
                 token: userInfo.token ?? this.token,
                 refreshToken: userInfo.refreshToken ?? this.refreshToken,
                 tokenExpireIn: userInfo.tokenExpireIn ?? this.tokenExpireIn,
+                roles: normalizeRoles(userInfo.roles),
             }
         },
-        async fetchUserInfo(): Promise<void> {
+        async fetchUserInfo(clearOnFailure = true): Promise<boolean> {
             if (!this.token) {
-                return
+                return false
             }
 
             try {
@@ -90,9 +98,13 @@ export const useUserStore = defineStore('user', {
                     refreshToken: this.refreshToken,
                     tokenExpireIn: this.tokenExpireIn,
                 })
+                return true
             } catch (error) {
                 console.error('获取用户信息失败:', error)
-                this.logout()
+                if (clearOnFailure) {
+                    this.logout()
+                }
+                return false
             }
         },
         logout(): void {

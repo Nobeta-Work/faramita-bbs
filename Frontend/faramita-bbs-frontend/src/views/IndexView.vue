@@ -3,8 +3,8 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import { Search, ArrowForwardOutline } from '@vicons/ionicons5'
-import { getBlogListPage } from '@/api/blog'
-import type { Blog } from '@/types/blog'
+import { getPublicBlogPage } from '@/api/blog'
+import type { BlogPublicBriefVO } from '@/types/blog'
 import ParticleBackground from '@/components/ParticleBackground.vue'
 
 // Fonts
@@ -16,7 +16,7 @@ document.head.appendChild(fontLink)
 const router = useRouter()
 const keyword = ref('')
 const showContent = ref(false)
-const recentBlogs = ref<Blog[]>([])
+const recentBlogs = ref<BlogPublicBriefVO[]>([])
 
 const handleSearch = () => {
   if (keyword.value.trim()) {
@@ -28,18 +28,13 @@ const handleSearch = () => {
 
 const fetchRecentBlogs = async () => {
   try {
-    const res = await getBlogListPage({
-      page: 1,
+    const res = await getPublicBlogPage({
+      pageNum: 1,
       pageSize: 3,
-      bigCategoryId: 0,
-      keyword: '',
-      orderBy: 'create_time',
+      sortField: 'createTime',
       sortOrder: 'desc',
-      litteCategoryName: '',
-      categoryId: '',
-      authorId: 0
     })
-    recentBlogs.value = res.list || []
+    recentBlogs.value = res.records || []
   } catch (error) {
     console.error('Failed to fetch recent blogs:', error)
   }
@@ -70,7 +65,7 @@ onUnmounted(() => {
         <div class="meta-line animate-fade-in" style="animation-delay: 0.1s">
           <span class="date">EST. 2025</span>
           <span class="divider">/</span>
-          <span class="issue">Version 0.2.0</span>
+          <span class="issue">Version 0.3.0</span>
         </div>
 
         <div class="title-wrapper animate-slide-in" style="animation-delay: 0.2s">
@@ -110,16 +105,16 @@ onUnmounted(() => {
         <div class="recent-grid">
           <div 
             v-for="blog in recentBlogs" 
-            :key="blog.bloguid" 
+            :key="blog.id" 
             class="recent-card"
-            @click="router.push(`/blog/${blog.bloguid}`)"
+            @click="router.push(`/blog/${blog.id}`)"
           >
             <div class="recent-meta">
-              <span class="recent-category">{{ blog.littleCategoryName }}</span>
+              <span class="recent-category">{{ blog.tags?.[0]?.name || 'Article' }}</span>
               <span class="recent-date">{{ blog.createTime?.split(' ')[0] }}</span>
             </div>
             <h3 class="recent-blog-title">{{ blog.title }}</h3>
-            <p class="recent-author">by {{ blog.authorName }}</p>
+            <p class="recent-author">by {{ blog.author.nickname }}</p>
           </div>
         </div>
       </div>

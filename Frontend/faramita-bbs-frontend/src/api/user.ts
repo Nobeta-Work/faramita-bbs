@@ -3,8 +3,6 @@ import type {
     AvatarVO,
     LoginDTO,
     PasswordEditDTO,
-    ProfileResponse,
-    User,
     UserInfo,
     UserInfoVO,
     UserProfileDTO,
@@ -19,21 +17,6 @@ function toNumberId(id: number | string | null | undefined): number {
     }
 
     return Number(id)
-}
-
-function toLegacyUser(user: UserInfoVO | UserProfileVO): User {
-    return {
-        id: toNumberId(user.id),
-        username: 'username' in user ? user.username : '',
-        password: '',
-        nickname: user.nickname,
-        avatar: user.avatar ?? '',
-        sex: user.sex,
-        race: user.race,
-        signature: user.signature ?? '',
-        createTime: user.createTime,
-        updateTime: '',
-    }
 }
 
 function toUserInfo(
@@ -130,38 +113,6 @@ export function register(data: {
         sex: data.sex as UserSex,
         race: data.race,
     })
-}
-
-export async function getProfileByUid(uid: number): Promise<ProfileResponse> {
-    const user = await getUserInfo(uid)
-
-    return {
-        user: toLegacyUser(user),
-        blogList: [],
-    }
-}
-
-export function updateProfile(
-    _uid: number,
-    data: {
-        id: number
-        password: string
-        nickname: string
-        avatar: string
-        sex: number
-        race: string
-        signature: string
-    },
-): Promise<void> {
-    return updateCurrentUserProfile({
-        nickname: data.nickname,
-        sex: data.sex as UserSex,
-        race: data.race,
-    })
-}
-
-export function updateAvatar(_uid: number, file: File): Promise<AvatarVO> {
-    return updateCurrentUserAvatar(file)
 }
 
 export async function getCurrentUserInfo(): Promise<UserInfo> {
