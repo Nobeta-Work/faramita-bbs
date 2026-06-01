@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import online.faramita.bbs.common.result.PageResult;
 import online.faramita.bbs.common.result.Result;
@@ -28,7 +29,7 @@ public class TagController {
      * @return
      */
     @PostMapping
-    public Result<TagBriefVO> saveTag(@RequestBody TagSaveDTO dto) {
+    public Result<TagBriefVO> saveTag(@Valid @RequestBody TagSaveDTO dto) {
 
         TagBriefVO vo = tagService.createTag(dto);
 

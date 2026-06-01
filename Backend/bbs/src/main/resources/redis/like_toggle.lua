@@ -22,7 +22,7 @@ if ttl and ttl > 0 then
     redis.call('EXPIRE', KEYS[1], ttl)
 end
 
-redis.call('XADD', KEYS[2], '~', 100000, '*',
+redis.call('XADD', KEYS[2], 'MAXLEN', '~', 100000, '*',
     'blogId', ARGV[2],
     'userId', ARGV[1],
     'isLikeAction', tostring(isLikeAction),

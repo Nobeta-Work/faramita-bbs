@@ -34,10 +34,10 @@ spring:
       # Lettuce 配置
       lettuce:
         pool:
-          max-active: ${faramita.redis.lettuce.max-active} # 最大连接数
-          max-idle: ${faramita.redis.lettuce.max-idle} # 最大空闲连接
-          min-idle: ${faramita.redis.lettuce.min-idle} # 最小空闲连接
-          max-wait: ${faramita.redis.lettuce.max-wait} # 最大等待时间，超时报错
+          max-active: ${faramita.redis.lettuce.pool.max-active} # 最大连接数
+          max-idle: ${faramita.redis.lettuce.pool.max-idle} # 最大空闲连接
+          min-idle: ${faramita.redis.lettuce.pool.min-idle} # 最小空闲连接
+          max-wait: ${faramita.redis.lettuce.pool.max-wait} # 最大等待时间，超时报错
 
 
 # MyBatis配置

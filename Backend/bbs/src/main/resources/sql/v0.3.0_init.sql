@@ -64,6 +64,65 @@ CREATE TABLE `sys_role_perm` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT '系统角色-权限关系表';
 
+-- 初始化数据
+INSERT INTO `sys_role` (
+    id, role_code, role_name, description
+) VALUES (1, 'USER',  '普通用户', '默认注册用户'),
+         (2, 'ADMIN', '管理员',   '系统管理员');
+
+INSERT IGNORE INTO sys_perm (
+    id, perm_code, perm_name, description
+) VALUES
+    (1, 'user:edit_profile', '编辑个人资料', '修改自己的个人资料'),
+    (2, 'blog:manage_self',  '管理个人博客', '创建、编辑、删除自己的博客'),
+    (3, 'folder:manage_self','管理个人目录', '创建、移动、删除自己的目录'),
+    (4, 'like:blog',         '博客点赞',     '点赞或取消点赞博客'),
+    (5, 'user:ban',          '封禁用户',     '管理员封禁用户'),
+    (6, 'admin:manage',      '系统管理',     '管理员系统管理权限');
+
+
+/* ===== RBAC seed: role permissions ===== */
+
+INSERT IGNORE INTO sys_role_perm (
+    role_id, perm_id
+)
+SELECT r.id, p.id
+FROM sys_role r
+JOIN sys_perm p
+WHERE r.role_code = 'USER'
+  AND p.perm_code IN (
+      'user:edit_profile',
+      'blog:manage_self',
+      'folder:manage_self',
+      'like:blog'
+  );
+
+INSERT IGNORE INTO sys_role_perm (
+    role_id, perm_id
+)
+SELECT r.id, p.id
+FROM sys_role r
+JOIN sys_perm p
+WHERE r.role_code = 'ADMIN'
+  AND p.perm_code IN (
+      'user:edit_profile',
+      'blog:manage_self',
+      'folder:manage_self',
+      'like:blog',
+      'user:ban',
+      'admin:manage'
+  );
+
+
+/* ===== migrate existing users: all existing users get USER ===== */
+
+INSERT IGNORE INTO sys_user_role (
+    user_id, role_id
+)
+SELECT u.id, r.id
+FROM sys_user u
+JOIN sys_role r ON r.role_code = 'USER';
+
 /* ========== 博客系统 ========*/
 /*
 修改 博客表 blog 
@@ -90,8 +149,8 @@ DROP COLUMN big_category_id,
 MODIFY id BIGINT NOT NULL COMMENT '主键id(雪花)',
 ADD COLUMN folder_id BIGINT NOT NULL DEFAULT 0 COMMENT '目录id(雪花) 0:根目录',
 ADD COLUMN like_count INT NOT NULL DEFAULT 0 COMMENT '总点赞数量',
-UNIQUE KEY `uk_author_folder_title` (`author_id`, `folder_id`, `title`) COMMENT '同一用户同一目录下禁止重名博客'
-KEY `idx_folder_id` (`folder_id`);
+ADD UNIQUE KEY `uk_author_folder_title` (`author_id`, `folder_id`, `title`) COMMENT '同一用户同一目录下禁止重名博客',
+ADD KEY `idx_folder_id` (`folder_id`);
 
 -- 创建 tag 表
 CREATE TABLE `tag` (
@@ -138,6 +197,7 @@ CREATE TABLE `like_blog` (
     `blog_id` BIGINT NOT NULL COMMENT '博客id',
     `user_id` BIGINT NOT NULL COMMENT '用户id',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
     UNIQUE KEY `uk_blog_user` (`blog_id`, `user_id`) COMMENT '同一用户只能给一个博客点一次赞',
     KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

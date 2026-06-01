@@ -326,7 +326,7 @@ public class BlogServiceImpl implements BlogService{
         }
 
         // 3.目录校验
-        if (blog.getFolderId() > 0) {
+        if (blogEditDTO.getFolderId() > 0) {
             Folder folder = folderMapper.selectFolderById(blogEditDTO.getFolderId());
             if (folder == null || !folder.getAuthorId().equals(loginUser.getUser().getId())) {
                 throw new BusinessException(ResultCode.FORBIDDEN);

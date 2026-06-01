@@ -17,6 +17,8 @@ import java.util.Objects;
 
 import lombok.RequiredArgsConstructor;
 import online.faramita.bbs.common.enums.RedisKeys;
+import online.faramita.bbs.common.enums.ResultCode;
+import online.faramita.bbs.common.exception.BusinessException;
 import online.faramita.bbs.module.like.entity.LikeBlogChangelog;
 import online.faramita.bbs.module.like.service.LikeService;
 
@@ -64,6 +66,10 @@ public class LikeFlushTask {
             );
         }
 
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+
         List<LikeBlogChangelog> logs = records.stream()
                 .map(r -> {
                     try {
@@ -76,8 +82,7 @@ public class LikeFlushTask {
                                 .timestamp(LocalDateTime.parse(value.get("timestamp").toString()))
                                 .build();
                     } catch (Exception e) {
-
-                        return null;
+                        throw new BusinessException(ResultCode.FAIL);
                     }
                 }).filter(Objects::nonNull).toList();
 

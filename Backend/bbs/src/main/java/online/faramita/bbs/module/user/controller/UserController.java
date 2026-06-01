@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -74,7 +75,7 @@ public class UserController {
     @PutMapping("/me")
     public Result<Void> editCurrentUserProfile(
         @AuthenticationPrincipal UserAuthInfo loginUser,
-        @RequestBody UserProfileDTO userProfileDTO
+        @Valid @RequestBody UserProfileDTO userProfileDTO
     ) {
 
         Long userId = loginUser.getUser().getId();
@@ -93,7 +94,7 @@ public class UserController {
     @PutMapping("/me/password")
     public Result<Void> editUserPassword(
         @AuthenticationPrincipal UserAuthInfo loginUser,
-        @RequestBody PasswordEditDTO passwordEditDTO
+        @Valid @RequestBody PasswordEditDTO passwordEditDTO
     ) {
 
         Long userId = loginUser.getUser().getId();

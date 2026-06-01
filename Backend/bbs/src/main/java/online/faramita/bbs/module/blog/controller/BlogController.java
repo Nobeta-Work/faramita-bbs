@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import online.faramita.bbs.common.result.PageResult;
@@ -73,7 +74,7 @@ public class BlogController {
     @PostMapping("/me")
     public Result<Long> saveBlog(
         @AuthenticationPrincipal UserAuthInfo loginUser,
-        @RequestBody BlogSaveDTO blogSaveDTO
+        @Valid @RequestBody BlogSaveDTO blogSaveDTO
     ) {
 
         Long userId = loginUser.getUser().getId();
@@ -118,7 +119,7 @@ public class BlogController {
     @PutMapping("/me/{id}")
     public Result<Void> editPrivateBlog(
         @PathVariable(value = "id") Long blogId,
-        @RequestBody BlogEditDTO blogEditDTO
+        @Valid @RequestBody BlogEditDTO blogEditDTO
     ) {
 
         blogService.editBlogById(blogId, blogEditDTO);        

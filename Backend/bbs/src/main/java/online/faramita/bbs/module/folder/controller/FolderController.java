@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import online.faramita.bbs.common.dto.PageQuery;
 import online.faramita.bbs.common.enums.ResultCode;
@@ -37,7 +38,7 @@ public class FolderController {
      * @return
      */
     @PostMapping
-    public Result<Void> saveFolder(@RequestBody FolderSaveDTO folderSaveDTO) {
+    public Result<Void> saveFolder(@Valid @RequestBody FolderSaveDTO folderSaveDTO) {
 
         Long userId = SecurityUtil.getLoginUserId();
         if (userId == null) return Result.fail(ResultCode.UNAUTHORIZED);
@@ -56,7 +57,7 @@ public class FolderController {
     @PutMapping("/{id}")
     public Result<Void> renameFolder(
         @PathVariable Long id,
-        @RequestBody FolderRenameDTO folderRenameDTO
+        @Valid @RequestBody FolderRenameDTO folderRenameDTO
     ) {
 
         folderService.renameFolder(id, folderRenameDTO.getName());
@@ -73,7 +74,7 @@ public class FolderController {
     @PutMapping("/{id}/move")
     public Result<Void> moveFolder(
         @PathVariable Long id,
-        @RequestBody FolderMoveDTO folderMoveDTO
+        @Valid @RequestBody FolderMoveDTO folderMoveDTO
     ) {
 
         folderService.moveFolderById(id, folderMoveDTO.getTargetParentId());
@@ -134,7 +135,7 @@ public class FolderController {
      * @return
      */
     @PutMapping("/blogs/move")
-    public Result<Void> moveBlogsToFolder(@RequestBody FolderBlogsMoveDTO folderBlogsMoveDTO) {
+    public Result<Void> moveBlogsToFolder(@Valid @RequestBody FolderBlogsMoveDTO folderBlogsMoveDTO) {
 
         folderService.moveBlogsToFolder(folderBlogsMoveDTO);
         

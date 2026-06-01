@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +40,7 @@ public class AuthController {
      */
     @Operation(summary = "登录接口", description = "登录接口")
     @PostMapping("/login")
-    public Result<TokenVO> login(@RequestBody LoginDTO loginDTO) {
+    public Result<TokenVO> login(@Valid @RequestBody LoginDTO loginDTO) {
 
         TokenVO tokenVO = authService.login(loginDTO);
 
@@ -53,7 +54,7 @@ public class AuthController {
      */
     @Operation(summary = "账号注册", description = "账号注册")
     @PostMapping("/register")
-    public Result<Void> register(@RequestBody RegisterDTO registerDTO) {
+    public Result<Void> register(@Valid @RequestBody RegisterDTO registerDTO) {
         
         authService.register(registerDTO);
 

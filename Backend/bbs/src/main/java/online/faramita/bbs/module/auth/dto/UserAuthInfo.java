@@ -9,6 +9,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,6 +19,15 @@ import online.faramita.bbs.module.user.entity.User;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonIgnoreProperties(value = {
+        "authorities",
+        "password",
+        "username",
+        "enabled",
+        "accountNonExpired",
+        "accountNonLocked",
+        "credentialsNonExpired"
+}, ignoreUnknown = true)
 public class UserAuthInfo implements UserDetails {
 
     private User user;                // 数据库用户实体

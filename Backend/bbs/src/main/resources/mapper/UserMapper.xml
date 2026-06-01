@@ -57,7 +57,7 @@
     <!-- selectAuthorBriefByIds --> 
 
     <select id="selectAuthorBriefByIds"
-            resultType="online.faramita.bbs.module.user.vo.AuthorBriefVO">
+            resultType="online.faramita.bbs.module.user.vo.UserBriefVO">
         SELECT
             id, nickname, avatar
         FROM sys_user
@@ -70,10 +70,10 @@
     <!-- selectAuthorBriefById --> 
 
     <select id="selectAuthorBriefById"
-            resultType="online.faramita.bbs.module.user.vo.AuthorBriefVO">
+            resultType="online.faramita.bbs.module.user.vo.UserBriefVO">
         SELECT
             id, nickname, avatar
         FROM sys_user
-        WHERE id = #{userId}
+        WHERE id = #{authorId}
     </select>
 </mapper>
