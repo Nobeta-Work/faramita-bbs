@@ -1,9 +1,8 @@
 # Faramita BBS
 
-> 一个面向创作、阅读与轻量社区互动的论坛/笔记系统。
+> 一个面向创作、阅读与轻量社区互动的论坛系统。
 
-Faramita BBS 是一个基于 Spring Boot 的社区后端项目，提供用户认证、博客发布、目录管理、标签检索、点赞互动与文件上传等能力。
-当前版本聚焦 v0.3.0：完成模块化后端结构、Spring Security 认证授权、Redis 缓存与点赞异步落盘链路。
+Faramita BBS 是一个基于 Spring Boot 的社区后端项目，提供用户认证、博客发布、目录管理、标签检索、点赞互动与文件上传等能力。当前版本聚焦 v0.3.0：完成模块化后端结构、Spring Security 认证授权、Redis 缓存与点赞异步落盘链路。
 
 ## 简介
 
@@ -72,6 +71,10 @@ Security Filter -> JWT -> Redis -> SecurityContext
 .\mvnw.cmd clean package -DskipTests
 ```
 
+## 文档
+
+- [PRD](docs/FRMT%20BBS%20v0.3.0%20PRD.md)
+- [API](docs/FRMT%20BBS%20v0.3.0%20API.md)
 
 ## 版本
 
