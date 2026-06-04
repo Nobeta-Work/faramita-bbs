@@ -1,80 +1,121 @@
-// # 登录相关API
-import type { ProfileResponse, UserInfo } from '@/types';
-import request from '@/utils/request';
+import { login as authLogin, register as authRegister } from '@/api/auth'
+import type {
+    AvatarVO,
+    LoginDTO,
+    PasswordEditDTO,
+    UserInfo,
+    UserInfoVO,
+    UserProfileDTO,
+    UserProfileVO,
+    UserSex,
+} from '@/types'
+import request from '@/utils/request'
 
-// 登录API
-export function login(data: {
-        username: string
-        password: string
-}):Promise<UserInfo> {
-    return request({
-        url: '/login',
-        method: 'post',
-        data,
-    })
+function toNumberId(id: number | string | null | undefined): number {
+    if (id === null || id === undefined) {
+        return 0
+    }
+
+    return Number(id)
 }
 
-// 注册API
-export function register(data: {
-        nickname: string
-        username: string
-        password: string
-        sex: number
-        race: string
-        avatar: string
-}) {
-    return request({
-        url: '/register',
-        method: 'post',
-        data,
-    })
+function toUserInfo(
+    user: UserInfoVO | UserProfileVO,
+    token: string | null = null,
+    refreshToken: string | null = null,
+    tokenExpireIn: string | null = null,
+): UserInfo {
+    return {
+        id: toNumberId(user.id),
+        username: 'username' in user ? user.username : null,
+        nickname: user.nickname,
+        avatar: user.avatar,
+        token,
+        refreshToken,
+        tokenExpireIn,
+        sex: user.sex,
+        race: user.race,
+        signature: user.signature,
+        roles: 'roles' in user ? user.roles : [],
+        createTime: user.createTime,
+    }
 }
 
-// 获取个人资料API
-export function getProfileByUid(uid: number)
-:Promise<ProfileResponse>{
-    return request({
-        url: `/${uid}`,
+export function getCurrentUserProfile(): Promise<UserProfileVO> {
+    return request<UserProfileVO>({
+        url: '/users/me',
         method: 'get',
     })
 }
 
-// 修改个人资料API
-export function updateProfile(uid: number,data: {
-    id: number,
-    password: string,
-    nickname: string,
-    avatar: string,
-    sex: number,
-    race: string,
-    signature: string,
-}) {
-    return request({
-        url: `/${uid}/profile`,
+export function getUserInfo(id: number | string): Promise<UserInfoVO> {
+    return request<UserInfoVO>({
+        url: `/users/${id}`,
+        method: 'get',
+    })
+}
+
+export function updateCurrentUserProfile(data: UserProfileDTO): Promise<void> {
+    return request<void>({
+        url: '/users/me',
         method: 'put',
         data,
     })
 }
 
-// 个人资料头像更新API
-export function updateAvatar(uid: number, file: File) {
-    // 创建FormData对象
+export function updateUserPassword(data: PasswordEditDTO): Promise<void> {
+    return request<void>({
+        url: '/users/me/password',
+        method: 'put',
+        data,
+    })
+}
+
+export function updateCurrentUserAvatar(file: File): Promise<AvatarVO> {
     const formData = new FormData()
     formData.append('file', file)
 
-    return request({
-        url: `/${uid}/upload/avatar`,
+    return request<AvatarVO>({
+        url: '/users/me/avatar',
         method: 'post',
-        data: formData
+        data: formData,
     })
 }
 
-// 根据token获取用户信息
-export function getCurrentUserInfo(): Promise<UserInfo> {
-    const uid = 0
-    return request({
-        url: `${uid}/current`,
-        method: 'get',
+// Legacy exports kept for current pages until Phase 2 rewires views.
+export async function login(data: LoginDTO): Promise<UserInfo> {
+    const token = await authLogin(data)
+
+    return {
+        id: null,
+        username: data.username,
+        nickname: null,
+        avatar: null,
+        token: token.accessToken,
+        refreshToken: token.refreshToken,
+        tokenExpireIn: token.expireIn,
+        roles: [],
+    }
+}
+
+export function register(data: {
+    username: string
+    password: string
+    nickname: string
+    sex: number
+    race: string
+    avatar?: string
+}): Promise<void> {
+    return authRegister({
+        username: data.username,
+        password: data.password,
+        nickname: data.nickname,
+        sex: data.sex as UserSex,
+        race: data.race,
     })
 }
 
+export async function getCurrentUserInfo(): Promise<UserInfo> {
+    const profile = await getCurrentUserProfile()
+    return toUserInfo(profile)
+}

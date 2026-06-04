@@ -1,48 +1,59 @@
-// # 博文接口
+import type {
+    ApiId,
+    BlogEditDTO,
+    BlogPageQuery,
+    BlogPrivateDetailVO,
+    BlogPublicBriefVO,
+    BlogPublicDetailVO,
+    BlogSaveDTO,
+    PageResult,
+} from '@/types'
+import { normalizePageResult } from '@/utils/page'
+import request from '@/utils/request'
 
-import type { Blog, BlogCreateDTO, BlogPageQueryVO, BlogUpdateDTO, BlogPageQueryDTO } from "@/types";
-import request from "@/utils/request";
-
-
-// 分页查询接口
-export function getBlogListPage(data: BlogPageQueryDTO): Promise<BlogPageQueryVO> {
-    return request({
-        url: `/blog`,
+export async function getPublicBlogPage(query: BlogPageQuery): Promise<PageResult<BlogPublicBriefVO>> {
+    const page = await request<PageResult<BlogPublicBriefVO>>({
+        url: '/blogs/page',
         method: 'get',
-        params: data
+        params: query,
     })
+
+    return normalizePageResult(page)
 }
 
-// 博文创建接口
-export function createBlog(data: BlogCreateDTO): Promise<string> {
-    return request({
-        url: `/blog/create`,
+export function createPrivateBlog(data: BlogSaveDTO): Promise<ApiId> {
+    return request<ApiId>({
+        url: '/blogs/me',
         method: 'post',
-        data
+        data,
     })
 }
 
-// 博文查询接口
-export function getBlog(bloguid: string): Promise<Blog> {
-    return request({
-        url: `/blog/${bloguid}`,
-        method: 'get'
+export function getPublicBlog(id: ApiId): Promise<BlogPublicDetailVO> {
+    return request<BlogPublicDetailVO>({
+        url: `/blogs/${id}`,
+        method: 'get',
     })
 }
 
-// 博文删除接口
-export function deleteBlog(bloguid: string) {
-    return request({
-        url: `/blog/${bloguid}`,
-        method: 'delete'
+export function getPrivateBlog(id: ApiId): Promise<BlogPrivateDetailVO> {
+    return request<BlogPrivateDetailVO>({
+        url: `/blogs/me/${id}`,
+        method: 'get',
     })
 }
 
-// 博文更新接口
-export function updateBlog(bloguid: string , data: BlogUpdateDTO) {
-    return request({
-        url: `/blog/${bloguid}`,
+export function updatePrivateBlog(id: ApiId, data: BlogEditDTO): Promise<void> {
+    return request<void>({
+        url: `/blogs/me/${id}`,
         method: 'put',
-        data: data
+        data,
+    })
+}
+
+export function deletePrivateBlog(id: ApiId): Promise<void> {
+    return request<void>({
+        url: `/blogs/me/${id}`,
+        method: 'delete',
     })
 }

@@ -1,19 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted, h, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, h } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   NInput, NSelect, NPagination, NModal,
   NForm, NFormItem, NIcon, NEmpty, NSpin, useMessage, useDialog, NAvatar
 } from 'naive-ui'
-import { Search, Add, ArrowForward, GridOutline, Person } from '@vicons/ionicons5'
-import { getBlogListPage, createBlog } from '@/api/blog'
-import { getProfileByUid } from '@/api/user'
+import { Search, Add, ArrowForward, GridOutline, Person, HeartOutline } from '@vicons/ionicons5'
+import { createPrivateBlog, getPublicBlogPage } from '@/api/blog'
 import { resolveAvatarUrl } from '@/utils/avatar'
-import type { Blog, BlogPageQueryDTO } from '@/types'
-import { BlogUtils } from '@/types/blog'
+import type { BlogPageQuery, BlogPublicBriefVO } from '@/types'
 import { DateUtils } from '@/types/date'
 import { useUserStore } from '@/stores/user'
-import ParticleBackground from '@/components/ParticleBackground.vue'
 
 // Fonts
 const fontLink = document.createElement('link')
@@ -22,12 +19,13 @@ fontLink.rel = 'stylesheet'
 document.head.appendChild(fontLink)
 
 const router = useRouter()
+const route = useRoute()
 const message = useMessage()
 const dialog = useDialog()
 const userStore = useUserStore()
 
 const loading = ref(false)
-const blogList = ref<Blog[]>([])
+const blogList = ref<BlogPublicBriefVO[]>([])
 const total = ref(0)
 const showCreateModal = ref(false)
 
@@ -47,77 +45,37 @@ const handleCreateClick = () => {
   showCreateModal.value = true
 }
 
-const searchForm = ref<BlogPageQueryDTO>({
-  page: 1,
+const searchForm = ref<BlogPageQuery>({
+  pageNum: 1,
   pageSize: 9,
-  bigCategoryId: 0,
-  keyword: '',
-  orderBy: 'create_time',
-  sortOrder: 'desc',
-  litteCategoryName: '',
-  categoryId: '',
-  authorId: 0
+  keyword: typeof route.query.keyword === 'string' ? route.query.keyword : '',
+  sortField: 'createTime',
+  sortOrder: 'desc'
 })
 
 const createForm = ref({
-  title: '',
-  bigCategoryId: 1,
-  littleCategoryName: '',
-  authorName: userStore.userInfo?.nickname || ''
+  title: ''
 })
 
-const bigCategoryOptions = [
-  { label: '项目实战', value: 1 },
-  { label: '技术栈', value: 2 },
-  { label: '算法心得', value: 3 },
-  { label: '游戏开发', value: 4 },
-  { label: '随笔杂谈', value: 5 }
-]
-
 const sortOptions = [
-  { label: '最新发布', value: 'create_time' },
-  { label: '最近更新', value: 'update_time' }
+  { label: '最新发布', value: 'createTime' },
+  { label: '最近更新', value: 'updateTime' }
 ]
-
-// Avatar handling
-const authorAvatars = ref<Map<number, string>>(new Map())
 
 // 默认头像图标渲染函数
 const renderDefaultAvatar = () => h(NIcon, null, { default: () => h(Person) })
 
-const fetchAuthorAvatars = async (blogs: Blog[]) => {
-  // Get unique author IDs that don't have an avatar URL yet
-  const uids = [...new Set(blogs.map(b => b.authorId).filter(id => id && !authorAvatars.value.has(id)))]
-  
-  if (uids.length === 0) return
-
-  // Fetch avatars in parallel
-  await Promise.all(uids.map(async (uid) => {
-    try {
-      const res = await getProfileByUid(uid)
-      authorAvatars.value.set(uid, resolveAvatarUrl(res.user?.avatar))
-    } catch (error) {
-      console.error(`Failed to fetch avatar for user ${uid}`, error)
-      authorAvatars.value.set(uid, resolveAvatarUrl(undefined))
-    }
-  }))
-}
-
 const fetchBlogs = async () => {
   loading.value = true
   try {
-    const params = { ...searchForm.value }
-    if (params.bigCategoryId === 0) delete (params as any).bigCategoryId
-    if (params.authorId === 0) delete (params as any).authorId
-    
-    const res = await getBlogListPage(params)
-    blogList.value = res.list
-    total.value = res.total
-    
-    // Fetch avatars for the current list
-    if (res.list && res.list.length > 0) {
-      fetchAuthorAvatars(res.list)
+    const params: BlogPageQuery = {
+      ...searchForm.value,
+      keyword: searchForm.value.keyword?.trim() || undefined
     }
+    
+    const res = await getPublicBlogPage(params)
+    blogList.value = res.records
+    total.value = res.total
   } catch (error) {
     message.error('获取博客列表失败')
   } finally {
@@ -126,12 +84,12 @@ const fetchBlogs = async () => {
 }
 
 const handleSearch = () => {
-  searchForm.value.page = 1
+  searchForm.value.pageNum = 1
   fetchBlogs()
 }
 
 const handlePageChange = (page: number) => {
-  searchForm.value.page = page
+  searchForm.value.pageNum = page
   fetchBlogs()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -142,11 +100,14 @@ const handleCreateBlog = async () => {
     return
   }
   try {
-    createForm.value.authorName = userStore.userInfo?.nickname || ''
-    const blogUid = await createBlog(createForm.value)
+    const blogId = await createPrivateBlog({
+      title: createForm.value.title,
+      folderId: 0
+    })
     message.success('创建成功')
     showCreateModal.value = false
-    router.push(`/blog/${blogUid}`)
+    createForm.value.title = ''
+    router.push(`/workspace/blogs/${blogId}`)
   } catch (error) {
     message.error('创建失败')
   }
@@ -155,15 +116,10 @@ const handleCreateBlog = async () => {
 onMounted(() => {
   fetchBlogs()
 })
-
-onUnmounted(() => {
-})
 </script>
 
 <template>
   <div class="blog-list-page">
-    <ParticleBackground class="interactive-bg" />
-    
     <!-- Hero Header -->
     <div class="hero-section">
       <div class="hero-content">
@@ -195,7 +151,7 @@ onUnmounted(() => {
         <div class="footer-left">
           <div class="sort-selector">
             <n-select
-              v-model:value="searchForm.orderBy"
+              v-model:value="searchForm.sortField"
               :options="sortOptions"
               size="medium"
               class="custom-select"
@@ -204,24 +160,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="filter-tags">
-          <span
-            class="filter-tag"
-            :class="{ active: searchForm.bigCategoryId === 0 }"
-            @click="searchForm.bigCategoryId = 0; handleSearch()"
-          >
-            All
-          </span>
-          <span
-            v-for="opt in bigCategoryOptions"
-            :key="opt.value"
-            class="filter-tag"
-            :class="{ active: searchForm.bigCategoryId === opt.value }"
-            @click="searchForm.bigCategoryId = opt.value; handleSearch()"
-          >
-            {{ opt.label }}
-          </span>
-        </div>
+        <div class="filter-tags"></div>
 
         <div class="footer-right">
           <button class="create-btn" @click="handleCreateClick">
@@ -239,16 +178,16 @@ onUnmounted(() => {
           <div class="blog-grid">
             <div 
               v-for="(blog, index) in blogList" 
-              :key="blog.bloguid" 
+              :key="blog.id" 
               class="blog-card-wrapper"
               :style="{ animationDelay: `${index * 0.1}s` }"
-              @click="router.push(`/blog/${blog.bloguid}`)"
+              @click="router.push(`/blog/${blog.id}`)"
             >
               <div class="blog-card">
                 <div class="card-header">
                   <div class="card-header-content">
                     <span class="category-badge">
-                      {{ BlogUtils.bigIdToString(blog.bigCategoryId) }}
+                      {{ blog.tags?.[0]?.name || 'Article' }}
                     </span>
                     <span class="read-more-icon">
                       <n-icon :component="ArrowForward" />
@@ -258,7 +197,7 @@ onUnmounted(() => {
                 
                 <div class="card-body">
                   <div class="card-meta-top">
-                    <span class="sub-category">{{ blog.littleCategoryName || 'General' }}</span>
+                    <span class="sub-category">{{ blog.tags?.map(tag => tag.name).join(' / ') || 'General' }}</span>
                     <span class="publish-date">{{ DateUtils.isoToDateOnly(blog.createTime) }}</span>
                   </div>
                   
@@ -270,12 +209,16 @@ onUnmounted(() => {
                       <n-avatar 
                         round 
                         size="small" 
-                        :src="authorAvatars.get(blog.authorId)" 
+                        :src="resolveAvatarUrl(blog.author.avatar)" 
                         :render-icon="renderDefaultAvatar"
                         class="author-avatar"
                       />
-                      <span class="author-name">{{ blog.authorName }}</span>
+                      <span class="author-name">{{ blog.author.nickname }}</span>
                     </div>
+                    <span class="like-count">
+                      <n-icon :component="HeartOutline" />
+                      {{ blog.likeCount || 0 }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -284,7 +227,7 @@ onUnmounted(() => {
           
           <div class="pagination-container">
             <n-pagination
-              v-model:page="searchForm.page"
+              v-model:page="searchForm.pageNum"
               :item-count="total"
               :page-size="searchForm.pageSize"
               size="large"
@@ -308,15 +251,9 @@ onUnmounted(() => {
           <h3>New Article</h3>
         </div>
         <div class="modal-body">
-            <n-form ref="createFormRef" :model="createForm" size="large" class="custom-form">
+            <n-form :model="createForm" size="large" class="custom-form">
             <n-form-item label="Title" path="title">
                 <n-input v-model:value="createForm.title" placeholder="Enter article title" class="custom-input" />
-            </n-form-item>
-            <n-form-item label="Category" path="bigCategoryId">
-                <n-select v-model:value="createForm.bigCategoryId" :options="bigCategoryOptions" class="custom-select" />
-            </n-form-item>
-            <n-form-item label="Tags" path="littleCategoryName">
-                <n-input v-model:value="createForm.littleCategoryName" placeholder="e.g. Vue3, SpringBoot" class="custom-input" />
             </n-form-item>
             </n-form>
         </div>
@@ -332,26 +269,16 @@ onUnmounted(() => {
 <style scoped>
 .blog-list-page {
   min-height: 100vh;
-  background-color: var(--bg-primary);
+  background-color: transparent;
   padding-bottom: 80px;
   position: relative;
   overflow: hidden;
 }
 
-.interactive-bg {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-}
-
 /* Hero Section */
 .hero-section {
   position: relative;
-  padding: 80px 20px 40px;
+  padding: 0px 20px 40px;
   margin-bottom: 40px;
   text-align: center;
   z-index: 10;
@@ -694,6 +621,10 @@ onUnmounted(() => {
 
 .card-footer {
   margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .author-profile {
@@ -713,6 +644,17 @@ onUnmounted(() => {
   letter-spacing: 1px;
   color: var(--text-primary);
   text-transform: uppercase;
+}
+
+.like-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-tertiary);
+  font-family: 'Lato', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
 .pagination-container {

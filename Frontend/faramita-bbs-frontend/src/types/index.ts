@@ -11,3 +11,12 @@ export * from './api'
 
 // 日期相关
 export * from './date'
+
+// 目录相关
+export * from './folder'
+
+// 标签相关
+export * from './tag'
+
+// 点赞相关
+export * from './like'

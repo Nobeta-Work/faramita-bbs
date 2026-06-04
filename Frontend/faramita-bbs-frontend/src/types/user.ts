@@ -1,30 +1,81 @@
-// # 用户相关类型定义
+import type { ApiId } from './api'
 
-// 用户接口
-export interface User {
-    id: number; // uid，唯一标识
-    username: string;   // 账号
-    password: string;   // 密码
-    nickname: string;   // 昵称
-    avatar: string;     // 头像URL
-    sex: number;        // 性别
-    race: string;       // 种族
-    signature: string;  // 个性签名
-    createTime: string; // 创建时间
-    updateTime: string; // 更新时间
-}
+export type UserRole = 'ROLE_USER' | 'ROLE_ADMIN' | (string & {})
+export type UserSex = 0 | 1 | 2
 
-// 用户信息响应接口
 export interface UserInfo {
     id: number | null
     username: string | null
     nickname: string | null
     avatar: string | null
     token: string | null
+    refreshToken?: string | null
+    tokenExpireIn?: string | null
+    sex?: number | null
+    race?: string | null
+    signature?: string | null
+    roles?: UserRole[]
+    createTime?: string | null
 }
 
-// 定义状态接口
 export interface UserState {
     token: string | null
+    refreshToken: string | null
+    tokenExpireIn: string | null
     userInfo: UserInfo | null
+}
+
+export interface LoginDTO {
+    username: string
+    password: string
+}
+
+export interface RegisterDTO {
+    username: string
+    password: string
+    nickname: string
+    sex: UserSex
+    race: string
+}
+
+export interface TokenVO {
+    accessToken: string
+    refreshToken: string
+    expireIn: string
+}
+
+export interface UserBriefVO {
+    id: ApiId
+    nickname: string
+    avatar: string | null
+}
+
+export interface UserInfoVO {
+    id: ApiId
+    nickname: string
+    avatar: string | null
+    sex: UserSex
+    race: string
+    signature: string | null
+    createTime: string
+}
+
+export interface UserProfileVO extends UserInfoVO {
+    username: string
+    roles: UserRole[]
+}
+
+export interface UserProfileDTO {
+    nickname: string
+    sex: UserSex
+    race: string
+}
+
+export interface PasswordEditDTO {
+    oldPassword: string
+    newPassword: string
+}
+
+export interface AvatarVO {
+    avatarKey: string
 }

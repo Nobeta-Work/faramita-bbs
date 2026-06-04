@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { NResult, NButton } from 'naive-ui'
+import { useThemeStore } from '@/stores/theme'
+import { storeToRefs } from 'pinia'
 
 const router = useRouter()
+const themeStore = useThemeStore()
+const { isDark } = storeToRefs(themeStore)
 </script>
 
 <template>
-  <div class="not-found-page">
+  <div class="not-found-page" :class="{ 'not-found-page--dark': isDark }">
     <div class="geometric-bg">
       <div class="shape shape-1"></div>
       <div class="shape shape-2"></div>
@@ -43,6 +47,10 @@ const router = useRouter()
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.5);
   z-index: 10;
+}
+
+.not-found-page--dark .content {
+  background: rgba(20, 20, 25, 0.65);
 }
 
 .geometric-bg {

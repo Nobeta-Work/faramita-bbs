@@ -30,6 +30,7 @@ dist-ssr
 
 # Build outputs
 bbs/
+output/
 
 # Temp files
 nul
@@ -37,3 +38,6 @@ nul
 # Generated typings
 src/auto-imports.d.ts
 src/components.d.ts
+
+# AI helper
+CLAUDE.md

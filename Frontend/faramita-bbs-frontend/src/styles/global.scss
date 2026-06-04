@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   /* New Design System Variables */
   --bg-primary: white; /* Warm/Linen White */
   --text-primary: #1A1A1A;
@@ -31,10 +32,12 @@
 }
 
 html {
+  min-height: 100%;
   background-color: var(--bg-primary) !important;
 }
 
 html.dark {
+  color-scheme: dark;
   --bg-primary: #0F1115; /* Deep Space */
   --text-primary: #E6E6E6;
   --text-secondary: #B0B0B0;
@@ -70,11 +73,18 @@ html.dark {
 }
 
 body {
+  min-height: 100%;
   margin: 0;
   font-family: 'Lato', sans-serif;
-  background-color: var(--bg-primary) !important;
+  background-color: transparent !important;
   color: var(--text-primary) !important;
   transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+#app {
+  min-height: 100%;
+  background-color: transparent;
+  color: var(--text-primary);
 }
 
 /* Glassmorphism utilities */
@@ -162,7 +172,16 @@ html.dark ::-webkit-scrollbar-thumb {
   h5 { color: #fca018 !important; }
   h6 { color: #d2b303 !important; }
   h4, h5, h6 { font-size: 1.25rem !important; }
-  h1 a, h2 a, h3 a, h4 a, h5 a, h6 a { color: inherit !important; text-decoration: none; }
+  h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
+    color: inherit !important;
+    text-decoration: none !important;
+    border-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .vditor-anchor {
+    display: none !important;
+  }
 
   // Bold and Italic Styling (Light Mode)
   strong, b {
@@ -302,7 +321,16 @@ html.dark {
     h5 { color: #67D2CC !important; }
     h6 { color: #41D1FF !important; }
     h4, h5, h6 { font-size: 1.25rem !important; }
-    h1 a, h2 a, h3 a, h4 a, h5 a, h6 a { color: inherit !important; text-decoration: none; }
+    h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
+      color: inherit !important;
+      text-decoration: none !important;
+      border-bottom: 0 !important;
+      padding-bottom: 0 !important;
+    }
+
+    .vditor-anchor {
+      display: none !important;
+    }
       // Bold and Italic Styling (Dark Mode)
       strong, b {
         color: #F9D46C;

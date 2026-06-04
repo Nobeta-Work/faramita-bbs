@@ -7,12 +7,12 @@ import {
 import {
   ArrowForwardOutline, LogoGithub, LogoTwitter, PencilOutline, CloseOutline, CameraOutline, Person
 } from '@vicons/ionicons5'
-import { getProfileByUid, updateAvatar, updateProfile } from '@/api/user'
+import { getUserInfo, updateCurrentUserAvatar, updateCurrentUserProfile } from '@/api/user'
+import { getPublicBlogPage } from '@/api/blog'
 import { resolveAvatarUrl } from '@/utils/avatar'
 import { useUserStore } from '@/stores/user'
-import type { User, Blog } from '@/types'
+import type { BlogPublicBriefVO, UserInfoVO, UserSex } from '@/types'
 import { DateUtils } from '@/types/date'
-import { BlogUtils } from '@/types/blog'
 import router from '@/router'
 
 // Fonts
@@ -25,12 +25,52 @@ const route = useRoute()
 const userStore = useUserStore()
 const message = useMessage()
 
-const uid = computed(() => Number(route.params.uid))
-const isCurrentUser = computed(() => userStore.userInfo?.id === uid.value)
+const uid = computed(() => String(route.params.uid || ''))
+const isCurrentUser = computed(() => String(userStore.userInfo?.id ?? '') === uid.value)
 
-const user = ref<User | null>(null)
+const user = ref<UserInfoVO | null>(null)
 const userAvatarUrl = computed(() => resolveAvatarUrl(user.value?.avatar))
-const blogList = ref<Blog[]>([])
+const blogList = ref<BlogPublicBriefVO[]>([])
+
+interface JourneyDateParts {
+  year: string
+  month: string
+  day: string
+  time: string
+  full: string
+}
+
+const formatJourneyDate = (value: string): JourneyDateParts => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return {
+      year: '----',
+      month: '--',
+      day: '--',
+      time: '--:--',
+      full: value,
+    }
+  }
+
+  return {
+    year: String(date.getFullYear()),
+    month: String(date.getMonth() + 1).padStart(2, '0'),
+    day: String(date.getDate()).padStart(2, '0'),
+    time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
+    full: DateUtils.formatToDateOnly(date),
+  }
+}
+
+const journeyStops = computed(() => blogList.value.slice(0, 6).map((blog, index) => ({
+  blog,
+  index,
+  date: formatJourneyDate(blog.createTime),
+})))
+
+const latestPublishedText = computed(() => {
+  const latest = blogList.value[0]
+  return latest ? DateUtils.isoToDateOnly(latest.createTime) : '暂无发布'
+})
 
 const renderDefaultAvatar = () => h(NIcon, null, { default: () => h(Person) })
 const loading = ref(false)
@@ -39,7 +79,7 @@ const pageLoaded = ref(false)
 // Edit Profile Logic
 const showEditModal = ref(false)
 const editForm = ref({
-  id: 0, nickname: '', avatar: '', sex: 0, race: '', signature: '', password: '', passwordConfirm: ''
+  nickname: '', sex: 2 as UserSex, race: ''
 })
 const saving = ref(false)
 
@@ -145,7 +185,7 @@ const confirmCrop = async () => {
     
     if (blob) {
       const file = new File([blob], 'avatar.png', { type: 'image/png' })
-      await updateAvatar(uid.value, file)
+      await updateCurrentUserAvatar(file)
       message.success('头像更新成功')
       showCropModal.value = false
       fetchProfile()
@@ -159,7 +199,11 @@ const confirmCrop = async () => {
 
 const openEditModal = () => {
   if (!user.value) return
-  editForm.value = { ...user.value, password: '', passwordConfirm: '' }
+  editForm.value = {
+    nickname: user.value.nickname,
+    sex: user.value.sex,
+    race: user.value.race
+  }
   showEditModal.value = true
 }
 
@@ -170,20 +214,16 @@ const handleSaveProfile = async () => {
   }
   saving.value = true
   try {
-    const { id, nickname, sex, race, signature } = editForm.value
-    // Assuming updateProfile takes User object.
-    // If backend requires partial update, we send what we have.
-    // Construct a user object to update
-    const userToUpdate = { ...user.value, nickname, sex, race, signature } as User
+    const { nickname, sex, race } = editForm.value
 
-    await updateProfile(userToUpdate.id, userToUpdate)
+    await updateCurrentUserProfile({ nickname, sex, race })
     message.success('Profile Updated')
     showEditModal.value = false
     fetchProfile()
 
     // Update store if current user
-    if (userStore.userInfo && userStore.userInfo.id === id) {
-       userStore.userInfo = { ...userStore.userInfo, nickname }
+    if (userStore.userInfo && String(userStore.userInfo.id ?? '') === uid.value) {
+       userStore.userInfo = { ...userStore.userInfo, nickname, sex, race }
     }
   } catch (error) {
     message.error('Failed to update profile')
@@ -204,10 +244,19 @@ let mouseY = -1000
 const fetchProfile = async () => {
   loading.value = true
   try {
-    const res = await getProfileByUid(uid.value)
-    user.value = res.user
-    blogList.value = res.blogList
-    document.title = `${res.user.nickname} - Estetica`
+    const [profile, blogs] = await Promise.all([
+      getUserInfo(uid.value),
+      getPublicBlogPage({
+        pageNum: 1,
+        pageSize: 20,
+        authorId: uid.value,
+        sortField: 'createTime',
+        sortOrder: 'desc'
+      })
+    ])
+    user.value = profile
+    blogList.value = blogs.records
+    document.title = `${profile.nickname} - Faramita BBS`
   } catch (error) {
     message.error('无法加载用户信息')
   } finally {
@@ -222,7 +271,7 @@ const fetchProfile = async () => {
 const sexText = (sex: number) => {
   switch(sex) {
     case 1: return 'MALE'
-    case 0: return 'FEMALE'
+    case 2: return 'FEMALE'
     default: return 'MYSTERY'
   }
 }
@@ -389,34 +438,66 @@ onUnmounted(() => {
 
         <!-- Content Section -->
         <section class="content-section">
-          <div class="section-head animate-fade-in" style="animation-delay: 0.6s">
-            <h2>Publications</h2>
-            <span class="count">({{ blogList.length }})</span>
+          <div class="section-head journey-head animate-fade-in" style="animation-delay: 0.6s">
+            <div class="journey-title-block">
+              <span class="section-kicker">CREATION JOURNEY</span>
+              <h2>发布旅程</h2>
+            </div>
+            <div class="journey-stats" v-if="blogList.length">
+              <div>
+                <strong>{{ blogList.length }}</strong>
+                <span>公开博客</span>
+              </div>
+              <div>
+                <strong>{{ latestPublishedText }}</strong>
+                <span>最近发布</span>
+              </div>
+            </div>
           </div>
 
-          <div class="blog-grid">
-            <div
-              v-for="(blog, index) in blogList"
-              :key="blog.bloguid"
-              class="blog-card animate-card-in"
-              :style="{ animationDelay: `${0.7 + index * 0.1}s` }"
-              @click="router.push(`/blog/${blog.bloguid}`)"
+          <div v-if="journeyStops.length" class="journey-map" aria-label="最近发布博客时间线">
+            <article
+              v-for="stop in journeyStops"
+              :key="stop.blog.id"
+              class="journey-stop animate-card-in"
+              :class="{ 'is-latest': stop.index === 0 }"
+              :style="{ animationDelay: `${0.7 + stop.index * 0.1}s` }"
+              @click="router.push(`/blog/${stop.blog.id}`)"
             >
-              <div class="card-meta">
-                <span class="cat-tag">{{ BlogUtils.bigIdToString(blog.bigCategoryId) }}</span>
-                <span class="time">{{ DateUtils.isoToDateOnly(blog.createTime) }}</span>
-              </div>
-              <h3 class="card-title">{{ blog.title }}</h3>
-              <p class="card-summary">{{ blog.summary }}</p>
-              <div class="card-footer">
-                <span class="read-more">READ ENTRY</span>
-                <n-icon><ArrowForwardOutline /></n-icon>
-              </div>
-            </div>
+              <time class="journey-date" :datetime="stop.date.full">
+                <span>{{ stop.date.month }}月</span>
+                <strong>{{ stop.date.day }}</strong>
+                <span>{{ stop.date.year }}</span>
+              </time>
 
-            <div v-if="blogList.length === 0" class="empty-state">
-              <span class="void-text">VOID</span>
-            </div>
+              <div class="journey-rail" aria-hidden="true">
+                <span class="journey-dot">{{ stop.index + 1 }}</span>
+              </div>
+
+              <div class="journey-card">
+                <div class="journey-card-head">
+                  <span class="cat-tag">{{ stop.blog.tags?.[0]?.name || 'Article' }}</span>
+                  <span class="time">{{ stop.date.time }} 发布</span>
+                </div>
+                <h3 class="card-title">{{ stop.blog.title }}</h3>
+                <p class="card-summary">{{ stop.blog.summary || '这篇博客暂时没有摘要。' }}</p>
+                <div class="card-footer">
+                  <span>{{ stop.blog.likeCount || 0 }} likes</span>
+                  <span class="read-more">
+                    READ ENTRY
+                    <n-icon><ArrowForwardOutline /></n-icon>
+                  </span>
+                </div>
+              </div>
+            </article>
+
+            <p v-if="blogList.length > journeyStops.length" class="journey-note">
+              展示最近 {{ journeyStops.length }} 篇公开发布，共 {{ blogList.length }} 篇。
+            </p>
+          </div>
+
+          <div v-else class="empty-state">
+            <span class="void-text">尚未发布</span>
           </div>
         </section>
 
@@ -438,20 +519,11 @@ onUnmounted(() => {
             <n-input v-model:value="editForm.nickname" placeholder="Your persona name" />
           </n-form-item>
           
-          <n-form-item label="SIGNATURE">
-             <n-input 
-               v-model:value="editForm.signature" 
-               type="textarea" 
-               placeholder="A brief bio..." 
-               :autosize="{ minRows: 3, maxRows: 5 }"
-             />
-          </n-form-item>
-          
           <n-form-item label="IDENTITY">
             <n-radio-group v-model:value="editForm.sex" name="sex">
               <n-radio :value="1">MALE</n-radio>
-              <n-radio :value="0">FEMALE</n-radio>
-              <n-radio :value="2">MYSTERY</n-radio>
+              <n-radio :value="2">FEMALE</n-radio>
+              <n-radio :value="0">MYSTERY</n-radio>
             </n-radio-group>
           </n-form-item>
           
@@ -840,11 +912,6 @@ onUnmounted(() => {
   backdrop-filter: blur(4px);
 }
 
-:global(html.dark) .change-btn {
-  background: rgba(230, 230, 230, 0.8);
-  color: #1a1a1a;
-}
-
 .avatar-wrapper:hover .change-btn {
   transform: translateY(0);
 }
@@ -861,81 +928,202 @@ onUnmounted(() => {
 }
 
 /* Content */
+.content-section {
+  position: relative;
+}
+
 .section-head {
   display: flex;
-  align-items: baseline;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: 15px;
   margin-bottom: 40px;
 }
 
+.section-kicker {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--accent-color);
+  font-family: 'Lato', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+
 .section-head h2 {
   font-family: 'Playfair Display', serif;
-  font-size: 2rem;
+  font-size: 2.35rem;
   font-weight: 400;
   margin: 0;
 }
 
-.section-head .count {
-  font-family: 'Playfair Display', serif;
-  font-style: italic;
-  color: var(--text-tertiary);
-  font-size: 1.2rem;
-}
-
-/* Blog Grid */
-.blog-grid {
+.journey-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--line-color);
+  background: var(--card-hover);
+  min-width: 330px;
 }
 
-.blog-card {
-  background: transparent;
-  border: 1px solid var(--line-color);
-  padding: 30px;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+.journey-stats div {
   display: flex;
   flex-direction: column;
-  height: 280px;
-  position: relative;
-  overflow: hidden;
+  gap: 4px;
+  padding: 14px 18px;
 }
 
-.blog-card::before {
+.journey-stats div + div {
+  border-left: 1px solid var(--line-color);
+}
+
+.journey-stats strong {
+  color: var(--text-primary);
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.journey-stats span {
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+}
+
+.journey-map {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: relative;
+}
+
+.journey-stop {
+  display: grid;
+  grid-template-columns: 86px 42px minmax(0, 1fr);
+  gap: 20px;
+  cursor: pointer;
+  position: relative;
+}
+
+.journey-date {
+  align-items: flex-end;
+  color: var(--text-tertiary);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 18px;
+  text-align: right;
+}
+
+.journey-date span {
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+}
+
+.journey-date strong {
+  color: var(--text-primary);
+  font-family: 'Playfair Display', serif;
+  font-size: 2.25rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.journey-rail {
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.journey-rail::before {
   content: '';
   position: absolute;
   top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, var(--card-hover), transparent);
-  transition: left 0.6s;
+  bottom: -18px;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--line-color) 18px, var(--line-color) calc(100% - 18px), transparent);
 }
 
-.blog-card:hover::before {
-  left: 100%;
+.journey-stop:last-of-type .journey-rail::before {
+  bottom: 50%;
 }
 
-.blog-card:hover {
-  background: var(--card-hover);
+.journey-dot {
+  align-items: center;
+  background: var(--bg-primary);
+  border: 1px solid var(--line-color);
+  color: var(--text-secondary);
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 700;
+  height: 32px;
+  justify-content: center;
+  letter-spacing: 0;
+  margin-top: 22px;
+  position: relative;
+  width: 32px;
+  z-index: 1;
+}
+
+.is-latest .journey-dot {
+  background: var(--accent-color);
   border-color: var(--accent-color);
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  color: var(--bg-primary);
 }
 
-.card-meta {
+.journey-card {
+  background:
+    linear-gradient(135deg, var(--card-hover), transparent 58%),
+    var(--bg-primary);
+  border: 1px solid var(--line-color);
+  min-width: 0;
+  padding: 22px 24px;
+  position: relative;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.journey-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--line-color);
+  transition: background 0.25s ease;
+}
+
+.journey-stop:hover .journey-card {
+  border-color: var(--accent-color);
+  box-shadow: 10px 10px 0 var(--line-color);
+  transform: translateX(5px);
+}
+
+.journey-stop:hover .journey-card::before,
+.is-latest .journey-card::before {
+  background: var(--accent-color);
+}
+
+.journey-card-head,
+.card-footer {
+  align-items: center;
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
+  gap: 14px;
+}
+
+.journey-card-head {
   color: var(--text-tertiary);
-  margin-bottom: 20px;
+  font-size: 0.72rem;
   letter-spacing: 1px;
-  text-transform: uppercase;
+  margin-bottom: 14px;
 }
 
 .cat-tag {
   color: var(--accent-color);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.time {
+  color: var(--text-tertiary);
 }
 
 .card-title {
@@ -953,9 +1141,8 @@ onUnmounted(() => {
   position: relative;
 }
 
-.blog-card:hover .card-title {
+.journey-stop:hover .card-title {
   color: var(--accent-color);
-  transform: translateX(5px);
 }
 
 .card-summary {
@@ -972,14 +1159,11 @@ onUnmounted(() => {
   transition: color 0.3s;
 }
 
-.blog-card:hover .card-summary {
+.journey-stop:hover .card-summary {
   color: var(--text-primary);
 }
 
 .card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   font-size: 0.75rem;
   letter-spacing: 2px;
   color: var(--text-primary);
@@ -987,23 +1171,38 @@ onUnmounted(() => {
   transition: all 0.3s;
 }
 
-.blog-card:hover .card-footer {
+.read-more {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.journey-stop:hover .card-footer {
   opacity: 1;
   color: var(--accent-color);
-  transform: translateX(5px);
+}
+
+.journey-note {
+  color: var(--text-tertiary);
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  font-style: italic;
+  margin: 12px 0 0 148px;
 }
 
 .empty-state {
-  grid-column: 1 / -1;
+  border: 1px solid var(--line-color);
+  background: var(--card-hover);
   text-align: center;
-  padding: 100px 0;
+  padding: 80px 24px;
 }
 
 .void-text {
   font-family: 'Playfair Display', serif;
-  font-size: 3rem;
+  font-size: 2.2rem;
   color: var(--line-color);
-  letter-spacing: 10px;
+  letter-spacing: 6px;
 }
 
 /* Modal Styles */
@@ -1205,6 +1404,53 @@ onUnmounted(() => {
 
   .container {
     padding: 80px 20px;
+  }
+
+  .journey-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .journey-stats {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .journey-stop {
+    grid-template-columns: 58px 28px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .journey-date {
+    padding-top: 16px;
+  }
+
+  .journey-date strong {
+    font-size: 1.65rem;
+  }
+
+  .journey-date span {
+    font-size: 0.66rem;
+  }
+
+  .journey-dot {
+    height: 24px;
+    margin-top: 22px;
+    width: 24px;
+  }
+
+  .journey-card {
+    padding: 18px;
+  }
+
+  .journey-card-head,
+  .card-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .journey-note {
+    margin-left: 0;
   }
 }
 </style>
