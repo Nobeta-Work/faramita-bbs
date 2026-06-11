@@ -94,7 +94,8 @@ const cropContainerRef = ref<HTMLDivElement | null>(null)
 const scale = ref(1)
 const offset = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
-const lastMousePos = ref({ x: 0, y: 0 })
+const activePointerId = ref<number | null>(null)
+const lastPointerPos = ref({ x: 0, y: 0 })
 
 const handleAvatarChange = (options: any) => {
   const file = options.file?.file
@@ -111,22 +112,34 @@ const handleAvatarChange = (options: any) => {
   }
 }
 
-const handleCropMouseDown = (e: MouseEvent) => {
+const handleCropPointerDown = (e: PointerEvent) => {
+  if (activePointerId.value !== null) return
+
+  activePointerId.value = e.pointerId
   isDragging.value = true
-  lastMousePos.value = { x: e.clientX, y: e.clientY }
+  lastPointerPos.value = { x: e.clientX, y: e.clientY }
+  cropContainerRef.value?.setPointerCapture(e.pointerId)
   e.preventDefault()
 }
 
-const handleCropMouseMove = (e: MouseEvent) => {
-  if (!isDragging.value) return
-  const dx = e.clientX - lastMousePos.value.x
-  const dy = e.clientY - lastMousePos.value.y
+const handleCropPointerMove = (e: PointerEvent) => {
+  if (!isDragging.value || activePointerId.value !== e.pointerId) return
+
+  const dx = e.clientX - lastPointerPos.value.x
+  const dy = e.clientY - lastPointerPos.value.y
   offset.value.x += dx
   offset.value.y += dy
-  lastMousePos.value = { x: e.clientX, y: e.clientY }
+  lastPointerPos.value = { x: e.clientX, y: e.clientY }
+  e.preventDefault()
 }
 
-const handleCropMouseUp = () => {
+const handleCropPointerUp = (e: PointerEvent) => {
+  if (activePointerId.value !== e.pointerId) return
+
+  if (cropContainerRef.value?.hasPointerCapture(e.pointerId)) {
+    cropContainerRef.value.releasePointerCapture(e.pointerId)
+  }
+  activePointerId.value = null
   isDragging.value = false
 }
 
@@ -549,10 +562,10 @@ onUnmounted(() => {
         <div 
           class="native-cropper-wrapper" 
           ref="cropContainerRef"
-          @mousedown="handleCropMouseDown"
-          @mousemove="handleCropMouseMove"
-          @mouseup="handleCropMouseUp"
-          @mouseleave="handleCropMouseUp"
+          @pointerdown="handleCropPointerDown"
+          @pointermove="handleCropPointerMove"
+          @pointerup="handleCropPointerUp"
+          @pointercancel="handleCropPointerUp"
           @wheel="handleCropWheel"
         >
           <img 
@@ -1260,6 +1273,7 @@ onUnmounted(() => {
 .native-cropper-wrapper {
   width: 100%;
   max-width: 360px; /* 限制最大宽度 */
+  max-height: 100%;
   aspect-ratio: 1 / 1; /* 严格限制 1:1 */
   position: relative;
   cursor: move;
@@ -1269,6 +1283,9 @@ onUnmounted(() => {
   overflow: hidden;
   box-shadow: 0 0 20px rgba(0,0,0,0.5);
   border: 1px solid rgba(255,255,255,0.1);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .native-crop-image {
@@ -1451,6 +1468,23 @@ onUnmounted(() => {
 
   .journey-note {
     margin-left: 0;
+  }
+
+  .crop-modal-content {
+    width: min(92vw, 420px);
+    height: auto;
+    max-height: calc(100dvh - 32px);
+    padding: 18px;
+  }
+
+  .modal-body {
+    flex: 0 1 auto;
+    max-height: min(68vw, calc(100dvh - 180px));
+  }
+
+  .native-cropper-wrapper {
+    width: min(68vw, calc(100dvh - 180px));
+    max-width: 100%;
   }
 }
 </style>

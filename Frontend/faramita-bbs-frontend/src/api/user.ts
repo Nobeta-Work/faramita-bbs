@@ -104,7 +104,6 @@ export function register(data: {
     nickname: string
     sex: number
     race: string
-    avatar?: string
 }): Promise<void> {
     return authRegister({
         username: data.username,
