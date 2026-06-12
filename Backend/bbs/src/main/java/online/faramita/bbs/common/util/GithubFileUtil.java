@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.util.Base64;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,8 +17,11 @@ import online.faramita.bbs.config.properties.GithubProperties;
 @Component
 public class GithubFileUtil {
 
-    @Autowired
-    private GithubProperties Param;
+    private final GithubProperties Param;
+
+    GithubFileUtil(GithubProperties Param) {
+        this.Param = Param;
+    }
 
     public String upload(MultipartFile file) throws IOException {
         // 获取上传文件的输入流

@@ -1,7 +1,6 @@
 package online.faramita.bbs.module.file.controller;
 
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -10,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import online.faramita.bbs.common.result.Result;
 import online.faramita.bbs.module.file.service.FileService;
@@ -18,13 +18,13 @@ import online.faramita.bbs.module.file.service.FileService;
  * 文件相关接口
  */
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("api/")
 @Slf4j
 @Tag(name = "文件传输相关接口", description = "处理文件上传、下载接口")
 public class FileController {
 
-    @Autowired
-    private FileService fileService;
+    private final FileService fileService;
     
     /**
      * 全局头像上传接口(无需身份校验=>无关联用户)

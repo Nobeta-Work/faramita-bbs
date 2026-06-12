@@ -1,5 +1,6 @@
 package online.faramita.bbs.handler;
 
+import org.springframework.messaging.handler.annotation.support.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -24,10 +25,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 捕获参数校验异常
+     * @param ex
+     * @return
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public Result<Void> handleValidateException(MethodArgumentNotValidException ex) {
+        log.info("参数异常：{}", ex.getMessage());
+        return Result.fail(ResultCode.ILLEGAL_ARGUMENT, ex.getMessage());
+    }
+
+    /**
      * 捕获全局异常
      * @param e
      * @return
      */
+    @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception e) {
         log.error("未知异常", e);
         return Result.fail(ResultCode.FAIL);

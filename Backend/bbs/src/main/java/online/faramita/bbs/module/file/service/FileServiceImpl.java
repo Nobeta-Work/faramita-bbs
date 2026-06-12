@@ -8,10 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import online.faramita.bbs.common.enums.ResultCode;
 import online.faramita.bbs.common.exception.BusinessException;
@@ -22,14 +22,14 @@ import online.faramita.bbs.module.file.mapper.FileMapper;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class FileServiceImpl implements FileService {
 
-    @Autowired
-    private FileConfig fileConfig;
-    @Autowired
-    private FileMapper fileMapper;
-    @Autowired
-    private GithubFileUtil githubFileUtil;
+
+    private final FileConfig fileConfig;
+    private final FileMapper fileMapper;
+
+    private final GithubFileUtil githubFileUtil;
 
     @Override
     public String uploadAvatar(MultipartFile file) {
