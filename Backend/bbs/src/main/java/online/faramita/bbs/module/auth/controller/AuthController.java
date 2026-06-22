@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import online.faramita.bbs.common.annotation.AuditLog;
 import online.faramita.bbs.common.result.Result;
 import online.faramita.bbs.module.auth.dto.LoginDTO;
 import online.faramita.bbs.module.auth.dto.RegisterDTO;
@@ -38,7 +38,7 @@ public class AuthController {
      * @param loginDTO
      * @return
      */
-    @Operation(summary = "登录接口", description = "登录接口")
+    @AuditLog(message = "用户登陆", data = "{'username': #p0.username}")
     @PostMapping("/login")
     public Result<TokenVO> login(@Valid @RequestBody LoginDTO loginDTO) {
 
@@ -52,7 +52,9 @@ public class AuthController {
      * @param registerDTO
      * @return
      */
-    @Operation(summary = "账号注册", description = "账号注册")
+    @AuditLog(message = "用户注册",
+        data = "{'username': #p0.username, 'nickname': #p0.nickname, 'sex': #p0.sex, 'race': #p0.race}"
+    )
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterDTO registerDTO) {
         
@@ -66,6 +68,7 @@ public class AuthController {
      * @param refreshToken
      * @return
      */
+    @AuditLog(message = "用户刷新令牌")
     @PostMapping("/refresh")
     public Result<TokenVO> refresh(@NotBlank @RequestParam String refreshToken) {
 
@@ -80,6 +83,7 @@ public class AuthController {
      * @param refreshToken
      * @return
      */
+    @AuditLog(message = "用户登出", data = "{'username': #p0.getUsername()}")
     @PostMapping("/logout")
     public Result<Void> logout(
         @AuthenticationPrincipal UserAuthInfo loginUser,

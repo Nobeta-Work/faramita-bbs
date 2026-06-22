@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import online.faramita.bbs.common.annotation.AuditLog;
 import online.faramita.bbs.common.result.Result;
 import online.faramita.bbs.module.auth.dto.UserAuthInfo;
 import online.faramita.bbs.module.user.dto.PasswordEditDTO;
@@ -42,6 +43,7 @@ public class UserController {
      * @param loginUser
      * @return
      */
+    @AuditLog(message = "获取当前用户个人资料", data = "{'username': #p0.username}")
     @GetMapping("/me")
     public Result<UserProfileVO> getCurrentUserProfile(@AuthenticationPrincipal UserAuthInfo loginUser) {
 
@@ -58,6 +60,7 @@ public class UserController {
      * @param id 被查询用户id
      * @return
      */
+    @AuditLog(message = "查询用户个人信息", data = "{'userId': #p0}")
     @GetMapping("/{id}")
     public Result<UserInfoVO> getUserInfo(@PathVariable Long id) {
         
@@ -72,6 +75,7 @@ public class UserController {
      * @param userProfileDTO
      * @return
      */
+    @AuditLog(message = "更新当前用户个人资料", data = "{'nickname': #p1.nickname, 'sex': #p1.sex, 'race': #p1.race}")
     @PutMapping("/me")
     public Result<Void> editCurrentUserProfile(
         @AuthenticationPrincipal UserAuthInfo loginUser,
@@ -91,6 +95,7 @@ public class UserController {
      * @param passwordEditDTO
      * @return
      */
+    @AuditLog(message = "更新当前用户密码", data = "{'username': #p0.username}")
     @PutMapping("/me/password")
     public Result<Void> editUserPassword(
         @AuthenticationPrincipal UserAuthInfo loginUser,
@@ -110,6 +115,7 @@ public class UserController {
      * @param file
      * @return
      */
+    @AuditLog(message = "更新当前用户头像", data = "{'username': #p0.username, 'filename': #p1.originalFilename, 'size': #p1.size}")
     @PostMapping("/me/avatar")
     public Result<AvatarVO> editUserAvatar(
         @AuthenticationPrincipal UserAuthInfo loginUser,

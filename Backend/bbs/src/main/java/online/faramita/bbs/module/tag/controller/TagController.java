@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import online.faramita.bbs.common.annotation.AuditLog;
 import online.faramita.bbs.common.result.PageResult;
 import online.faramita.bbs.common.result.Result;
 import online.faramita.bbs.module.tag.dto.TagPageQuery;
@@ -28,6 +29,7 @@ public class TagController {
      * @param dto
      * @return
      */
+    @AuditLog(message = "创建标签", data = "{'name': #p0.name}")
     @PostMapping
     public Result<TagBriefVO> saveTag(@Valid @RequestBody TagSaveDTO dto) {
 
@@ -41,6 +43,7 @@ public class TagController {
      * @param query
      * @return
      */
+    @AuditLog(message = "查询标签列表", data = "{'pageNum': #p0.pageNum, 'pageSize': #p0.pageSize, 'keyword': #p0.keyword}")
     @GetMapping
     public Result<PageResult<TagBriefVO>> getTagPage(
         @ModelAttribute TagPageQuery query

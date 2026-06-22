@@ -7,10 +7,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import online.faramita.bbs.common.annotation.AuditLog;
 import online.faramita.bbs.common.result.Result;
 import online.faramita.bbs.module.file.service.FileService;
 
@@ -20,7 +19,6 @@ import online.faramita.bbs.module.file.service.FileService;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("api/")
-@Slf4j
 @Tag(name = "文件传输相关接口", description = "处理文件上传、下载接口")
 public class FileController {
 
@@ -31,10 +29,9 @@ public class FileController {
      * @param file
      * @return
      */
+    @AuditLog(message = "用户上传头像", data = "{'filename': #p0.originalFilename, 'size': #p0.size}")
     @PostMapping("/uploadAvatar")
-    @Operation(summary = "全局头像上传接口")
     public Result<String> uploadAvatar(@RequestParam("file") MultipartFile file) {
-        log.info(">头像文件上传<");
         String avatarKey = fileService.uploadAvatar(file);
         return Result.success(avatarKey);
     }
@@ -60,10 +57,9 @@ public class FileController {
      * @param file
      * @return
      */
-    @Operation(summary = "图片上传接口")
+    @AuditLog(message = "用户上传图片", data = "{'filename': #p0.originalFilename, 'size': #p0.size}")
     @PostMapping("/uploadImage")
     public Result<String> uploadImage(@RequestParam("file") MultipartFile file) {
-        log.info(">图片文件上传<");
         String url = fileService.uploadImage(file);
         return Result.success(url);
     }

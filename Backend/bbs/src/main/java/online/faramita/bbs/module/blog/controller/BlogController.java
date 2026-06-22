@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import online.faramita.bbs.common.annotation.AuditLog;
 import online.faramita.bbs.common.result.PageResult;
 import online.faramita.bbs.common.result.Result;
 import online.faramita.bbs.module.auth.dto.UserAuthInfo;
@@ -46,7 +47,9 @@ public class BlogController {
      * @param blogPageQuery
      * @return
      */
-    @Operation(summary = "分页查询接口")
+    @AuditLog(message = "请求获取博客公开页列表", 
+        data = "{'pageNum': #p1.pageNum, 'pageSize': #p1.pageSize, 'keyword': #p1.keyword, 'authorId': #p1.authorId}"
+    )
     @GetMapping("/page")
     public Result<PageResult<BlogPublicBriefVO>> getPublicBlogPage(
         @AuthenticationPrincipal UserAuthInfo loginUser,
@@ -71,6 +74,7 @@ public class BlogController {
      * @param blogSaveDTO
      * @return
      */
+    @AuditLog(message = "创建博客", data = "{'title': #p1.title}")
     @PostMapping("/me")
     public Result<Long> saveBlog(
         @AuthenticationPrincipal UserAuthInfo loginUser,
@@ -89,6 +93,7 @@ public class BlogController {
      * @param id
      * @return
      */
+    @AuditLog(message = "访问公开博客详情", data = "{'blogId': #p0}")
     @GetMapping("/{id}")
     public Result<BlogPublicDetailVO> getPublicBlog(@PathVariable Long id) {
 
@@ -102,6 +107,7 @@ public class BlogController {
      * @param id
      * @return
      */
+    @AuditLog(message = "访问个人博客编辑详情", data = "{'blogId': #p0}")
     @GetMapping("/me/{id}")
     public Result<BlogPrivateDetailVO> getPrivateBlog(@PathVariable Long id) {
 
@@ -116,6 +122,9 @@ public class BlogController {
      * @param blogEditDTO
      * @return
      */
+    @AuditLog(message = "修改个人博客", 
+        data = "{'blogId': #p0, 'folderId': #p1.folderId, 'isPublished': #p1.isPublished, 'title': #p1.title}"
+    )
     @PutMapping("/me/{id}")
     public Result<Void> editPrivateBlog(
         @PathVariable(value = "id") Long blogId,
@@ -132,6 +141,7 @@ public class BlogController {
      * @param id
      * @return
      */
+    @AuditLog(message = "删除个人博客", data = "{'blogId': #p0}")
     @DeleteMapping("/me/{id}")
     public Result<Void> deletePrivateBlog(@PathVariable Long id) {
 

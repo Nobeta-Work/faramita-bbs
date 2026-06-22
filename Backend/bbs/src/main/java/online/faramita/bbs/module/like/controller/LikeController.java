@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
+import online.faramita.bbs.common.annotation.AuditLog;
 import online.faramita.bbs.common.result.Result;
 import online.faramita.bbs.module.auth.dto.UserAuthInfo;
 import online.faramita.bbs.module.like.service.LikeService;
@@ -24,6 +25,7 @@ public class LikeController {
      * @param id
      * @return
      */
+    @AuditLog(message = "切换博客点赞状态", data = "{'blogId': #p1}")
     @PostMapping("/blogs/{id}")
     public Result<Integer> toggleBlogLike(
         @AuthenticationPrincipal UserAuthInfo loginUser,
