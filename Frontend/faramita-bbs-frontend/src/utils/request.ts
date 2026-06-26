@@ -30,6 +30,7 @@ const service = axios.create({
 })
 
 let refreshPromise: Promise<string | null> | null = null
+const TOKEN_REFRESH_SKEW_MS = 30_000
 
 function isApiResponse<T = unknown>(value: unknown): value is ApiResponse<T> {
     return typeof value === 'object' && value !== null && 'code' in value
@@ -41,6 +42,37 @@ function getResponseMessage(response: ApiResponse): string {
 
 function isSuccessCode(code: number): boolean {
     return code === API_SUCCESS_CODE || code === LEGACY_API_SUCCESS_CODE
+}
+
+function parseTokenExpireAt(expireIn: string | null): number | null {
+    if (!expireIn) {
+        return null
+    }
+
+    const normalized = expireIn.trim()
+    if (!normalized) {
+        return null
+    }
+
+    const numericValue = Number(normalized)
+    if (Number.isFinite(numericValue) && numericValue > 0) {
+        return numericValue < 10_000_000_000 ? numericValue * 1000 : numericValue
+    }
+
+    const parsed = Date.parse(normalized)
+    return Number.isNaN(parsed) ? null : parsed
+}
+
+function shouldRefreshAccessToken(expireIn: string | null): boolean {
+    const expireAt = parseTokenExpireAt(expireIn)
+    return expireAt !== null && expireAt - Date.now() <= TOKEN_REFRESH_SKEW_MS
+}
+
+function shouldSkipProactiveRefresh(config: InternalAxiosRequestConfig): boolean {
+    const url = config.url ?? ''
+    return url.includes('/auth/login')
+        || url.includes('/auth/register')
+        || url.includes('/auth/refresh')
 }
 
 async function requestNewAccessToken(refreshToken: string): Promise<string | null> {
@@ -64,6 +96,19 @@ async function requestNewAccessToken(refreshToken: string): Promise<string | nul
     return payload.data.accessToken
 }
 
+async function getFreshAccessToken(refreshToken: string): Promise<string | null> {
+    try {
+        refreshPromise = refreshPromise ?? requestNewAccessToken(refreshToken)
+        return await refreshPromise.finally(() => {
+            refreshPromise = null
+        })
+    } catch (error) {
+        console.error('Refresh Token Error:', error)
+        refreshPromise = null
+        return null
+    }
+}
+
 async function replayWithFreshToken(config: RetriableRequestConfig): Promise<unknown | null> {
     const userStore = useUserStore()
 
@@ -73,11 +118,7 @@ async function replayWithFreshToken(config: RetriableRequestConfig): Promise<unk
 
     config._retry = true
 
-    refreshPromise = refreshPromise ?? requestNewAccessToken(userStore.refreshToken)
-    const accessToken = await refreshPromise.finally(() => {
-        refreshPromise = null
-    })
-
+    const accessToken = await getFreshAccessToken(userStore.refreshToken)
     if (!accessToken) {
         return null
     }
@@ -103,12 +144,26 @@ function promptLogin(messageText = '您未登录或身份已失效，请重新�
 }
 
 service.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
+    async (config: InternalAxiosRequestConfig) => {
         const userStore = useUserStore()
+        let accessToken = userStore.token
 
-        if (userStore.token) {
+        if (
+            accessToken
+            && userStore.refreshToken
+            && shouldRefreshAccessToken(userStore.tokenExpireIn)
+            && !shouldSkipProactiveRefresh(config)
+        ) {
+            accessToken = await getFreshAccessToken(userStore.refreshToken)
+            if (!accessToken) {
+                promptLogin()
+                return Promise.reject(new Error('Authentication expired'))
+            }
+        }
+
+        if (accessToken) {
             config.headers = config.headers || {}
-            config.headers.Authorization = `Bearer ${userStore.token}`
+            config.headers.Authorization = `Bearer ${accessToken}`
         }
 
         if (config.data && !(config.data instanceof FormData)) {

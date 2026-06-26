@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.alibaba.fastjson.JSONObject;
 
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import online.faramita.bbs.config.properties.GithubProperties;
@@ -58,6 +59,21 @@ public class GithubFileUtil {
         // 解析返回结果获取下载链接
         JSONObject jsonObject = JSONObject.parseObject(response.body());
         JSONObject content = jsonObject.getJSONObject("content");
-        return content.getString("download_url");
+        String rawUrl = content.getString("download_url");
+
+        return convertToCdn(rawUrl);
+
+    }
+
+    private String convertToCdn(String rawUrl) {
+        String prefix = "https://raw.githubusercontent.com/" + Param.owner + "/" + Param.repo + "/" + Param.path + "/";
+        if (!rawUrl.startsWith(prefix)) {
+            // 匹配失败兜底返回原地址
+            return rawUrl;
+        }
+
+        String filePath = StrUtil.subAfter(rawUrl, prefix, false);
+        // 拼接jsDelivr CDN链接
+        return String.format("https://cdn.jsdelivr.net/gh/%s/%s@%s/%s", Param.owner, Param.repo, Param.branch, filePath);
     }
 }

@@ -75,6 +75,8 @@ const blogId = computed(() => String(route.params.id || ''))
 const loading = ref(false)
 const saving = ref(false)
 const dirty = ref(false)
+const autosaveEnabled = ref(false)
+const autosavePending = ref(false)
 const loadError = ref(false)
 const editorRef = ref<HTMLElement | null>(null)
 const editorSurfaceRef = ref<HTMLDivElement | null>(null)
@@ -87,8 +89,11 @@ const folderTree = ref<FolderTree | null>(null)
 const editorCleanup = ref<(() => void) | null>(null)
 const showBackTop = ref(false)
 let tocTimer: number | undefined
+let autosaveTimer: number | undefined
 let contentInitialized = false
 let scrollTarget: HTMLElement | Window | null = null
+
+const AUTOSAVE_DELAY = 60_000
 
 const form = reactive({
   title: '',
@@ -114,6 +119,13 @@ const saveStateText = computed(() => {
   return dirty.value ? 'Unsaved' : 'Saved'
 })
 const saveStateType = computed(() => (dirty.value ? 'warning' : 'success'))
+const autosaveStateText = computed(() => {
+  if (!autosaveEnabled.value) {
+    return 'Off'
+  }
+
+  return autosavePending.value ? 'Queued' : 'On'
+})
 const folderOptions = computed<FolderOption[]>(() => [
   {
     label: '根目录',
@@ -188,6 +200,58 @@ function destroyEditor(): void {
   }
 }
 
+function clearAutosaveTimer(): void {
+  window.clearTimeout(autosaveTimer)
+  autosaveTimer = undefined
+  autosavePending.value = false
+}
+
+function scheduleAutosave(): void {
+  clearAutosaveTimer()
+
+  if (!autosaveEnabled.value || !dirty.value || loading.value) {
+    return
+  }
+
+  autosavePending.value = true
+  autosaveTimer = window.setTimeout(() => {
+    autosaveTimer = undefined
+    autosavePending.value = false
+    void runAutosave()
+  }, AUTOSAVE_DELAY)
+}
+
+function getSaveSnapshot(content = vditor.value?.getValue() ?? form.content): string {
+  return JSON.stringify({
+    title: form.title.trim(),
+    summary: form.summary,
+    content,
+    folderId: form.folderId,
+    isPublished: form.isPublished,
+    tagIds: [...form.tagIds],
+  })
+}
+
+async function runAutosave(): Promise<void> {
+  if (!autosaveEnabled.value || !dirty.value) {
+    return
+  }
+
+  if (saving.value) {
+    scheduleAutosave()
+    return
+  }
+
+  if (!form.title.trim()) {
+    return
+  }
+
+  const saved = await handleSave({ silent: true })
+  if (!saved && autosaveEnabled.value && dirty.value) {
+    scheduleAutosave()
+  }
+}
+
 function initEditor(markdown: string): void {
   if (!editorRef.value) {
     return
@@ -196,7 +260,7 @@ function initEditor(markdown: string): void {
   destroyEditor()
   vditor.value = new Vditor(editorRef.value, {
     height: 'auto',
-    mode: 'ir',
+    mode: 'wysiwyg',
     value: markdown,
     theme: isDark.value ? 'dark' : 'classic',
     toolbarConfig: {
@@ -217,9 +281,10 @@ function initEditor(markdown: string): void {
           showTableModal.value = true
         },
       },
-      '|', 'undo', 'redo', '|', 'fullscreen',
+      '|', 'undo', 'redo', '|', 'edit-mode', 'both', 'fullscreen',
     ],
     preview: {
+      mode: 'both',
       theme: {
         current: isDark.value ? 'dark' : 'light',
       },
@@ -250,6 +315,7 @@ function initEditor(markdown: string): void {
     input: (value) => {
       form.content = value
       dirty.value = true
+      scheduleAutosave()
       scheduleTocSync()
     },
     after: () => {
@@ -279,6 +345,7 @@ function syncEditorContent(): void {
   if (vditor.value) {
     form.content = vditor.value.getValue()
     dirty.value = true
+    scheduleAutosave()
     scheduleTocSync()
   }
 }
@@ -358,14 +425,23 @@ function handlePairKey(event: KeyboardEvent): void {
     '[': ']',
     '{': '}',
     '`': '`',
+    '$': '$',
   }
-  const closing = Object.values(pairs)
+  const closing = new Set(Object.values(pairs))
   const selection = window.getSelection()
   if (!selection || selection.rangeCount === 0 || !editorRef.value?.contains(selection.anchorNode)) {
     return
   }
 
   const range = selection.getRangeAt(0)
+  if (closing.has(event.key) && shouldSkipClosingPair(event.key, range)) {
+    event.preventDefault()
+    moveRangePastNextCharacter(range)
+    selection.removeAllRanges()
+    selection.addRange(range)
+    return
+  }
+
   const open = event.key
   if (pairs[open]) {
     event.preventDefault()
@@ -384,7 +460,7 @@ function handlePairKey(event: KeyboardEvent): void {
     return
   }
 
-  if (!closing.includes(event.key) || !range.collapsed || range.startContainer.nodeType !== Node.TEXT_NODE) {
+  if (!closing.has(event.key) || !range.collapsed || range.startContainer.nodeType !== Node.TEXT_NODE) {
     return
   }
 
@@ -395,6 +471,41 @@ function handlePairKey(event: KeyboardEvent): void {
     range.collapse(true)
     selection.removeAllRanges()
     selection.addRange(range)
+  }
+}
+
+function getNextTextCharacter(range: Range): string | null {
+  if (!range.collapsed) {
+    return null
+  }
+
+  if (range.startContainer.nodeType === Node.TEXT_NODE) {
+    return range.startContainer.textContent?.[range.startOffset] ?? null
+  }
+
+  const nextNode = range.startContainer.childNodes.item(range.startOffset)
+  if (nextNode?.nodeType === Node.TEXT_NODE) {
+    return nextNode.textContent?.[0] ?? null
+  }
+
+  return null
+}
+
+function shouldSkipClosingPair(key: string, range: Range): boolean {
+  return getNextTextCharacter(range) === key
+}
+
+function moveRangePastNextCharacter(range: Range): void {
+  if (range.startContainer.nodeType === Node.TEXT_NODE) {
+    range.setStart(range.startContainer, range.startOffset + 1)
+    range.collapse(true)
+    return
+  }
+
+  const nextNode = range.startContainer.childNodes.item(range.startOffset)
+  if (nextNode?.nodeType === Node.TEXT_NODE) {
+    range.setStart(nextNode, 1)
+    range.collapse(true)
   }
 }
 
@@ -617,27 +728,46 @@ async function resolveTagIds(): Promise<ApiId[]> {
   return resolved
 }
 
-async function handleSave(): Promise<void> {
+async function handleSave(options: { silent?: boolean } = {}): Promise<boolean> {
   if (!form.title.trim()) {
-    message.warning('请输入标题')
-    return
+    if (!options.silent) {
+      message.warning('请输入标题')
+    }
+    return false
+  }
+
+  if (saving.value) {
+    return false
   }
 
   saving.value = true
+  const content = vditor.value?.getValue() ?? form.content
+  const snapshot = getSaveSnapshot(content)
   try {
     const tagIds = await resolveTagIds()
     await updatePrivateBlog(blogId.value, {
       title: form.title.trim(),
       summary: form.summary,
-      content: vditor.value?.getValue() ?? form.content,
+      content,
       folderId: form.folderId,
       isPublished: form.isPublished,
       tagIds,
     })
-    dirty.value = false
-    message.success('已保存')
+    dirty.value = getSaveSnapshot() !== snapshot
+    if (!options.silent) {
+      message.success('已保存')
+    }
+    if (!dirty.value) {
+      clearAutosaveTimer()
+    } else {
+      scheduleAutosave()
+    }
+    return true
   } catch (error) {
-    message.error('保存失败')
+    if (!options.silent) {
+      message.error('保存失败')
+    }
+    return false
   } finally {
     saving.value = false
   }
@@ -669,8 +799,13 @@ watch(isDark, () => {
 watch(form, () => {
   if (contentInitialized) {
     dirty.value = true
+    scheduleAutosave()
   }
 }, { deep: true })
+
+watch(autosaveEnabled, () => {
+  scheduleAutosave()
+})
 
 onMounted(() => {
   loadPage()
@@ -684,6 +819,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.clearTimeout(tocTimer)
+  clearAutosaveTimer()
   scrollTarget?.removeEventListener('scroll', updateScrollEffects)
   window.removeEventListener('resize', updateScrollEffects)
   scrollTarget = null
@@ -714,7 +850,12 @@ onUnmounted(() => {
               </template>
               {{ saveStateText }}
             </n-tag>
-            <n-button type="primary" :loading="saving" @click="handleSave">
+            <div class="autosave-control">
+              <span>Autosave</span>
+              <n-switch v-model:value="autosaveEnabled" size="small" :disabled="saving" />
+              <span class="autosave-state">{{ autosaveStateText }}</span>
+            </div>
+            <n-button type="primary" :loading="saving" @click="() => handleSave()">
               <template #icon><n-icon :component="SaveOutline" /></template>
               Save
             </n-button>
@@ -805,8 +946,10 @@ onUnmounted(() => {
           <main ref="editorSurfaceRef" class="editor-card">
             <div ref="editorRef" class="vditor-edit-container"></div>
 
-            <div class="word-count">
-              {{ wordCount }} chars
+            <div class="editor-footer">
+              <div class="word-count">
+                {{ wordCount }} chars
+              </div>
             </div>
 
             <div
@@ -907,7 +1050,28 @@ onUnmounted(() => {
 .state-group {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
+}
+
+.autosave-control {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--line-color);
+  color: var(--text-secondary);
+  font-family: 'Lato', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.autosave-state {
+  color: var(--text-tertiary);
 }
 
 .meta-panel,
@@ -1028,6 +1192,14 @@ onUnmounted(() => {
   min-height: 720px;
 }
 
+.editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid var(--line-color);
+}
+
 .back-top-button {
   position: fixed;
   right: 28px;
@@ -1054,15 +1226,10 @@ onUnmounted(() => {
 }
 
 .word-count {
-  position: absolute;
-  right: 28px;
-  bottom: 28px;
-  z-index: 80;
   padding: 7px 12px;
   border: 1px solid var(--line-color);
-  background: var(--modal-bg);
+  background: transparent;
   color: var(--text-secondary);
-  backdrop-filter: blur(12px);
   font-family: 'Lato', sans-serif;
   font-size: 0.78rem;
   font-weight: 700;
@@ -1220,6 +1387,10 @@ onUnmounted(() => {
   .state-group {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .autosave-control {
+    justify-content: space-between;
   }
 
   .meta-panel,

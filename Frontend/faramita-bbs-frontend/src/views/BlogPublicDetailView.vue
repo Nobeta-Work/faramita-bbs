@@ -15,6 +15,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import {
+  ArrowUpOutline,
   CreateOutline,
   DocumentTextOutline,
   DownloadOutline,
@@ -47,6 +48,8 @@ const loading = ref(false)
 const loadError = ref(false)
 const liking = ref(false)
 const previewRef = ref<HTMLDivElement | null>(null)
+const showBackTop = ref(false)
+let scrollTarget: HTMLElement | Window | null = null
 const {
   activeTocId,
   cleanupToc,
@@ -341,16 +344,40 @@ function goProfile(): void {
   }
 }
 
+function resolveScrollTarget(): HTMLElement | Window {
+  return document.querySelector<HTMLElement>('.main-layout .n-layout-scroll-container')
+    ?? document.querySelector<HTMLElement>('.n-layout-scroll-container')
+    ?? window
+}
+
+function getScrollTop(target = resolveScrollTarget()): number {
+  return target instanceof Window ? window.scrollY : target.scrollTop
+}
+
+function updateBackTopVisibility(): void {
+  showBackTop.value = getScrollTop() > 360
+}
+
+function scrollToTop(): void {
+  const target = scrollTarget ?? resolveScrollTarget()
+  target.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 watch(isDark, () => {
   renderPreview()
 })
 
 onMounted(() => {
   window.scrollTo(0, 0)
+  scrollTarget = resolveScrollTarget()
+  updateBackTopVisibility()
+  scrollTarget.addEventListener('scroll', updateBackTopVisibility, { passive: true })
   fetchBlog()
 })
 
 onUnmounted(() => {
+  scrollTarget?.removeEventListener('scroll', updateBackTopVisibility)
+  scrollTarget = null
   cleanupToc()
 })
 </script>
@@ -472,6 +499,17 @@ onUnmounted(() => {
         </main>
       </div>
     </n-spin>
+
+    <button
+      v-show="showBackTop"
+      class="back-top-button"
+      type="button"
+      title="回到顶部"
+      aria-label="回到顶部"
+      @click="scrollToTop"
+    >
+      <n-icon :component="ArrowUpOutline" />
+    </button>
   </div>
 </template>
 
@@ -481,6 +519,31 @@ onUnmounted(() => {
   padding: 44px 20px 80px;
   background: var(--bg-primary);
   color: var(--text-primary);
+}
+
+.back-top-button {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 120;
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-color);
+  background: var(--modal-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.16);
+  transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.back-top-button:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
 }
 
 .detail-shell {
@@ -705,7 +768,8 @@ onUnmounted(() => {
 
 @media print {
   .detail-sidebar,
-  .action-row {
+  .action-row,
+  .back-top-button {
     display: none;
   }
 

@@ -29,8 +29,10 @@ import online.faramita.bbs.module.auth.dto.LoginDTO;
 import online.faramita.bbs.module.auth.dto.RegisterDTO;
 import online.faramita.bbs.module.auth.dto.UserAuthInfo;
 import online.faramita.bbs.module.auth.mapper.AuthMapper;
+import online.faramita.bbs.module.auth.service.impl.AuthServiceImpl;
 import online.faramita.bbs.module.auth.vo.TokenVO;
 import online.faramita.bbs.module.user.entity.User;
+import online.faramita.bbs.module.user.mapper.UserMapper;
 import online.faramita.bbs.security.util.TokenProvider;
 import online.faramita.bbs.support.TestDataFactory;
 
@@ -48,7 +50,7 @@ import online.faramita.bbs.support.TestDataFactory;
 public class AuthServiceTest {
 
     @InjectMocks
-    private AuthService authService;
+    private AuthServiceImpl authService;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -67,6 +69,9 @@ public class AuthServiceTest {
 
     @Mock
     private ValueOperations<String, Object> valueOperations;
+
+    @Mock
+    private UserMapper userMapper;
 
 
     @Captor
@@ -103,6 +108,7 @@ public class AuthServiceTest {
         // 4. 打桩：RedisTemplate
         when(redisTemplate.opsForValue())
             .thenReturn(valueOperations);
+
 
         // act
         TokenVO vo = authService.login(dto);
