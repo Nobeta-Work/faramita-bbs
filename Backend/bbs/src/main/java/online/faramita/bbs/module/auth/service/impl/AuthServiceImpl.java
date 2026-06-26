@@ -189,7 +189,7 @@ public class AuthServiceImpl implements AuthService {
         if (!tokenProvider.isAccessToken(accessToken)) { return; }
 
         // 3. 校验用户一致
-        if (userId != tokenProvider.getUserId(accessToken)) { return; }
+        if (userId.equals(tokenProvider.getUserId(accessToken))) { return; }
 
         // 4. 拉黑令牌 jti
         Duration accessTtl = Duration.ofSeconds(RedisKeys.TOKEN_BLACK.getDefaultTtl());
