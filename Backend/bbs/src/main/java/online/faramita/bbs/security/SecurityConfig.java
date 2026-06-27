@@ -74,6 +74,11 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/like/**"
                 ).authenticated()
+                // 7. 文件接口
+                .requestMatchers(
+                    "/api/uploadAvatar",
+                    "/api/uploadImage"
+                ).authenticated()
                 .anyRequest().denyAll()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
