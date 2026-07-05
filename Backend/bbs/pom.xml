@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>online.faramita</groupId>
 	<artifactId>bbs</artifactId>
-	<version>0.0.2</version>
+	<version>0.3.2</version>
 	<name>bbs</name>
 	<description>Demo project for Spring Boot</description>
 	<url/>
@@ -157,6 +157,10 @@
 	</dependencies>
 
 	<build>
+		<!-- 构建重命名 "bbs.jar" -->
+		 <!-- 2026-6-29 "v0.3.2 引入" -->
+		<finalName>bbs</finalName>
+		
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

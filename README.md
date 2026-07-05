@@ -22,6 +22,7 @@ Faramita BBS 是一个基于 Java 后端开发学习链路，不断更新、迭�
 | **MyBatis**                  | 服务端与数据库的中间件 |
 | **Spring Security**          | 认证授权系统           |
 | **Redis**                    | 缓存                   |
+| **Docker**                   | 打包部署               |
 
 ---
 
@@ -50,6 +51,8 @@ Faramita BBS 是一个基于 Java 后端开发学习链路，不断更新、迭�
 - 前端路径: `http://localhost:5173/bbs`
 - 后端 API : `http://localhost:8080/bbs`
 
+*支持 Docker 容器化部署，详情参考 [Docker 部署](docs/DOCKER.md) 。*
+
 ---
 
 ## 贡献
@@ -58,7 +61,7 @@ Faramita BBS 是一个基于 Java 后端开发学习链路，不断更新、迭�
 
 欢迎你在 Github 仓库提交 [Issues](https://github.com/Nobeta-Work/faramita-bbs/issues) ，但并不推荐你提交 PR；若有相关问题，可以发送邮件联系 📧 `qw1450975458@163.com` 。
 
-- **[Faramita BBS | Faramita BBS](https://faramita.online/bbs/workspace/blogs/2064990305689534464)**
+- **[Faramita BBS | Faramita BBS](https://faramita.online/bbs/blog/2064990305689534464)**
 
 ## 社区
 

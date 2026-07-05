@@ -1,0 +1,50 @@
+# ---------- 版本控制 ----------
+.git/
+.gitignore
+.gitattributes
+
+# ---------- 系统/编辑器/AI ----------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/
+.codex/
+.github/
+
+# ---------- 依赖缓存 ----------
+node_modules/
+.npm-cache/
+Backend/bbs/target/
+
+# ---------- 构建产物 ----------
+dist/
+frontend/faramita-bbs-frontend/dist/
+
+# ---------- 文档 ----------
+docs/
+CLAUDE.md
+AGENTS.md
+README.md
+LICENSE
+
+# ---------- 隐私与本地文件 ----------
+secret.txt
+*.env
+*.env.*
+!.env.example
+Backend/bbs/src/main/resources/application-dev.yml
+Backend/bbs/src/main/resources/application-prod.yml
+
+# ---------- 运行时资源 ----------
+Backend/resources/static/images/
+
+# ---------- 日志 ----------
+*.log
+*.tmp
+*.swp
+
+# ---------- 备份与杂项 ----------
+备份/
+version/
+.playwright-cli/

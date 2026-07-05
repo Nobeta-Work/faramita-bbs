@@ -31,7 +31,7 @@ services:
 #    npm run build && cp -r dist/ ../../docker/frontend/
 # 2. 打包后端 JAR (在 backend/bbs/ 目录) :
 #    ./mvnw clean package -DskipTests && cp target/bbs.jar ../../docker/backend/
-# 3. 准备环境变量 :
+# 3. 准备环境变量 (在项目根目录执行) :
 #    cp docker/backend/.env.example docker/backend/.env
 # 4. 启动 (在项目根目录执行) :
 #    docker compose -f docker/docker-compose.frontend.yml up -d

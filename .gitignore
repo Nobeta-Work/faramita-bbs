@@ -1,8 +1,4 @@
 # ---------- Root scope ----------
-# 仅保留需要发布的主工程目录
-备份/
-version/
-design/
 
 # 隐私与本地文件
 secret.txt
@@ -36,3 +32,8 @@ Backend/resources/static/images/
 # 本地配置文件（含敏感信息）
 Backend/bbs/src/main/resources/application-dev.yml
 Backend/bbs/src/main/resources/application-prod.yml
+
+# 备份
+备份/
+version/
+dist/
