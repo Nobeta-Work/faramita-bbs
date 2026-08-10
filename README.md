@@ -1,16 +1,16 @@
 <p align="center">
-    <img src="https://faramita.online/gallery/files/2026/06/11/6b527c296c394582bf664c2d58a7f574.webp" alt="Faramita BBS" width="100%">
+    <img src="https://nobeta.cn/gallery/files/2026/06/11/6b527c296c394582bf664c2d58a7f574.webp" alt="Para BBS" width="100%">
 </p>
 
-# Faramita BBS
+# 彼记 / Para BBS
 
 <p align="center">
-    <a href="https://faramita.online/bbs"><img src="https://faramita.online/gallery/files/2026/06/11/78a9d681b8354b3ba316343e4e3c6261.webp" width="30%"/></a>
+    <a href="https://nobeta.cn/bbs"><img src="https://nobeta.cn/gallery/files/2026/06/11/78a9d681b8354b3ba316343e4e3c6261.webp" width="30%"/></a>
     <br>
-    <a href="https://faramita.online/bbs">Faramita BBS</a> | <a href="https://faramita.online/bbs/blog/40"><em>v0.3.1</em></a>
+    <a href="https://nobeta.cn/bbs">Para BBS</a> | <a href="https://nobeta.cn/bbs/blog/40"><em>v0.3.1</em></a>
 </p>
 
-Faramita BBS 是一个基于 Java 后端开发学习链路，不断更新、迭代、维护的云笔记/论坛项目。
+彼记（Para BBS）是一个基于 Java 后端开发学习链路，不断更新、迭代、维护的云笔记/论坛项目。
 
 以 "实现为先，迭代最佳"、"框架优先，复用轮子" 为代码开发标准，尽可能保持项目代码的质量。
 
@@ -40,9 +40,10 @@ Faramita BBS 是一个基于 Java 后端开发学习链路，不断更新、迭�
 
 ## 本地运行
 
-准备 MySQL、Redis，并参考配置模板`resource/application.yml`补齐本地配置。
+准备 MySQL、Redis，并参考 `backend/bbs/src/main/resources/application-dev.yml.example` 补齐本地配置。
 
 ```powershell
+cd backend/bbs
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
@@ -57,19 +58,19 @@ Faramita BBS 是一个基于 Java 后端开发学习链路，不断更新、迭�
 
 ## 贡献
 
-- **[Github | Faramita BBS](https://github.com/Nobeta-Work/faramita-bbs)**
+- **[Github | Para BBS](https://github.com/Nobeta-Work/parabbs)**
 
-欢迎你在 Github 仓库提交 [Issues](https://github.com/Nobeta-Work/faramita-bbs/issues) ，但并不推荐你提交 PR；若有相关问题，可以发送邮件联系 📧 `qw1450975458@163.com` 。
+欢迎你在 Github 仓库提交 [Issues](https://github.com/Nobeta-Work/parabbs/issues) ，但并不推荐你提交 PR；若有相关问题，可以发送邮件联系 📧 `qw1450975458@163.com` 。
 
-- **[Faramita BBS | Faramita BBS](https://faramita.online/bbs/blog/2064990305689534464)**
+- **[Para BBS | Para BBS](https://nobeta.cn/bbs/blog/2064990305689534464)**
 
 ## 社区
 
-- [Faramita BBS](https://faramita.online/bbs)
-- [Issues](https://github.com/Nobeta-Work/faramita-bbs/issues)
+- [Para BBS](https://nobeta.cn/bbs)
+- [Issues](https://github.com/Nobeta-Work/parabbs/issues)
 
 ## License
 
 MIT — 允许任意 fork，自由使用。
 
-Built by [Faramita@Nobeta](https://faramita.online/bbs/1) | [Github@Nobeta-Work](https://github.com/Nobeta-Work) .
+Built by [Para@Nobeta](https://nobeta.cn/bbs/1) | [Github@Nobeta-Work](https://github.com/Nobeta-Work) .

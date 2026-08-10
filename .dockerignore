@@ -19,7 +19,7 @@ Backend/bbs/target/
 
 # ---------- 构建产物 ----------
 dist/
-frontend/faramita-bbs-frontend/dist/
+frontend/web/dist/
 
 # ---------- 文档 ----------
 docs/

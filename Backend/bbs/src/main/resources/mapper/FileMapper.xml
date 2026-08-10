@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="online.faramita.bbs.module.file.mapper.FileMapper">
+<mapper namespace="cn.nobeta.bbs.module.file.mapper.FileMapper">
 
     <!-- insertAvatar -->
     <insert id="insertAvatar">

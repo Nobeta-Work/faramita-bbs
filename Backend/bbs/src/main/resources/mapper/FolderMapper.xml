@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="online.faramita.bbs.module.folder.mapper.FolderMapper">
+<mapper namespace="cn.nobeta.bbs.module.folder.mapper.FolderMapper">
 
     <sql id="FolderColumns">
         id,
@@ -28,7 +28,7 @@
     <!-- selectFolderById --> 
 
     <select id="selectFolderById"
-            resultType="online.faramita.bbs.module.folder.entity.Folder">
+            resultType="cn.nobeta.bbs.module.folder.entity.Folder">
         SELECT
             <include refid="FolderColumns"></include>
         FROM folder
@@ -38,7 +38,7 @@
     <!-- insertFolder --> 
 
     <insert id="insertFolder"
-            parameterType="online.faramita.bbs.module.folder.entity.Folder"
+            parameterType="cn.nobeta.bbs.module.folder.entity.Folder"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO folder (
             author_id,
@@ -133,7 +133,7 @@
     <!-- selectSubtreeFoldersByAuthorIdAndParentId --> 
 
     <select id="selectSubtreeFoldersByAuthorIdAndParentId"
-            resultType="online.faramita.bbs.module.folder.entity.Folder">
+            resultType="cn.nobeta.bbs.module.folder.entity.Folder">
         SELECT 
             <include refid="FolderColumnsWithAlias"></include>
         FROM folder f

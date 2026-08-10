@@ -1,8 +1,8 @@
-# Faramita BBS
+# 彼记 / Para BBS
 
 > 一个面向创作、阅读与轻量社区互动的论坛系统。
 
-Faramita BBS 是一个基于 Spring Boot 的社区后端项目，提供用户认证、博客发布、目录管理、标签检索、点赞互动与文件上传等能力。当前版本聚焦 v0.3.0：完成模块化后端结构、Spring Security 认证授权、Redis 缓存与点赞异步落盘链路。
+彼记（Para BBS）是一个基于 Spring Boot 的社区后端项目，提供用户认证、博客发布、目录管理、标签检索、点赞互动与文件上传等能力。v0.4.0 完成产品命名、开发主体、Java 包与基础设施目录迁移。
 
 ## 简介
 
@@ -78,5 +78,5 @@ Security Filter -> JWT -> Redis -> SecurityContext
 
 ## 版本
 
-当前目标版本：`v0.3.0`
+当前目标版本：`v0.4.0`
 

@@ -8,9 +8,9 @@
 		<version>3.5.6</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>online.faramita</groupId>
+	<groupId>cn.nobeta.bbs</groupId>
 	<artifactId>bbs</artifactId>
-	<version>0.3.2</version>
+	<version>0.4.0</version>
 	<name>bbs</name>
 	<description>Demo project for Spring Boot</description>
 	<url/>

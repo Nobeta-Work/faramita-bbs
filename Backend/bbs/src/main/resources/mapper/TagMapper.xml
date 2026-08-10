@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="online.faramita.bbs.module.tag.mapper.TagMapper">
+<mapper namespace="cn.nobeta.bbs.module.tag.mapper.TagMapper">
 
     <sql id="TagColumns">
         id,
@@ -12,7 +12,7 @@
     <!-- selectBlogTagBriefRelationsByBlogIds --> 
 
     <select id="selectBlogTagBriefRelationsByBlogIds"
-            resultType="online.faramita.bbs.module.blog.dto.BlogTagBriefRelations">
+            resultType="cn.nobeta.bbs.module.blog.dto.BlogTagBriefRelations">
         SELECT
             bt.blog_id, bt.tag_id, t.name AS tag_name
         FROM tag t
@@ -26,7 +26,7 @@
     <!-- selectTagBriefByBlogId --> 
 
     <select id="selectTagBriefByBlogId"
-            resultType="online.faramita.bbs.module.tag.vo.TagBriefVO">
+            resultType="cn.nobeta.bbs.module.tag.vo.TagBriefVO">
         SELECT
             t.id, t.name
         FROM tag t
@@ -61,7 +61,7 @@
     <!-- selectTagPage --> 
 
     <select id="selectTagPage"
-            resultType="online.faramita.bbs.module.tag.entity.Tag">
+            resultType="cn.nobeta.bbs.module.tag.entity.Tag">
         SELECT
             <include refid="TagColumns"></include>
         FROM tag

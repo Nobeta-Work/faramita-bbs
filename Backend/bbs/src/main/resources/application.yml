@@ -11,9 +11,9 @@ spring:
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${faramita.datasource.url}
-    username: ${faramita.datasource.username}
-    password: ${faramita.datasource.password}
+    url: ${para.datasource.url}
+    username: ${para.datasource.username}
+    password: ${para.datasource.password}
   # 文件上传配置
   servlet:
     multipart:
@@ -22,36 +22,36 @@ spring:
   data:
     # Redis 配置
     redis:
-      host: ${faramita.redis.host}
-      port: ${faramita.redis.port}
-      password: ${faramita.redis.password}
-      database: ${faramita.redis.database}
+      host: ${para.redis.host}
+      port: ${para.redis.port}
+      password: ${para.redis.password}
+      database: ${para.redis.database}
       # 连接超时
-      connect-timeout: ${faramita.redis.connect-timeout}
+      connect-timeout: ${para.redis.connect-timeout}
       # 命令执行超时
-      timeout: ${faramita.redis.timeout}
+      timeout: ${para.redis.timeout}
 
       # Lettuce 配置
       lettuce:
         pool:
-          max-active: ${faramita.redis.lettuce.pool.max-active} # 最大连接数
-          max-idle: ${faramita.redis.lettuce.pool.max-idle} # 最大空闲连接
-          min-idle: ${faramita.redis.lettuce.pool.min-idle} # 最小空闲连接
-          max-wait: ${faramita.redis.lettuce.pool.max-wait} # 最大等待时间，超时报错
+          max-active: ${para.redis.lettuce.pool.max-active} # 最大连接数
+          max-idle: ${para.redis.lettuce.pool.max-idle} # 最大空闲连接
+          min-idle: ${para.redis.lettuce.pool.min-idle} # 最小空闲连接
+          max-wait: ${para.redis.lettuce.pool.max-wait} # 最大等待时间，超时报错
 
 
 # MyBatis配置
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
-  type-aliases-package: online.faramita.bbs.entity
+  type-aliases-package: cn.nobeta.bbs.module
   configuration:
     map-underscore-to-camel-case: true  # 开启驼峰命名
 
 # jwt配置
 jwt: 
-  secret: ${faramita.jwt.secret}
-  access-token-expire: ${faramita.jwt.access-token-expire}
-  refresh-token-expire: ${faramita.jwt.refresh-token-expire}
+  secret: ${para.jwt.secret}
+  access-token-expire: ${para.jwt.access-token-expire}
+  refresh-token-expire: ${para.jwt.refresh-token-expire}
 
 # PageHelper配置
 pagehelper:
@@ -60,15 +60,15 @@ pagehelper:
   default-count: true
   support-methods-arguments: true
 
-faramita:
+para:
   # 文件存储位置
   file:
     avatar:
-      root-path: ${faramita.file.avatar.root-path}
-      max-size: ${faramita.file.avatar.max-size}
-      expire: ${faramita.file.avatar.expire}
+      root-path: ${para.file.avatar.root-path}
+      max-size: ${para.file.avatar.max-size}
+      expire: ${para.file.avatar.expire}
     image:
-      max-size: ${faramita.file.image.max-size}
+      max-size: ${para.file.image.max-size}
   # Github配置
   github:
     branch: main
@@ -77,6 +77,6 @@ faramita:
     owner: Nobeta-Work
     repo: faramita-bbs-file
     path: img/
-    token: ${faramita.github.token}
+    token: ${para.github.token}
 
 

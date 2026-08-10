@@ -1,0 +1,48 @@
+package cn.nobeta.bbs.handler;
+
+import org.springframework.messaging.handler.annotation.support.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import lombok.extern.slf4j.Slf4j;
+import cn.nobeta.bbs.common.enums.ResultCode;
+import cn.nobeta.bbs.common.exception.BaseException;
+import cn.nobeta.bbs.common.result.Result;
+
+@RestControllerAdvice
+@Slf4j
+public class GlobalExceptionHandler {
+
+    /**
+     * 捕获业务异常
+     * @param ex
+     * @return
+     */
+    @ExceptionHandler(BaseException.class)
+    public Result<Void> exceptionHandler(BaseException ex) {
+        log.warn("异常：{}<", ex.getMessage());
+        return Result.fail(ex.getResultCode(), ex.getMessage());
+    }
+
+    /**
+     * 捕获参数校验异常
+     * @param ex
+     * @return
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public Result<Void> handleValidateException(MethodArgumentNotValidException ex) {
+        log.info("参数异常：{}", ex.getMessage());
+        return Result.fail(ResultCode.ILLEGAL_ARGUMENT, ex.getMessage());
+    }
+
+    /**
+     * 捕获全局异常
+     * @param e
+     * @return
+     */
+    @ExceptionHandler(Exception.class)
+    public Result<Void> handleException(Exception e) {
+        log.error("未知异常", e);
+        return Result.fail(ResultCode.FAIL);
+    }
+}

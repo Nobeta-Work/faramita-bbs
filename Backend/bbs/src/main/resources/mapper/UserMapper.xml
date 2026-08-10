@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="online.faramita.bbs.module.user.mapper.UserMapper">
+<mapper namespace="cn.nobeta.bbs.module.user.mapper.UserMapper">
 
     <sql id="UserColumns">
         id,
@@ -19,7 +19,7 @@
     <!-- selectUserById --> 
 
     <select id="selectUserById" parameterType="long"
-            resultType="online.faramita.bbs.module.user.entity.User">
+            resultType="cn.nobeta.bbs.module.user.entity.User">
         SELECT
             <include refid="UserColumns"></include>
         FROM sys_user
@@ -57,7 +57,7 @@
     <!-- selectAuthorBriefByIds --> 
 
     <select id="selectAuthorBriefByIds"
-            resultType="online.faramita.bbs.module.user.vo.UserBriefVO">
+            resultType="cn.nobeta.bbs.module.user.vo.UserBriefVO">
         SELECT
             id, nickname, avatar
         FROM sys_user
@@ -70,7 +70,7 @@
     <!-- selectAuthorBriefById --> 
 
     <select id="selectAuthorBriefById"
-            resultType="online.faramita.bbs.module.user.vo.UserBriefVO">
+            resultType="cn.nobeta.bbs.module.user.vo.UserBriefVO">
         SELECT
             id, nickname, avatar
         FROM sys_user

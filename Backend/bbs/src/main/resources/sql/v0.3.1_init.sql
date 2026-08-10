@@ -1,4 +1,4 @@
-USE faramita_bbs;
+USE para_bbs;
 
 -- 将 user 表的 nickname 字段设为唯一键
 ALTER TABLE `sys_user`
