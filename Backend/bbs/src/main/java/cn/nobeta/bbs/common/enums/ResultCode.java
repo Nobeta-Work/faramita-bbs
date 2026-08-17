@@ -41,7 +41,10 @@ public enum ResultCode {
     FOLDER_OPERAION_NOT_ALLOWED(400, "操作异常"), 
     
     // =========== 标签模块 ===========
-    TAG_NAME_DUPLICATE(400, "标签名重复"),
+    TAG_NAME_DUPLICATE(400, "标签名重复"), 
+    
+    // =========== Agent 模块 ===========
+    AGENT_NAME_DUPLICATE(400, "Token 名重复"),
     
     
     

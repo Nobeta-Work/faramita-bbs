@@ -24,6 +24,11 @@ public enum RedisKeys {
         604800L,
         "RefreshToken 缓存 refresh_token:{userId} refreshToken"
     ),
+    AGENT_TOKEN(
+        "agent_token:",
+        604800L,
+        "AgentToken 缓存 agent_token:{agent_token} userAuthInfo"
+    ),
     
     /** =========== 点赞模块 =========== */
     LIKE_BLOG(

@@ -1,5 +1,5 @@
 /**
- * version: v0.4.0
+ * version: v0.4.1
  * 完整数据库sql脚本，与迁移无关
  */
 
@@ -143,9 +143,22 @@ CREATE TABLE `avatar_info` (
     KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='头像文件生命周期表';
 
+CREATE TABLE `agent_token` (
+    `token` BIGINT NOT NULL COMMENT 'token 主键(舍弃前缀)',
+    `user_id` BIGINT NOT NULL COMMENT '用户主键',
+    `name` VARCHAR(30) NOT NULL COMMENT 'token 名',
+    'expire' INT NOT NULL COMMENT '存活时长(天)',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `is_deleted` BOOLEAN DEFAULT false COMMENT '删除',
+    PRIMARY KEY (`token`),
+    UNIQUE KEY `uk_user_name` (`user_id`, `name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agent Token 表';
+
 INSERT INTO `sys_role` (`id`, `role_code`, `role_name`, `description`) VALUES
     (1, 'USER', '普通用户', '默认注册用户'),
-    (2, 'ADMIN', '管理员', '系统管理员');
+    (2, 'ADMIN', '管理员', '系统管理员'),
+    (3, 'AGENT', 'Agent', '用户 Agent');
 
 INSERT INTO `sys_perm` (`id`, `perm_code`, `perm_name`, `description`) VALUES
     (1, 'user:edit_profile', '编辑个人资料', '修改自己的个人资料'),

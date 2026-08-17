@@ -46,4 +46,11 @@ public interface AuthMapper {
      */
     void insertUser(User user);
 
+    /**
+     * 根据角色码查询权限表
+     * @param string
+     * @return
+     */
+    List<String> selectPermCodesByRoleCode(String roleCode);
+
 }

@@ -74,4 +74,14 @@
         FROM sys_role r
         WHERE r.role_code = 'USER'
     </insert>
+
+    <!-- selectPermCodesByRoleCode --> 
+
+    <select id="selectPermCodesByRoleCode">
+        SELECT DISTINCT p.perm_code
+        FROM sys_role r
+        INNER JOIN sys_role_perm rp ON rp.role_id = r.id
+        INNER JOIN sys_perm p ON p.id = rp.perm_id
+        WHERE r.role_code = #{ruleCode}
+    </select>
 </mapper>
