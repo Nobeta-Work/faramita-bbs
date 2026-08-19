@@ -22,7 +22,7 @@ public enum RedisKeys {
     REFRESH_TOKEN(
         "refresh_token:",
         604800L,
-        "RefreshToken 缓存 refresh_token:{userId} refreshToken"
+        "RefreshToken 缓存 refresh_token:{userId} {jti}:refreshToken"
     ),
     AGENT_TOKEN(
         "agent_token:",
@@ -40,6 +40,10 @@ public enum RedisKeys {
         "like:changelog:blog",
         0L,
         "点赞变更消息List队列 like:change:blog : likeBlogChangelog"
+    ), RATE_LIMIT(
+        "rate_limit:",
+        3600L,
+        "限流桶Hash表 rate_limit:{userId/IP} {tokens:tokens} {last_time:last_time}"
     );
 
 

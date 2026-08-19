@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 import cn.nobeta.bbs.common.annotation.AuditLog;
+import cn.nobeta.bbs.common.annotation.RateLimit;
+import cn.nobeta.bbs.common.enums.Scene;
 import cn.nobeta.bbs.common.result.Result;
 import cn.nobeta.bbs.module.auth.dto.UserAuthInfo;
 import cn.nobeta.bbs.module.like.service.LikeService;
@@ -25,6 +27,7 @@ public class LikeController {
      * @param id
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "切换博客点赞状态", data = "{'blogId': #p1}")
     @PostMapping("/blogs/{id}")
     public Result<Integer> toggleBlogLike(

@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import cn.nobeta.bbs.common.annotation.AuditLog;
+import cn.nobeta.bbs.common.annotation.RateLimit;
+import cn.nobeta.bbs.common.enums.Scene;
 import cn.nobeta.bbs.common.result.PageResult;
 import cn.nobeta.bbs.common.result.Result;
 import cn.nobeta.bbs.module.tag.dto.TagPageQuery;
@@ -29,6 +31,7 @@ public class TagController {
      * @param dto
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "创建标签", data = "{'name': #p0.name}")
     @PostMapping
     public Result<TagBriefVO> saveTag(@Valid @RequestBody TagSaveDTO dto) {
@@ -43,6 +46,7 @@ public class TagController {
      * @param query
      * @return
      */
+    @RateLimit(scene = Scene.READ)
     @AuditLog(message = "查询标签列表", data = "{'pageNum': #p0.pageNum, 'pageSize': #p0.pageSize, 'keyword': #p0.keyword}")
     @GetMapping
     public Result<PageResult<TagBriefVO>> getTagPage(

@@ -58,7 +58,10 @@ public enum ResultCode {
     PERM_CODE_DUPLICATE(400, "权限编码重复"),
     PERM_NAME_DUPLICATE(400, "权限名重复"),
     ROLE_PERM_BIND_FAILED(400, "角色权限绑定失败"),
-    USER_ROLE_BIND_FAILED(400, "用户角色绑定失败"),
+    USER_ROLE_BIND_FAILED(400, "用户角色绑定失败"), 
+    
+    // =========== 接口限流 ===========
+    TOO_MANY_REQUESTS(429, "访问频繁，请稍后重试"),
     
     ;
 

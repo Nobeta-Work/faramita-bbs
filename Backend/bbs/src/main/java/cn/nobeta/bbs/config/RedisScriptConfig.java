@@ -20,4 +20,11 @@ public class RedisScriptConfig {
         script.setResultType(Long.class);
         return script;
     }
+
+    public static DefaultRedisScript<Long> rateLimitScript() {
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setLocation(new ClassPathResource("redis/rate_limit.lua"));
+        script.setResultType(Long.class);
+        return script;
+    }
 }

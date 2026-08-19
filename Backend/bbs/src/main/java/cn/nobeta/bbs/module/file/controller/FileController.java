@@ -10,6 +10,8 @@ import org.springframework.web.multipart.MultipartFile;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import cn.nobeta.bbs.common.annotation.AuditLog;
+import cn.nobeta.bbs.common.annotation.RateLimit;
+import cn.nobeta.bbs.common.enums.Scene;
 import cn.nobeta.bbs.common.result.Result;
 import cn.nobeta.bbs.module.file.service.FileService;
 
@@ -29,6 +31,7 @@ public class FileController {
      * @param file
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "用户上传头像", data = "{'filename': #p0.originalFilename, 'size': #p0.size}")
     @PostMapping("/uploadAvatar")
     public Result<String> uploadAvatar(@RequestParam("file") MultipartFile file) {
@@ -57,6 +60,7 @@ public class FileController {
      * @param file
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "用户上传图片", data = "{'filename': #p0.originalFilename, 'size': #p0.size}")
     @PostMapping("/uploadImage")
     public Result<String> uploadImage(@RequestParam("file") MultipartFile file) {

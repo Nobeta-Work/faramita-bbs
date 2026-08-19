@@ -17,6 +17,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import cn.nobeta.bbs.common.annotation.AuditLog;
+import cn.nobeta.bbs.common.annotation.RateLimit;
+import cn.nobeta.bbs.common.enums.Scene;
 import cn.nobeta.bbs.common.result.PageResult;
 import cn.nobeta.bbs.common.result.Result;
 import cn.nobeta.bbs.module.auth.dto.UserAuthInfo;
@@ -46,6 +48,7 @@ public class BlogController {
      * @param blogPageQuery
      * @return
      */
+    @RateLimit(scene = Scene.READ)
     @AuditLog(message = "请求获取博客公开页列表", 
         data = "{'pageNum': #p1.pageNum, 'pageSize': #p1.pageSize, 'keyword': #p1.keyword, 'authorId': #p1.authorId}"
     )
@@ -73,6 +76,7 @@ public class BlogController {
      * @param blogSaveDTO
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "创建博客", data = "{'title': #p1.title}")
     @PostMapping("/me")
     public Result<Long> saveBlog(
@@ -92,6 +96,7 @@ public class BlogController {
      * @param id
      * @return
      */
+    @RateLimit(scene = Scene.READ)
     @AuditLog(message = "访问公开博客详情", data = "{'blogId': #p0}")
     @GetMapping("/{id}")
     public Result<BlogPublicDetailVO> getPublicBlog(@PathVariable Long id) {
@@ -106,6 +111,7 @@ public class BlogController {
      * @param id
      * @return
      */
+    @RateLimit(scene = Scene.READ)
     @AuditLog(message = "访问个人博客编辑详情", data = "{'blogId': #p0}")
     @GetMapping("/me/{id}")
     public Result<BlogPrivateDetailVO> getPrivateBlog(@PathVariable Long id) {
@@ -121,6 +127,7 @@ public class BlogController {
      * @param blogEditDTO
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "修改个人博客", 
         data = "{'blogId': #p0, 'folderId': #p1.folderId, 'isPublished': #p1.isPublished, 'title': #p1.title}"
     )
@@ -140,6 +147,7 @@ public class BlogController {
      * @param id
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "删除个人博客", data = "{'blogId': #p0}")
     @DeleteMapping("/me/{id}")
     public Result<Void> deletePrivateBlog(@PathVariable Long id) {

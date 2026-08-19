@@ -17,6 +17,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import cn.nobeta.bbs.common.annotation.AuditLog;
+import cn.nobeta.bbs.common.annotation.RateLimit;
+import cn.nobeta.bbs.common.enums.Scene;
 import cn.nobeta.bbs.common.result.Result;
 import cn.nobeta.bbs.module.auth.dto.UserAuthInfo;
 import cn.nobeta.bbs.module.user.dto.PasswordEditDTO;
@@ -43,6 +45,7 @@ public class UserController {
      * @param loginUser
      * @return
      */
+    @RateLimit(scene = Scene.READ)
     @AuditLog(message = "获取当前用户个人资料", data = "{'username': #p0.username}")
     @GetMapping("/me")
     public Result<UserProfileVO> getCurrentUserProfile(@AuthenticationPrincipal UserAuthInfo loginUser) {
@@ -60,6 +63,7 @@ public class UserController {
      * @param id 被查询用户id
      * @return
      */
+    @RateLimit(scene = Scene.READ)
     @AuditLog(message = "查询用户个人信息", data = "{'userId': #p0}")
     @GetMapping("/{id}")
     public Result<UserInfoVO> getUserInfo(@PathVariable Long id) {
@@ -75,6 +79,7 @@ public class UserController {
      * @param userProfileDTO
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "更新当前用户个人资料", data = "{'nickname': #p1.nickname, 'sex': #p1.sex, 'race': #p1.race}")
     @PutMapping("/me")
     public Result<Void> editCurrentUserProfile(
@@ -95,6 +100,7 @@ public class UserController {
      * @param passwordEditDTO
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "更新当前用户密码", data = "{'username': #p0.username}")
     @PutMapping("/me/password")
     public Result<Void> editUserPassword(
@@ -115,6 +121,7 @@ public class UserController {
      * @param file
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "更新当前用户头像", data = "{'username': #p0.username, 'filename': #p1.originalFilename, 'size': #p1.size}")
     @PostMapping("/me/avatar")
     public Result<AvatarVO> editUserAvatar(

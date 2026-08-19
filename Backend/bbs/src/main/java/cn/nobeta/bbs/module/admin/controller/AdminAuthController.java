@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import cn.nobeta.bbs.common.annotation.AuditLog;
+import cn.nobeta.bbs.common.annotation.RateLimit;
+import cn.nobeta.bbs.common.enums.Scene;
 import cn.nobeta.bbs.common.result.Result;
 import cn.nobeta.bbs.module.admin.dto.AdminLoginDTO;
 import cn.nobeta.bbs.module.admin.service.AdminAuthService;
@@ -28,6 +30,7 @@ public class AdminAuthController {
      * @param dto
      * @return
      */
+    @RateLimit(capacity = 5, refill = 1)
     @AuditLog(message = "后台登录", data = "{'username': #p0.username}")
     @PostMapping("/login")
     public Result<TokenVO> login(@Valid @RequestBody AdminLoginDTO dto) {

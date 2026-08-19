@@ -13,8 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import cn.nobeta.bbs.common.annotation.AuditLog;
+import cn.nobeta.bbs.common.annotation.RateLimit;
 import cn.nobeta.bbs.common.dto.PageQuery;
 import cn.nobeta.bbs.common.enums.ResultCode;
+import cn.nobeta.bbs.common.enums.Scene;
 import cn.nobeta.bbs.common.result.PageResult;
 import cn.nobeta.bbs.common.result.Result;
 import cn.nobeta.bbs.module.blog.vo.BlogPrivateBriefVO;
@@ -38,6 +40,7 @@ public class FolderController {
      * @param folderSaveDTO
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "保存目录", data = "{'parentId': #p0.parentId, 'folderName': #p0.name}")
     @PostMapping
     public Result<Void> saveFolder(@Valid @RequestBody FolderSaveDTO folderSaveDTO) {
@@ -56,6 +59,7 @@ public class FolderController {
      * @param name
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "重命名目录", data = "{'folderId': #p0, 'folderName': #p1.name}")
     @PutMapping("/{id}")
     public Result<Void> renameFolder(
@@ -74,6 +78,7 @@ public class FolderController {
      * @param targetId
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "移动目录", data = "{'folderId': #p0, 'targetParentId': #p1.targetParentId}")
     @PutMapping("/{id}/move")
     public Result<Void> moveFolder(
@@ -91,6 +96,7 @@ public class FolderController {
      * @param id
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "删除目录", data = "{'folderId': #p0}")
     @DeleteMapping("/{id}")
     public Result<Void> deleteFolder(@PathVariable Long id) {
@@ -104,6 +110,7 @@ public class FolderController {
      * 获得当前用户的 FolderTree
      * @return
      */
+    @RateLimit(scene = Scene.READ)
     @AuditLog(message = "获取个人目录树")
     @GetMapping("/me")
     public Result<FolderTree> getCurrentUserFolderTree() {
@@ -124,6 +131,7 @@ public class FolderController {
      * @param id
      * @return
      */
+    @RateLimit(scene = Scene.READ)
     @AuditLog(message = "查询目录下博客列表", data = "{'folderId': #p0, 'pageNum': #p1.pageNum, 'pageSize': #p1.pageSize}")
     @GetMapping("/{id}/blogs")
     public Result<PageResult<BlogPrivateBriefVO>> getBlogPageInFolder(
@@ -141,6 +149,7 @@ public class FolderController {
      * @param folderBlogsMoveDTO
      * @return
      */
+    @RateLimit(scene = Scene.WRITE)
     @AuditLog(message = "批量移动博客到目录", data = "{'targetId': #p0.targetId, 'blogIds': #p0.blogIds}")
     @PutMapping("/blogs/move")
     public Result<Void> moveBlogsToFolder(@Valid @RequestBody FolderBlogsMoveDTO folderBlogsMoveDTO) {

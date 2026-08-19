@@ -71,10 +71,13 @@ public class AuthServiceImpl implements AuthService {
         );
 
         // 5. 缓存 RefreshToken
-        redisTemplate.opsForValue().set(
-            RedisKeys.REFRESH_TOKEN.getFullKey(userId),
-            refreshToken, ttl
+        String key = RedisKeys.REFRESH_TOKEN.getFullKey(userId);
+        redisTemplate.opsForHash().put(
+            key,
+            tokenProvider.getJti(refreshToken),
+            refreshToken
         );
+        redisTemplate.expire(key, ttl);
 
         return TokenVO.builder()
                 .accessToken(accessToken)
@@ -136,11 +139,13 @@ public class AuthServiceImpl implements AuthService {
 
         // 3. 查看 Redis 令牌、用户缓存
         Long userId = tokenProvider.getUserId(refreshToken);
+        String refreshKey = RedisKeys.REFRESH_TOKEN.getFullKey(userId);
 
-        String cacheRefreshToken = (String) redisTemplate.opsForValue().get(
-            RedisKeys.REFRESH_TOKEN.getFullKey(userId)
+        String cacheRefreshToken = (String) redisTemplate.opsForHash().get(
+            refreshKey,
+            tokenProvider.getJti(refreshToken)
         );
-        if (!cacheRefreshToken.equals(refreshToken)) {
+        if (cacheRefreshToken == null || !cacheRefreshToken.equals(refreshToken)) {
             throw new BusinessException(ResultCode.UNAUTHORIZED, "Token 失效");
         }
 
@@ -158,10 +163,16 @@ public class AuthServiceImpl implements AuthService {
 
         // 5. 更新 Redis 令牌、用户缓存
         Duration ttl = Duration.ofSeconds(RedisKeys.REFRESH_TOKEN.getDefaultTtl());
-        redisTemplate.opsForValue().set(
-            RedisKeys.REFRESH_TOKEN.getFullKey(userId),
-            newRefreshToken, ttl
+        redisTemplate.opsForHash().delete(
+            refreshKey,
+            tokenProvider.getJti(refreshToken)
         );
+        redisTemplate.opsForHash().put(
+            refreshKey,
+            tokenProvider.getJti(newRefreshToken),
+            newRefreshToken
+        );
+        redisTemplate.expire(refreshKey, ttl);
         redisTemplate.opsForValue().set(
             RedisKeys.LOGIN_USER.getFullKey(userId),
             loginUser, ttl
@@ -189,9 +200,9 @@ public class AuthServiceImpl implements AuthService {
         if (!tokenProvider.isAccessToken(accessToken)) { return; }
 
         // 3. 校验用户一致
-        if (userId.equals(tokenProvider.getUserId(accessToken))) { return; }
+        if (!userId.equals(tokenProvider.getUserId(accessToken))) { return; }
 
-        // 4. 拉黑令牌 jti
+        // 4. 拉黑业务令牌 jti
         Duration accessTtl = Duration.ofSeconds(RedisKeys.TOKEN_BLACK.getDefaultTtl());
 
         String jti = tokenProvider.getJti(accessToken);

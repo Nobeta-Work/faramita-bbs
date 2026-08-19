@@ -15,6 +15,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import cn.nobeta.bbs.common.annotation.AuditLog;
+import cn.nobeta.bbs.common.annotation.RateLimit;
 import cn.nobeta.bbs.common.result.Result;
 import cn.nobeta.bbs.module.auth.dto.LoginDTO;
 import cn.nobeta.bbs.module.auth.dto.RegisterDTO;
@@ -40,6 +41,7 @@ public class AuthController {
      * @return
      */
     // {"username": "admin", "password": "password"}
+    @RateLimit(capacity = 5, refill = 1)
     @AuditLog(message = "用户登陆", data = "{'username': #p0.username}")
     @PostMapping("/login")
     public Result<TokenVO> login(@Valid @RequestBody LoginDTO loginDTO) {
@@ -54,6 +56,7 @@ public class AuthController {
      * @param registerDTO
      * @return
      */
+    @RateLimit(capacity = 5, refill = 1)
     @AuditLog(message = "用户注册",
         data = "{'username': #p0.username, 'nickname': #p0.nickname, 'sex': #p0.sex, 'race': #p0.race}"
     )
@@ -70,6 +73,7 @@ public class AuthController {
      * @param refreshToken
      * @return
      */
+    @RateLimit(capacity = 5, refill = 1)
     @AuditLog(message = "用户刷新令牌")
     @PostMapping("/refresh")
     public Result<TokenVO> refresh(@NotBlank @RequestParam String refreshToken) {
