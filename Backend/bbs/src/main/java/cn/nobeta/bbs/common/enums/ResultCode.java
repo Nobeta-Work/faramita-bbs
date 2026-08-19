@@ -46,9 +46,22 @@ public enum ResultCode {
     // =========== Agent 模块 ===========
     AGENT_NAME_DUPLICATE(400, "Token 名重复"),
     
-    
+    // =========== 后台管理模块 ===========
+    ADMIN_FORBIDDEN(403, "无后台管理权限"),
+    USER_NOT_FOUND(404, "用户不存在"),
+    ROLE_NOT_FOUND(404, "角色不存在"),
+    PERM_NOT_FOUND(404, "权限不存在"),
+    BLOG_NOT_FOUND(404, "博客不存在"),
+    TAG_NOT_FOUND(404, "标签不存在"),
+    ROLE_CODE_DUPLICATE(400, "角色编码重复"),
+    ROLE_NAME_DUPLICATE(400, "角色名重复"),
+    PERM_CODE_DUPLICATE(400, "权限编码重复"),
+    PERM_NAME_DUPLICATE(400, "权限名重复"),
+    ROLE_PERM_BIND_FAILED(400, "角色权限绑定失败"),
+    USER_ROLE_BIND_FAILED(400, "用户角色绑定失败"),
     
     ;
+
     
 
     private final Integer code;

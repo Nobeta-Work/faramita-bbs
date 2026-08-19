@@ -86,6 +86,13 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/agent/**"
                 ).hasAnyRole(NameConstant.USER_ROLE)
+                // 9. 后台管理接口
+                .requestMatchers(
+                    "/api/admin/login"
+                ).permitAll()
+                .requestMatchers(
+                    "/api/admin/**"
+                ).hasRole(NameConstant.ADMIN_ROLE)
                 .anyRequest().denyAll()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
