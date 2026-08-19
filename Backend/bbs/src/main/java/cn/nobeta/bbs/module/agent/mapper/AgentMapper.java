@@ -1,8 +1,9 @@
 package cn.nobeta.bbs.module.agent.mapper;
 
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import com.github.pagehelper.Page;
 
@@ -19,7 +20,7 @@ public interface AgentMapper {
      * @return
      */
     @Select("SELECT user_id FROM agent_token WHERE token = #{token}")
-    Long selectUserIdByAgentToken(Long token);
+    Long selectUserIdByAgentToken(@Param("token") Long token);
 
     /**
      * 分页查询 Agent Token
@@ -31,9 +32,11 @@ public interface AgentMapper {
     void insertAgent(Agent agent);
 
     @Select("SELECT token FROM agent_token WHERE user_id = #{userId} AND name = #{name}")
-    String selectTokenByUserIdAndName(Long userId, String name);
+    String selectTokenByUserIdAndName(@Param("userId") Long userId,@Param("name") String name);
 
-    @Delete("DELETE FROM agent_token WHERE token = #{token}")
-    void deleteAgentTokenByToken(String token);
+    @Update("UPDATE agent_token SET is_deleted = 1 WHERE token = #{token}")
+    void deleteAgentTokenByToken(@Param("token") String token);
+
+    Agent selectByToken(@Param("token") Long token);
 
 }

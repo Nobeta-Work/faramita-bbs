@@ -2,6 +2,7 @@ package cn.nobeta.bbs.security.filter;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.redis.core.RedisTemplate;
@@ -15,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import cn.nobeta.bbs.common.constant.NameConstant;
 import cn.nobeta.bbs.common.enums.RedisKeys;
+import cn.nobeta.bbs.module.agent.entity.Agent;
 import cn.nobeta.bbs.module.agent.mapper.AgentMapper;
 import cn.nobeta.bbs.module.auth.dto.UserAuthInfo;
 import cn.nobeta.bbs.module.auth.mapper.AuthMapper;
@@ -39,7 +41,7 @@ public class AgentAuthenticationFilter extends OncePerRequestFilter {
         
         // 1. 提取 token
         String token = resolveToken(request);
-        if (token == null) {
+        if (token == null || isBlacklisted(token)) {
             chain.doFilter(request, response);
             return;
         }
@@ -56,12 +58,7 @@ public class AgentAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // 4. 缓存
-            redisTemplate.opsForValue().set(
-                RedisKeys.AGENT_TOKEN.getFullKey(token),
-                userAuthInfo,
-                Duration.ofSeconds(RedisKeys.AGENT_TOKEN.getDefaultTtl())
-            );
+            // 4. 缓存 => mockLoginUser
         }
 
         
@@ -88,14 +85,40 @@ public class AgentAuthenticationFilter extends OncePerRequestFilter {
 		return null;
 	}
     private UserAuthInfo mockLoginUser(String token) {
-        Long rawToken = Long.parseLong(token.substring(NameConstant.AGENT_TOKEN_PRFIX.length()));
-        Long userId = agentMapper.selectUserIdByAgentToken(rawToken);
+        Long rawToken;
+        try {
+            rawToken = Long.parseLong(token.substring(NameConstant.AGENT_TOKEN_PRFIX.length()));
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+        Agent agent = agentMapper.selectByToken(rawToken);
+        if (agent == null) { return null; }
+        // 过期判断
+        int expire = agent.getExpire();
+        LocalDateTime now = LocalDateTime.now();
+        long ttl = Duration.between(now, agent.getCreateTime().plusDays(expire)).getSeconds();
+        if (expire >= 0 && ttl <= 0) {
+            return null;
+        }
+        Long userId = agent.getUserId();
         if (userId == null) return null;
         User user = User.builder().id(userId).build();
         List<String> roles = List.of(NameConstant.AGENT_ROLE);
         List<String> permissions = authMapper.selectPermCodesByRoleCode(NameConstant.AGENT_ROLE);
         UserAuthInfo userAuthInfo = new UserAuthInfo(user, permissions, roles);
+        // 缓存
+        ttl = Math.min(RedisKeys.AGENT_TOKEN.getDefaultTtl(), expire < 0 ? Long.MAX_VALUE : ttl);
+        redisTemplate.opsForValue().set(
+            RedisKeys.AGENT_TOKEN.getFullKey(token),
+            userAuthInfo,
+            Duration.ofSeconds(ttl)
+        );
         return userAuthInfo;
+    }
+    private boolean isBlacklisted(String token) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(
+            RedisKeys.TOKEN_BLACK.getFullKey(token)
+        ));
     }
 
 }

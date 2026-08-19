@@ -4,7 +4,7 @@
 
     <sql id="AgentColumns">
         token,
-        userId,
+        user_id,
         name,
         expire,
         create_time,
@@ -15,10 +15,12 @@
 
     <!-- selectAgentTokenPage --> 
 
-    <select id="selectAgentTokenPage">
+    <select id="selectAgentTokenPage" parameterType="cn.nobeta.bbs.module.agent.dto.AgentTokenPageQuery"
+    resultType="cn.nobeta.bbs.module.agent.vo.AgentTokenVO">
         SELECT
             <include refid="AgentColumns"></include>
         FROM agent_token
+        WHERE user_id = #{userId} AND is_deleted = 0
         ORDER BY
             <choose>
                 <when test="sortField == 'updateTime'">
@@ -45,7 +47,16 @@
         INSERT INTO agent_token (
             token, user_id, name, expire
         ) VALUES (
-            #{token}, #{user_id}, #{name}, #{expire}
+            #{token}, #{userId}, #{name}, #{expire}
         )
     </insert>
+
+    <!-- selectByToekn --> 
+
+    <select id="selectByToken">
+        SELECT
+            <include refid="AgentColumns"></include>
+        FROM agent_token
+        WHERE token = #{token} AND is_deleted = FALSE
+    </select>
 </mapper>

@@ -51,6 +51,6 @@ public interface AuthMapper {
      * @param string
      * @return
      */
-    List<String> selectPermCodesByRoleCode(String roleCode);
+    List<String> selectPermCodesByRoleCode(@Param("roleCode") String roleCode);
 
 }

@@ -147,7 +147,7 @@ CREATE TABLE `agent_token` (
     `token` BIGINT NOT NULL COMMENT 'token 主键(舍弃前缀)',
     `user_id` BIGINT NOT NULL COMMENT '用户主键',
     `name` VARCHAR(30) NOT NULL COMMENT 'token 名',
-    'expire' INT NOT NULL COMMENT '存活时长(天)',
+    `expire` INT NOT NULL COMMENT '存活时长(天)',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `is_deleted` BOOLEAN DEFAULT false COMMENT '删除',

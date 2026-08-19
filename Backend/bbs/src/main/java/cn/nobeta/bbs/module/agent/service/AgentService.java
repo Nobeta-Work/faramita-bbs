@@ -10,6 +10,7 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 
 import cn.nobeta.bbs.common.constant.NameConstant;
+import cn.nobeta.bbs.common.enums.RedisKeys;
 import cn.nobeta.bbs.common.enums.ResultCode;
 import cn.nobeta.bbs.common.exception.BusinessException;
 import cn.nobeta.bbs.common.result.PageResult;
@@ -53,7 +54,7 @@ public class AgentService {
         // 4. 消除 token
 
         records.forEach(record -> {
-            record.setToken(NameConstant.HIDDEN);
+            record.setToken(NameConstant.AGENT_TOKEN_PRFIX);
         });
 
         return PageResult.<AgentTokenVO>builder()
@@ -73,6 +74,7 @@ public class AgentService {
         // 2. 封装 Agent
         Agent agent = Agent.builder()
                 .token(rawToken)
+                .userId(userId)
                 .name(dto.getName())
                 .expire(dto.getExpire())
                 .build();
@@ -97,8 +99,10 @@ public class AgentService {
 
         String token = NameConstant.AGENT_TOKEN_PRFIX + rawToken;
 
-        agentMapper.deleteAgentTokenByToken(token);
-        redisTemplate.delete(token);
+        agentMapper.deleteAgentTokenByToken(rawToken);
+        redisTemplate.delete(
+            RedisKeys.AGENT_TOKEN.getFullKey(token)
+        );
     }
 
 }

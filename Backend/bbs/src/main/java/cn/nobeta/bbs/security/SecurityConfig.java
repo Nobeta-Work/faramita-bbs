@@ -1,5 +1,7 @@
 package cn.nobeta.bbs.security;
 
+import cn.nobeta.bbs.common.constant.NameConstant;
+import cn.nobeta.bbs.security.filter.AgentAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,6 +25,7 @@ import cn.nobeta.bbs.security.util.PasswordEncoderImpl;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final AgentAuthenticationFilter agentAuthenticationFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final SecurityAccessDeniedHandler accessDeniedHandler;
     private final SecurityAuthenticationEntryPoint authenticationEntryPoint;
@@ -44,18 +47,18 @@ public class SecurityConfig {
                 ).permitAll()
                 .requestMatchers(
                     "/api/auth/logout"
-                ).authenticated()
+                ).hasAnyRole(NameConstant.USER_ROLE, NameConstant.ADMIN_ROLE)
                 // 2. 用户接口
                 .requestMatchers(
                     "/api/users/me/**"
-                ).authenticated()
+                ).hasAnyRole(NameConstant.USER_ROLE, NameConstant.ADMIN_ROLE)
                 .requestMatchers(
                     "/api/users/**"
                 ).permitAll()
                 // 3. 目录接口
                 .requestMatchers(
                     "/api/folders/**"
-                ).authenticated()
+                ).hasAuthority(NameConstant.PERM_FOLDER_MANAGE_SELF)
                 // 4. 标签接口
                 .requestMatchers(
                     HttpMethod.GET, "/api/tags"
@@ -66,7 +69,7 @@ public class SecurityConfig {
                 // 5. 博客接口
                 .requestMatchers(
                     "/api/blogs/me/**"
-                ).authenticated()
+                ).hasAuthority(NameConstant.PERM_BLOG_MANAGE_SELF)
                 .requestMatchers(
                     "/api/blogs/page", "/api/blogs/*"
                 ).permitAll()
@@ -79,9 +82,14 @@ public class SecurityConfig {
                     "/api/uploadAvatar",
                     "/api/uploadImage"
                 ).authenticated()
+                // 8. Agent 接口
+                .requestMatchers(
+                    "/api/agent/**"
+                ).hasAnyRole(NameConstant.USER_ROLE)
                 .anyRequest().denyAll()
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(agentAuthenticationFilter, JwtAuthenticationFilter.class);
             
 
         return http.build();
