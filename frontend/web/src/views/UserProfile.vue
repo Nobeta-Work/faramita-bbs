@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, onUnmounted, h } from 'vue'
+import { ref, onMounted, computed, onUnmounted, nextTick, h } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   NUpload, NIcon, useMessage, NSpin, NModal, NForm, NFormItem, NInput, NRadioGroup, NRadio, NAvatar
@@ -15,12 +15,6 @@ import type { BlogPublicBriefVO, UserInfoVO, UserSex } from '@/types'
 import { DateUtils } from '@/types/date'
 import router from '@/router'
 
-// Fonts
-const fontLink = document.createElement('link')
-fontLink.href = 'https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap'
-fontLink.rel = 'stylesheet'
-document.head.appendChild(fontLink)
-
 const route = useRoute()
 const userStore = useUserStore()
 const message = useMessage()
@@ -31,6 +25,12 @@ const isCurrentUser = computed(() => String(userStore.userInfo?.id ?? '') === ui
 const user = ref<UserInfoVO | null>(null)
 const userAvatarUrl = computed(() => resolveAvatarUrl(user.value?.avatar))
 const blogList = ref<BlogPublicBriefVO[]>([])
+const blogTotal = ref(0)
+const blogPage = ref(1)
+const hasMoreBlogs = ref(true)
+const loadingMoreBlogs = ref(false)
+const journeySentinel = ref<HTMLDivElement | null>(null)
+let journeyObserver: IntersectionObserver | null = null
 
 interface JourneyDateParts {
   year: string
@@ -61,7 +61,7 @@ const formatJourneyDate = (value: string): JourneyDateParts => {
   }
 }
 
-const journeyStops = computed(() => blogList.value.slice(0, 6).map((blog, index) => ({
+const journeyStops = computed(() => blogList.value.map((blog, index) => ({
   blog,
   index,
   date: formatJourneyDate(blog.createTime),
@@ -245,141 +245,77 @@ const handleSaveProfile = async () => {
   }
 }
 
+const fetchBlogs = async (reset = false): Promise<void> => {
+  if (loadingMoreBlogs.value) return
 
-// Canvas Refs
-const canvasRef = ref<HTMLCanvasElement | null>(null)
-let ctx: CanvasRenderingContext2D | null = null
-let animationFrameId: number
-let mouseX = -1000
-let mouseY = -1000
+  loadingMoreBlogs.value = true
+  const nextPage = reset ? 1 : blogPage.value + 1
+  try {
+    const blogs = await getPublicBlogPage({
+      pageNum: nextPage,
+      pageSize: 6,
+      authorId: uid.value,
+      sortField: 'createTime',
+      sortOrder: 'desc'
+    })
 
-// Fetch Data
+    blogPage.value = nextPage
+    blogTotal.value = blogs.total
+    blogList.value = reset ? blogs.records : [...blogList.value, ...blogs.records]
+    hasMoreBlogs.value = nextPage < blogs.pages && blogs.records.length > 0
+  } catch (error) {
+    message.error('博客加载失败')
+  } finally {
+    loadingMoreBlogs.value = false
+  }
+}
+
 const fetchProfile = async () => {
   loading.value = true
   try {
-    const [profile, blogs] = await Promise.all([
-      getUserInfo(uid.value),
-      getPublicBlogPage({
-        pageNum: 1,
-        pageSize: 20,
-        authorId: uid.value,
-        sortField: 'createTime',
-        sortOrder: 'desc'
-      })
-    ])
+    const profile = await getUserInfo(uid.value)
     user.value = profile
-    blogList.value = blogs.records
     document.title = `${profile.nickname} - Para BBS`
+    await fetchBlogs(true)
+    await nextTick()
+    journeyObserver?.disconnect()
+    if (journeySentinel.value) {
+      journeyObserver = new IntersectionObserver((entries) => {
+        if (entries[0]?.isIntersecting && hasMoreBlogs.value) {
+          void fetchBlogs()
+        }
+      }, { rootMargin: '360px 0px' })
+      journeyObserver.observe(journeySentinel.value)
+    }
   } catch (error) {
     message.error('无法加载用户信息')
   } finally {
     loading.value = false
-    // Trigger page animation after loading
-    setTimeout(() => {
-      pageLoaded.value = true
-    }, 100)
+    window.setTimeout(() => { pageLoaded.value = true }, 100)
   }
 }
 
 const sexText = (sex: number) => {
-  switch(sex) {
+  switch (sex) {
     case 1: return 'MALE'
     case 2: return 'FEMALE'
     default: return 'MYSTERY'
   }
 }
 
-// Canvas Animation Logic
-const initCanvas = () => {
-  if (!canvasRef.value) return
-  const canvas = canvasRef.value
-  ctx = canvas.getContext('2d')
-  if (!ctx) return
-
-  const resize = () => {
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-  }
-  window.addEventListener('resize', resize)
-  resize()
-
-  const gap = 30 // Grid gap
-  const pointSize = 1.5
-  
-  const animate = () => {
-    if (!ctx || !canvas) return
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    
-    // Theme colors
-    const isDark = document.documentElement.classList.contains('dark')
-    ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'
-    
-    const time = Date.now() * 0.001
-
-    for (let x = 0; x <= canvas.width; x += gap) {
-      for (let y = 0; y <= canvas.height; y += gap) {
-        // Distance to mouse
-        const dx = x - mouseX
-        const dy = y - mouseY
-        const dist = Math.sqrt(dx * dx + dy * dy)
-        
-        // Wave effect params
-        const maxDist = 250
-        let offsetX = 0
-        let offsetY = 0
-        let scale = 1
-
-        if (dist < maxDist) {
-          const force = (maxDist - dist) / maxDist
-          // Repulsion + Wave
-          const angle = Math.atan2(dy, dx)
-          const wave = Math.sin(dist * 0.05 - time * 2) * 5 * force
-          
-          offsetX = Math.cos(angle) * (force * 20 + wave)
-          offsetY = Math.sin(angle) * (force * 20 + wave)
-          scale = 1 + force * 1.5
-        }
-
-        ctx.beginPath()
-        ctx.arc(x + offsetX, y + offsetY, pointSize * scale, 0, Math.PI * 2)
-        ctx.fill()
-      }
-    }
-    
-    animationFrameId = requestAnimationFrame(animate)
-  }
-  animate()
-  
-  return resize
-}
-
-const handleMouseMove = (e: MouseEvent) => {
-  mouseX = e.clientX
-  mouseY = e.clientY
-}
-
-let resizeHandler: (() => void) | undefined
-
 onMounted(() => {
   fetchProfile()
-  resizeHandler = initCanvas()
-  window.addEventListener('mousemove', handleMouseMove)
 })
 
 onUnmounted(() => {
-  cancelAnimationFrame(animationFrameId)
-  window.removeEventListener('mousemove', handleMouseMove)
-  if (resizeHandler) window.removeEventListener('resize', resizeHandler)
+  journeyObserver?.disconnect()
+  journeyObserver = null
 })
-
-// Canvas loop handles theme change naturally by checking document.documentElement class
 
 </script>
 
 <template>
   <div class="profile-page" :class="{ 'loaded': pageLoaded }">
-    <canvas ref="canvasRef" class="bg-canvas"></canvas>
-
     <n-spin :show="loading">
       <div class="container" v-if="user">
 
@@ -387,7 +323,7 @@ onUnmounted(() => {
         <header class="header-grid animate-section">
           <div class="info-col">
             <div class="meta-line animate-fade-in" style="animation-delay: 0.1s">
-              <span class="uid">UID — {{ user.id.toString().padStart(6, '0') }}</span>
+              <span class="uid">UID - {{ user.id.toString().padStart(6, '0') }}</span>
               <span class="date">JOINED {{ DateUtils.isoToDateOnly(user.createTime) }}</span>
               <!-- Edit Button (Only for Owner) -->
               <button v-if="isCurrentUser" class="edit-btn" @click="openEditModal">
@@ -458,7 +394,7 @@ onUnmounted(() => {
             </div>
             <div class="journey-stats" v-if="blogList.length">
               <div>
-                <strong>{{ blogList.length }}</strong>
+                <strong>{{ blogTotal }}</strong>
                 <span>公开博客</span>
               </div>
               <div>
@@ -504,9 +440,11 @@ onUnmounted(() => {
               </div>
             </article>
 
-            <p v-if="blogList.length > journeyStops.length" class="journey-note">
-              展示最近 {{ journeyStops.length }} 篇公开发布，共 {{ blogList.length }} 篇。
-            </p>
+            <div v-if="hasMoreBlogs" ref="journeySentinel" class="journey-sentinel">
+              <n-spin v-if="loadingMoreBlogs" size="small" />
+              <span v-else>继续向下探索</span>
+            </div>
+            <p v-else class="journey-note">已经走到旅程的尽头啦。</p>
           </div>
 
           <div v-else class="empty-state">
@@ -1485,6 +1423,267 @@ onUnmounted(() => {
   .native-cropper-wrapper {
     width: min(68vw, calc(100dvh - 180px));
     max-width: 100%;
+  }
+}
+.profile-page {
+  max-width: none;
+  min-height: calc(100vh - 64px);
+  overflow: visible;
+  background:
+    radial-gradient(circle at 15% 8%, color-mix(in srgb, var(--accent-highlight) 22%, transparent), transparent 24rem),
+    var(--bg-primary);
+}
+
+.container {
+  width: min(960px, 100%);
+  padding: 4rem 24px 6rem;
+}
+
+.header-grid {
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 4rem;
+  margin-bottom: 3rem;
+}
+
+.meta-line,
+.tags-line {
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.nickname {
+  max-width: 11ch;
+  margin: 0.5rem 0 1.1rem;
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+  font-size: clamp(3rem, 9vw, 6.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+  color: var(--text-primary);
+}
+
+.signature {
+  max-width: 36rem;
+  padding: 1rem 1.2rem;
+  border-left: 4px solid var(--accent-color);
+  border-radius: 0 16px 16px 0;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.avatar-wrapper,
+.avatar-container-inner {
+  border-radius: 32px;
+}
+
+.avatar-wrapper {
+  padding: 10px;
+  background: var(--accent-highlight);
+  transform: rotate(3deg);
+}
+
+.avatar-img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border: 0;
+  background: var(--bg-secondary);
+}
+
+.avatar-wrapper,
+.avatar-container-inner,
+.avatar-img {
+  border: 0 !important;
+  outline: 0;
+}
+
+.avatar-wrapper {
+  padding: 0;
+  background: transparent;
+  transform: none;
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+
+.avatar-wrapper:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 48px color-mix(in srgb, var(--accent-color) 18%, transparent);
+}
+
+.avatar-img {
+  border-radius: 32px !important;
+  --n-border-radius: 32px;
+  background: var(--bg-secondary);
+}
+
+.change-btn {
+  border-radius: 0 0 22px 22px;
+  background: color-mix(in srgb, var(--text-primary) 85%, transparent);
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+  text-transform: none;
+}
+
+.divider-line {
+  margin-bottom: 3rem;
+  border-color: var(--line-color);
+}
+
+.journey-head {
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.section-kicker {
+  color: var(--accent-color);
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.journey-title-block h2 {
+  margin: 0.35rem 0 0;
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  letter-spacing: -0.04em;
+}
+
+.journey-stats {
+  gap: 1px;
+  min-width: 250px;
+  border: 1px solid var(--line-color);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--line-color);
+}
+
+.journey-stats > div {
+  padding: 0.8rem 1rem;
+  background: var(--bg-secondary);
+}
+
+.journey-stats strong {
+  color: var(--accent-color);
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+}
+
+.journey-map {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.journey-stop {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 1rem;
+  cursor: pointer;
+}
+
+.journey-date {
+  padding-top: 1rem;
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+  color: var(--text-tertiary);
+}
+
+.journey-date strong {
+  color: var(--text-primary);
+}
+
+.journey-rail {
+  display: none;
+}
+
+.journey-card {
+  padding: 1.25rem 1.4rem;
+  border: 1px solid var(--line-color);
+  border-radius: 20px;
+  background: var(--bg-secondary);
+  box-shadow: none;
+  transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+}
+
+.journey-stop:hover .journey-card {
+  transform: translateX(6px);
+  border-color: var(--accent-color);
+  background: var(--card-hover);
+}
+
+.journey-card-head,
+.card-footer {
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+}
+
+.journey-card .card-title {
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+  font-size: 1.6rem;
+}
+
+.journey-card .card-summary {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.journey-sentinel,
+.journey-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 4rem;
+  color: var(--text-tertiary);
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+  text-align: center;
+}
+
+.journey-sentinel::before,
+.journey-sentinel::after {
+  width: 4rem;
+  height: 1px;
+  margin: 0 0.8rem;
+  background: var(--line-color);
+  content: '';
+}
+
+.edit-modal-content,
+.crop-modal-content {
+  border-radius: 24px;
+  background: var(--modal-bg);
+}
+
+.modal-header h3,
+.edit-form,
+.save-btn,
+.close-btn {
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 2.5rem 18px 4rem;
+  }
+
+  .header-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .avatar-col {
+    max-width: 220px;
+    margin: 0 auto;
+  }
+
+  .journey-stop {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .journey-date {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0 0.25rem;
+  }
+
+  .journey-date strong {
+    font-size: 1.6rem;
   }
 }
 </style>

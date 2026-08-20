@@ -3,12 +3,14 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NButton,
+  NAvatar,
   NCheckbox,
   NEmpty,
   NForm,
   NFormItem,
   NIcon,
   NInput,
+  NInputNumber,
   NModal,
   NPagination,
   NSpace,
@@ -21,14 +23,18 @@ import {
 } from 'naive-ui'
 import {
   Add,
+  BookOutline,
   CreateOutline,
   DocumentTextOutline,
+  HeartOutline,
   FolderOpenOutline,
+  KeyOutline,
   MoveOutline,
   PencilOutline,
   TrashOutline,
 } from '@vicons/ionicons5'
 import { createPrivateBlog } from '@/api/blog'
+import { createAgentToken, deleteAgentToken, getAgentTokenPage } from '@/api/agent'
 import {
   createFolder,
   deleteFolder,
@@ -38,9 +44,10 @@ import {
   moveFolder,
   renameFolder,
 } from '@/api/folder'
-import type { ApiId, BlogPrivateBriefVO, FolderTree } from '@/types'
+import type { AgentTokenVO, ApiId, BlogPrivateBriefVO, FolderTree } from '@/types'
 import { ROOT_FOLDER_ID } from '@/types'
 import { DateUtils } from '@/types/date'
+import { resolveAvatarUrl } from '@/utils/avatar'
 
 interface TreeNode {
   [key: string]: unknown
@@ -50,6 +57,7 @@ interface TreeNode {
 }
 
 type FolderModalMode = 'create' | 'rename'
+type WorkspaceModule = 'blogs' | 'agent'
 
 const router = useRouter()
 const message = useMessage()
@@ -64,6 +72,7 @@ const blogs = ref<BlogPrivateBriefVO[]>([])
 const total = ref(0)
 const pageNum = ref(1)
 const pageSize = ref(10)
+const activeModule = ref<WorkspaceModule>('blogs')
 
 const folderModal = reactive({
   show: false,
@@ -84,6 +93,18 @@ const createBlogModal = reactive({
   show: false,
   title: '',
 })
+const agentLoading = ref(false)
+const agentTokens = ref<AgentTokenVO[]>([])
+const agentTotal = ref(0)
+const agentPage = ref(1)
+const agentPageSize = 5
+const agentModal = reactive({
+  show: false,
+  name: '',
+  expire: 30,
+})
+const createdAgentToken = ref('')
+const showCreatedAgentToken = ref(false)
 
 const rootFolder = computed<FolderTree>(() => {
   if (folderTree.value && String(folderTree.value.id) === String(ROOT_FOLDER_ID)) {
@@ -192,6 +213,31 @@ async function loadBlogs(): Promise<void> {
     message.error('博客列表加载失败')
   } finally {
     blogsLoading.value = false
+  }
+}
+
+async function loadAgentTokens(): Promise<void> {
+  agentLoading.value = true
+  try {
+    const page = await getAgentTokenPage({
+      pageNum: agentPage.value,
+      pageSize: agentPageSize,
+      sortField: 'updateTime',
+      sortOrder: 'desc',
+    })
+    agentTokens.value = page.records
+    agentTotal.value = page.total
+  } catch (error) {
+    message.error('Agent Token 加载失败')
+  } finally {
+    agentLoading.value = false
+  }
+}
+
+function selectModule(module: WorkspaceModule): void {
+  activeModule.value = module
+  if (module === 'agent') {
+    loadAgentTokens()
   }
 }
 
@@ -309,6 +355,62 @@ async function submitCreateBlog(): Promise<void> {
   }
 }
 
+function openAgentTokenModal(): void {
+  agentModal.name = ''
+  agentModal.expire = 30
+  agentModal.show = true
+}
+
+async function submitAgentToken(): Promise<void> {
+  const name = agentModal.name.trim()
+  if (!name) {
+    message.warning('请输入 Token 名称')
+    return
+  }
+
+  try {
+    createdAgentToken.value = await createAgentToken({ name, expire: agentModal.expire })
+    agentModal.show = false
+    showCreatedAgentToken.value = true
+    message.success('Agent Token 已创建')
+    await loadAgentTokens()
+  } catch (error) {
+    message.error('Agent Token 创建失败')
+  }
+}
+
+async function copyCreatedAgentToken(): Promise<void> {
+  if (!createdAgentToken.value) return
+  try {
+    await navigator.clipboard.writeText(createdAgentToken.value)
+    message.success('Token 已复制')
+  } catch (error) {
+    message.warning('复制失败，请手动复制')
+  }
+}
+
+function confirmDeleteAgentToken(token: AgentTokenVO): void {
+  dialog.warning({
+    title: '删除 Agent Token',
+    content: `确认删除「${token.name}」？删除后使用该 Token 的请求会立即失效。`,
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await deleteAgentToken(token.name)
+        message.success('Agent Token 已删除')
+        if (agentTokens.value.length === 1 && agentPage.value > 1) {
+          agentPage.value -= 1
+        } else {
+          await loadAgentTokens()
+        }
+      } catch (error) {
+        message.error('Agent Token 删除失败')
+      }
+    },
+  })
+}
+
 function openMoveBlogs(): void {
   if (selectedBlogIds.value.length === 0) {
     message.warning('请先选择博客')
@@ -348,9 +450,12 @@ watch(pageNum, () => {
   loadBlogs()
 })
 
+watch(agentPage, () => {
+  loadAgentTokens()
+})
+
 onMounted(async () => {
-  await loadTree()
-  await loadBlogs()
+  await Promise.all([loadTree(), loadBlogs()])
 })
 </script>
 
@@ -363,26 +468,61 @@ onMounted(async () => {
             <span class="eyebrow">Workspace</span>
             <h1>工作台</h1>
           </div>
-          <n-button circle secondary @click="openCreateFolder()">
-            <template #icon><n-icon :component="Add" /></template>
-          </n-button>
         </div>
 
-        <n-spin :show="treeLoading">
-          <n-tree
-            block-line
-            block-node
-            selectable
-            default-expand-all
-            :data="treeOptions"
-            :selected-keys="[selectedFolderId]"
-            @update:selected-keys="(keys) => selectFolder(keys[0] || ROOT_FOLDER_ID)"
-          />
-        </n-spin>
+        <nav class="workspace-module-nav" aria-label="工作台模块">
+          <button
+            type="button"
+            class="workspace-module"
+            :class="{ active: activeModule === 'blogs' }"
+            @click="selectModule('blogs')"
+          >
+            <span class="workspace-module-icon"><n-icon :component="BookOutline" /></span>
+            <span class="workspace-module-copy">
+              <strong>博客</strong>
+              <small>目录与文章</small>
+            </span>
+            <n-icon class="workspace-module-arrow" :component="FolderOpenOutline" />
+          </button>
+          <button
+            type="button"
+            class="workspace-module"
+            :class="{ active: activeModule === 'agent' }"
+            @click="selectModule('agent')"
+          >
+            <span class="workspace-module-icon"><n-icon :component="KeyOutline" /></span>
+            <span class="workspace-module-copy">
+              <strong>Agent Token</strong>
+              <small>{{ agentTotal ? `${agentTotal} 个凭证` : '访问凭证' }}</small>
+            </span>
+            <n-icon class="workspace-module-arrow" :component="KeyOutline" />
+          </button>
+        </nav>
+
+        <div v-if="activeModule === 'blogs'" class="folder-browser">
+          <div class="folder-browser-heading">
+            <span>目录</span>
+            <n-button circle secondary size="small" @click="openCreateFolder()">
+              <template #icon><n-icon :component="Add" /></template>
+            </n-button>
+          </div>
+          <n-spin :show="treeLoading">
+            <n-tree
+              block-line
+              block-node
+              selectable
+              default-expand-all
+              :data="treeOptions"
+              :selected-keys="[selectedFolderId]"
+              @update:selected-keys="(keys) => selectFolder(keys[0] || ROOT_FOLDER_ID)"
+            />
+          </n-spin>
+        </div>
       </aside>
 
       <main class="content-pane">
-        <section class="content-header">
+        <template v-if="activeModule === 'blogs'">
+          <section class="content-header">
           <div class="breadcrumbs">
             <button
               v-for="(folder, index) in breadcrumbs"
@@ -405,9 +545,9 @@ onMounted(async () => {
               新建博客
             </n-button>
           </n-space>
-        </section>
+          </section>
 
-        <section class="library-section">
+          <section class="library-section">
           <div class="library-head">
             <div class="section-title">
               <span>Contents</span>
@@ -460,10 +600,7 @@ onMounted(async () => {
                 <div class="blog-table">
                   <div class="blog-table-head">
                     <n-checkbox v-model:checked="checkedAll" />
-                    <span>Title</span>
-                    <span>Status</span>
-                    <span>Updated</span>
-                    <span>Likes</span>
+                    <span>Blogs</span>
                   </div>
                   <div
                     v-for="blog in blogs"
@@ -476,18 +613,41 @@ onMounted(async () => {
                       @click.stop
                       @update:checked="(checked) => toggleBlogChecked(blog.id, checked)"
                     />
-                    <div class="blog-cell-main">
-                      <n-icon :component="DocumentTextOutline" />
-                      <div>
-                        <h3>{{ blog.title }}</h3>
-                        <p>{{ blog.summary || 'No summary' }}</p>
+                    <div class="blog-row-content">
+                      <div class="blog-main-line">
+                        <div class="blog-title-cell">
+                          <n-icon :component="DocumentTextOutline" />
+                          <h3>{{ blog.title }}</h3>
+                        </div>
+                        <n-avatar
+                          round
+                          size="small"
+                          :src="resolveAvatarUrl(blog.author.avatar)"
+                          class="blog-author-avatar"
+                        />
+                        <span class="blog-like-count">
+                          <n-icon :component="HeartOutline" />
+                          {{ blog.likeCount || 0 }}
+                        </span>
+                      </div>
+                      <p class="blog-summary-line">{{ blog.summary || 'No summary' }}</p>
+                      <div class="blog-meta-line">
+                        <div class="blog-tags">
+                          <n-tag
+                            v-for="tag in blog.tags"
+                            :key="tag.id"
+                            size="small"
+                            round
+                          >
+                            {{ tag.name }}
+                          </n-tag>
+                          <n-tag :type="blog.isPublished === 1 ? 'success' : 'default'" size="small" round>
+                            {{ blog.isPublished === 1 ? 'Public' : 'Private' }}
+                          </n-tag>
+                        </div>
+                        <span class="blog-date">{{ DateUtils.isoToDateOnly(blog.updateTime || blog.createTime) }}</span>
                       </div>
                     </div>
-                    <n-tag :type="blog.isPublished === 1 ? 'success' : 'default'" size="small" round>
-                      {{ blog.isPublished === 1 ? 'Public' : 'Private' }}
-                    </n-tag>
-                    <span>{{ DateUtils.isoToDateOnly(blog.updateTime || blog.createTime) }}</span>
-                    <span>{{ blog.likeCount || 0 }}</span>
                   </div>
 
                   <div class="pagination-wrap">
@@ -505,6 +665,43 @@ onMounted(async () => {
                 class="empty-library"
                 description="当前目录暂无内容"
               />
+            </div>
+          </n-spin>
+          </section>
+        </template>
+
+        <section v-else class="agent-section">
+          <div class="agent-heading">
+            <div>
+              <span class="eyebrow">Authorization</span>
+              <h2>Agent Token</h2>
+              <p>为 AI Agent 创建访问你个人博客与目录的凭证。</p>
+            </div>
+            <n-button type="primary" @click="openAgentTokenModal">
+              <template #icon><n-icon :component="Add" /></template>
+              创建 Token
+            </n-button>
+          </div>
+
+          <n-spin :show="agentLoading">
+            <div v-if="agentTokens.length" class="agent-token-list">
+              <div v-for="token in agentTokens" :key="token.name" class="agent-token-row">
+                <div class="agent-token-main">
+                  <div class="agent-token-mark"><n-icon :component="KeyOutline" /></div>
+                  <div>
+                    <strong>{{ token.name }}</strong>
+                    <code>{{ token.token }}••••••••</code>
+                  </div>
+                </div>
+                <div class="agent-token-meta">
+                  <n-tag size="small" round>{{ token.expire === -1 ? '永久' : `${token.expire} 天` }}</n-tag>
+                  <n-button size="small" quaternary type="error" @click="confirmDeleteAgentToken(token)">删除</n-button>
+                </div>
+              </div>
+            </div>
+            <n-empty v-else description="还没有 Agent Token" />
+            <div class="pagination-wrap agent-pagination" v-if="agentTotal > agentPageSize">
+              <n-pagination v-model:page="agentPage" :page-size="agentPageSize" :item-count="agentTotal" />
             </div>
           </n-spin>
         </section>
@@ -580,6 +777,39 @@ onMounted(async () => {
         </div>
       </div>
     </n-modal>
+
+    <n-modal v-model:show="agentModal.show">
+      <div class="workspace-modal agent-modal">
+        <h2>创建 Agent Token</h2>
+        <p class="modal-help">Token 创建后不可修改，如需调整期限请删除后重新创建。</p>
+        <n-form label-placement="top">
+          <n-form-item label="名称">
+            <n-input v-model:value="agentModal.name" maxlength="20" show-count placeholder="例如：我的写作助手" @keyup.enter="submitAgentToken" />
+          </n-form-item>
+          <n-form-item label="有效期">
+            <n-input-number v-model:value="agentModal.expire" :min="-1" :max="3650" :precision="0" :show-button="false" style="width: 100%">
+              <template #suffix>天，-1 为永久</template>
+            </n-input-number>
+          </n-form-item>
+        </n-form>
+        <div class="modal-actions">
+          <n-button @click="agentModal.show = false">取消</n-button>
+          <n-button type="primary" @click="submitAgentToken">创建</n-button>
+        </div>
+      </div>
+    </n-modal>
+
+    <n-modal v-model:show="showCreatedAgentToken">
+      <div class="workspace-modal agent-modal">
+        <h2>Token 已创建</h2>
+        <p class="modal-help">完整 Token 只在创建时显示一次，请立即复制并妥善保存。</p>
+        <div class="created-token-box"><code>{{ createdAgentToken }}</code></div>
+        <div class="modal-actions">
+          <n-button @click="showCreatedAgentToken = false">关闭</n-button>
+          <n-button type="primary" @click="copyCreatedAgentToken">复制 Token</n-button>
+        </div>
+      </div>
+    </n-modal>
   </div>
 </template>
 
@@ -641,6 +871,91 @@ onMounted(async () => {
   color: var(--text-primary);
 }
 
+.workspace-module-nav {
+  display: grid;
+  gap: 8px;
+  margin: 28px 0 24px;
+}
+
+.workspace-module {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.workspace-module:hover,
+.workspace-module.active {
+  border-color: var(--line-color);
+  background: var(--card-hover);
+  color: var(--text-primary);
+}
+
+.workspace-module.active {
+  border-color: var(--accent-color);
+}
+
+.workspace-module-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid currentColor;
+  color: var(--accent-color);
+}
+
+.workspace-module-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.workspace-module-copy strong {
+  overflow: hidden;
+  color: inherit;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-module-copy small {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-module-arrow {
+  color: var(--text-tertiary);
+  font-size: 0.95rem;
+}
+
+.folder-browser {
+  padding-top: 18px;
+  border-top: 1px solid var(--line-color);
+}
+
+.folder-browser-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
 .content-pane {
   display: flex;
   min-width: 0;
@@ -659,6 +974,96 @@ onMounted(async () => {
 .library-section {
   overflow: hidden;
   padding: 0 !important;
+}
+
+.agent-section {
+  min-height: 100%;
+}
+
+.agent-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.agent-heading h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+}
+
+.agent-heading p:not(.eyebrow) {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.agent-token-list {
+  display: grid;
+  gap: 10px;
+}
+
+.agent-token-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-color);
+  background: var(--card-hover);
+}
+
+.agent-token-main,
+.agent-token-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.agent-token-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--accent-color);
+  color: var(--accent-color);
+}
+
+.agent-token-main strong,
+.agent-token-main code {
+  display: block;
+}
+
+.agent-token-main code {
+  margin-top: 4px;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+}
+
+.agent-pagination {
+  padding: 18px 0 0;
+}
+
+.modal-help {
+  margin: -10px 0 22px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.created-token-box {
+  overflow-x: auto;
+  padding: 14px;
+  border: 1px dashed var(--accent-color);
+  background: var(--card-hover);
+  color: var(--text-primary);
+}
+
+.created-token-box code {
+  white-space: nowrap;
 }
 
 .breadcrumbs {
@@ -751,16 +1156,14 @@ onMounted(async () => {
   font-size: 1.8rem;
 }
 
-.folder-card h3,
-.blog-cell-main h3 {
+.folder-card h3 {
   margin: 0;
   color: var(--text-primary);
   font-family: 'Playfair Display', serif;
   font-size: 1.2rem;
 }
 
-.folder-card p,
-.blog-cell-main p {
+.folder-card p {
   margin: 4px 0 0;
   color: var(--text-secondary);
   font-size: 0.86rem;
@@ -780,10 +1183,10 @@ onMounted(async () => {
 .blog-table-head,
 .blog-row {
   display: grid;
-  grid-template-columns: 44px minmax(260px, 1fr) 120px 140px 80px;
-  gap: 16px;
-  align-items: center;
-  padding: 14px 18px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  padding: 12px 18px;
 }
 
 .blog-table-head {
@@ -809,17 +1212,95 @@ onMounted(async () => {
   background: var(--card-hover);
 }
 
-.blog-cell-main {
-  display: flex;
+.blog-row-content {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.blog-main-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   min-width: 0;
 }
 
-.blog-cell-main h3,
-.blog-cell-main p {
+.blog-title-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.blog-title-cell > .n-icon {
+  flex: 0 0 auto;
+  color: var(--accent-color);
+}
+
+.blog-title-cell h3 {
+  margin: 0;
   overflow: hidden;
+  color: var(--text-primary);
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem;
+  font-weight: 600;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blog-author-avatar {
+  flex: 0 0 auto;
+}
+
+.blog-like-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.blog-like-count .n-icon {
+  color: var(--accent-color);
+}
+
+.blog-summary-line {
+  overflow: hidden;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blog-meta-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.blog-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.blog-tags :deep(.n-tag) {
+  flex: 0 0 auto;
+}
+
+.blog-date {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
   white-space: nowrap;
 }
 
@@ -870,11 +1351,6 @@ onMounted(async () => {
   .blog-row {
     grid-template-columns: 34px minmax(0, 1fr);
   }
-
-  .blog-row > span,
-  .blog-row > .n-tag {
-    grid-column: 2;
-  }
 }
 
 @media (max-width: 680px) {
@@ -883,5 +1359,16 @@ onMounted(async () => {
     align-items: stretch;
     flex-direction: column;
   }
+
+  .agent-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .blog-main-line {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+  }
+
 }
 </style>

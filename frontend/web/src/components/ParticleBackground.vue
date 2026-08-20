@@ -22,8 +22,8 @@ const mouse = { x: -1000, y: -1000 }
 const getColors = () => {
   const style = getComputedStyle(document.documentElement)
   return {
-    dot: style.getPropertyValue('--accent-color').trim() || '#006D77',
-    line: style.getPropertyValue('--accent-color').trim() || '#006D77',
+    dot: style.getPropertyValue('--text-primary').trim() || '#006D77',
+    line: style.getPropertyValue('--text-primary').trim() || '#006D77',
   }
 }
 

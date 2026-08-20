@@ -7,6 +7,8 @@ export const ROUTE_NAMES = {
     userProfile: 'UserProfile',
     workspace: 'Workspace',
     workspaceBlog: 'WorkspaceBlog',
+    admin: 'Admin',
+    adminLogin: 'AdminLogin',
     login: 'Login',
     register: 'Register',
     notFound: 'NotFound',
@@ -19,6 +21,8 @@ export const ROUTE_PATHS = {
     userProfile: '/:uid',
     workspace: '/workspace',
     workspaceBlog: '/workspace/blogs/:id',
+    admin: '/admin',
+    adminLogin: '/admin/login',
     login: '/login',
     register: '/register',
 } as const

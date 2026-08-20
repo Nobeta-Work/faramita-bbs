@@ -57,6 +57,16 @@ const routes: Array<RouteRecordRaw> = [
                 }
             },
             {
+                path: 'admin',
+                name: ROUTE_NAMES.admin,
+                component: () => import('@/views/AdminView.vue'),
+                meta: {
+                    requiresAuth: true,
+                    roles: ['ROLE_ADMIN'],
+                    title: '后台管理 | Para BBS',
+                },
+            },
+            {
                 path: ':uid',
                 name: ROUTE_NAMES.userProfile,
                 component: () => import('@/views/UserProfile.vue'),
@@ -85,6 +95,15 @@ const routes: Array<RouteRecordRaw> = [
         meta: {
             requiresAuth: false,
             title: '注册',
+        },
+    },
+    {
+        path: '/admin/login',
+        name: ROUTE_NAMES.adminLogin,
+        component: () => import('@/views/AdminLoginView.vue'),
+        meta: {
+            requiresAuth: false,
+            title: '后台登录 | Para BBS',
         },
     },
     // 404页面
@@ -129,7 +148,7 @@ router.beforeEach(async (to, _, next) => {
     if (requiresAuth && !userStore.isAuthenticated) {
         next('/login')
     } else if (requiredRoles.length > 0 && !userStore.hasAnyRole(requiredRoles)) {
-        next('/')
+        next(to.path.startsWith('/admin') ? '/admin/login' : '/')
     } else {
         next()
     }

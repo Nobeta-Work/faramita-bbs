@@ -5,18 +5,12 @@ import {
   NInput, NSelect, NPagination, NModal,
   NForm, NFormItem, NIcon, NEmpty, NSpin, useMessage, useDialog, NAvatar
 } from 'naive-ui'
-import { Search, Add, ArrowForward, GridOutline, Person, HeartOutline } from '@vicons/ionicons5'
+import { Search, Add, GridOutline, Person, HeartOutline } from '@vicons/ionicons5'
 import { createPrivateBlog, getPublicBlogPage } from '@/api/blog'
 import { resolveAvatarUrl } from '@/utils/avatar'
 import type { BlogPageQuery, BlogPublicBriefVO } from '@/types'
 import { DateUtils } from '@/types/date'
 import { useUserStore } from '@/stores/user'
-
-// Fonts
-const fontLink = document.createElement('link')
-fontLink.href = 'https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap'
-fontLink.rel = 'stylesheet'
-document.head.appendChild(fontLink)
 
 const router = useRouter()
 const route = useRoute()
@@ -123,10 +117,6 @@ onMounted(() => {
     <!-- Hero Header -->
     <div class="hero-section">
       <div class="hero-content">
-        <h1 class="hero-title">
-          The <span class="highlight">Chronicles</span>
-        </h1>
-        
         <div class="search-bar-wrapper">
           <n-input 
             v-model:value="searchForm.keyword" 
@@ -183,41 +173,28 @@ onMounted(() => {
               @click="router.push(`/blog/${blog.id}`)"
             >
               <div class="blog-card">
-                <div class="card-header">
-                  <div class="card-header-content">
-                    <span class="category-badge">
-                      {{ blog.tags?.[0]?.name || 'Article' }}
-                    </span>
-                    <span class="read-more-icon">
-                      <n-icon :component="ArrowForward" />
-                    </span>
-                  </div>
-                </div>
-                
                 <div class="card-body">
-                  <div class="card-meta-top">
-                    <span class="sub-category">{{ blog.tags?.map(tag => tag.name).join(' / ') || 'General' }}</span>
-                    <span class="publish-date">{{ DateUtils.isoToDateOnly(blog.createTime) }}</span>
-                  </div>
-                  
-                  <h3 class="card-title">{{ blog.title }}</h3>
-                  <p class="card-summary">{{ blog.summary || 'No summary available...' }}</p>
-                  
-                  <div class="card-footer">
-                    <div class="author-profile">
-                      <n-avatar 
-                        round 
-                        size="small" 
-                        :src="resolveAvatarUrl(blog.author.avatar)" 
-                        :render-icon="renderDefaultAvatar"
-                        class="author-avatar"
-                      />
-                      <span class="author-name">{{ blog.author.nickname }}</span>
-                    </div>
+                  <div class="card-main-line">
+                    <h3 class="card-title">{{ blog.title }}</h3>
+                    <n-avatar
+                      round
+                      size="small"
+                      :src="resolveAvatarUrl(blog.author.avatar)"
+                      :render-icon="renderDefaultAvatar"
+                      class="author-avatar"
+                    />
                     <span class="like-count">
                       <n-icon :component="HeartOutline" />
                       {{ blog.likeCount || 0 }}
                     </span>
+                  </div>
+                  <p class="card-summary">{{ blog.summary || 'No summary available...' }}</p>
+                  <div class="card-meta-top">
+                    <div class="card-tags">
+                      <span v-if="!blog.tags?.length" class="card-tag">General</span>
+                      <span v-for="tag in blog.tags" :key="tag.id" class="card-tag">{{ tag.name }}</span>
+                    </div>
+                    <span class="publish-date">{{ DateUtils.isoToDateOnly(blog.createTime) }}</span>
                   </div>
                 </div>
               </div>
@@ -294,21 +271,6 @@ onMounted(() => {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-.hero-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 4rem;
-  font-weight: 700;
-  margin-bottom: 16px;
-  line-height: 1.2;
-  letter-spacing: 2px;
-  color: var(--text-primary);
-}
-
-.highlight {
-  font-style: italic;
-  color: var(--accent-color);
 }
 
 .search-bar-wrapper {
@@ -492,7 +454,7 @@ onMounted(() => {
 
 .blog-card {
   height: 100%;
-  background: var(--bg-primary);
+  background: transparent !important;
   border: 1px solid var(--line-color);
   display: flex;
   flex-direction: column;
@@ -508,7 +470,7 @@ onMounted(() => {
   left: 0;
   width: 100%;
   height: 4px;
-  background: var(--text-primary);
+  background: transparent;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.4s ease;
@@ -521,7 +483,7 @@ onMounted(() => {
 
 .blog-card:hover::before {
   transform: scaleX(1);
-  background: var(--accent-color);
+  background: transparent;
 }
 
 .card-header {
@@ -759,18 +721,234 @@ onMounted(() => {
     font-size: 3rem;
   }
   .hero-footer {
-    flex-direction: column;
-    gap: 20px;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin: 0 auto;
+    padding-bottom: 14px;
   }
-  .footer-left, .footer-right {
-    justify-content: center;
+  .footer-left {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .footer-right {
+    flex: 0 0 auto;
+  }
+  .sort-selector,
+  .custom-select {
+    width: 100%;
+    min-width: 0;
   }
   .filter-tags {
-    flex-wrap: wrap;
+    display: none;
+  }
+  .create-btn {
+    padding-inline: 14px;
+    white-space: nowrap;
   }
   .blog-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.hero-title {
+  margin: 0 0 1.3rem;
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+  font-size: clamp(2.8rem, 7vw, 5.8rem);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.highlight {
+  color: var(--accent-color);
+}
+
+.search-bar-wrapper {
+  width: min(100%, 650px);
+  border: 1px solid var(--line-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  box-shadow: none;
+}
+
+.custom-input :deep(.n-input__input-el) {
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+}
+
+.search-bar-wrapper:focus-within {
+  border-color: var(--line-color);
+  box-shadow: none;
+}
+
+.hero-search-input :deep(.n-input),
+.hero-search-input :deep(.n-input--focus),
+.hero-search-input :deep(.n-input-wrapper),
+.hero-search-input :deep(.n-input__border),
+.hero-search-input :deep(.n-input__state-border),
+.hero-search-input :deep(.n-input__input-el:focus) {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.custom-select :deep(.n-base-selection) {
+  border-radius: 999px;
+  background: var(--bg-secondary);
+}
+
+.blog-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 1.25rem;
+}
+
+.blog-card-wrapper {
+  width: 100%;
+}
+
+.blog-card {
+  min-height: 0;
+  border: 1px solid var(--line-color);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-primary) 90%, var(--accent-color) 10%);
+  box-shadow: none;
+}
+
+.blog-card::before {
+  display: none;
+}
+
+.blog-card:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--accent-color) 45%, var(--line-color));
+  box-shadow: none;
+}
+
+.card-body {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem 1.1rem 0.95rem;
+}
+
+.card-main-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.card-title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.author-avatar {
+  border: 0;
+}
+
+.like-count {
+  white-space: nowrap;
+}
+
+.card-summary {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-meta-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.card-tags {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.card-tag {
+  flex: 0 0 auto;
+  overflow: hidden;
+  color: var(--accent-color);
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+}
+
+.card-tag + .card-tag::before {
+  margin-right: 0.45rem;
+  color: var(--line-color);
+  content: '/';
+}
+
+.publish-date {
+  color: var(--text-tertiary);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.category-badge,
+.author-name,
+.card-title,
+.card-meta-top,
+.card-summary,
+.like-count,
+.custom-form :deep(.n-form-item-label),
+.cancel-btn,
+.save-btn {
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.pagination-container {
+  margin-top: 2rem;
+}
+
+.create-modal-content {
+  border-radius: 24px;
+  background: var(--modal-bg);
+}
+
+.modal-header h3 {
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    padding-top: 1rem;
+  }
+
+  .hero-footer {
+    align-items: center;
+  }
+
+  .footer-left,
+  .footer-right {
+    justify-content: stretch;
+  }
+
+  .create-btn {
+    justify-content: center;
   }
 }
 </style>

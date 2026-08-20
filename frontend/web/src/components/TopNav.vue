@@ -2,7 +2,18 @@
 import { h, ref, computed } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { NLayoutHeader, NMenu, NButton, NAvatar, NDropdown, NSpace, NIcon, NSwitch, NDrawer, NDrawerContent } from 'naive-ui'
-import { PersonCircleOutline, LogOutOutline, Moon, Sunny, MenuOutline, Person } from '@vicons/ionicons5'
+import {
+  BookOutline,
+  BriefcaseOutline,
+  HomeOutline,
+  LogOutOutline,
+  MenuOutline,
+  Moon,
+  Person,
+  PersonCircleOutline,
+  ShieldCheckmarkOutline,
+  Sunny,
+} from '@vicons/ionicons5'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 import { storeToRefs } from 'pinia'
@@ -13,12 +24,6 @@ const { isDark } = storeToRefs(themeStore)
 const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
-
-// Fonts
-const fontLink = document.createElement('link')
-fontLink.href = 'https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe:wght@400&display=swap'
-fontLink.rel = 'stylesheet'
-document.head.appendChild(fontLink)
 
 const showMobileMenu = ref(false)
 const userAvatarUrl = computed(() => resolveAvatarUrl(userStore.userInfo?.avatar))
@@ -32,23 +37,39 @@ const activeKey = computed(() => {
     return 'blog'
   }
   if (route.path.startsWith('/workspace')) return 'workspace'
+  if (route.path.startsWith('/admin')) return 'admin'
   return null
 })
 
-const menuOptions = [
-  {
-    label: () => h(RouterLink, { to: '/' }, { default: () => '首页' }),
-    key: 'home'
-  },
-  {
-    label: () => h(RouterLink, { to: '/blog' }, { default: () => '博客' }),
-    key: 'blog'
-  },
-  {
-    label: () => h(RouterLink, { to: '/workspace' }, { default: () => '工作台' }),
-    key: 'workspace'
+const menuOptions = computed(() => {
+  const options = [
+    {
+      label: () => h(RouterLink, { to: '/' }, { default: () => '首页' }),
+      key: 'home',
+      icon: () => h(NIcon, null, { default: () => h(HomeOutline) }),
+    },
+    {
+      label: () => h(RouterLink, { to: '/blog' }, { default: () => '博客' }),
+      key: 'blog',
+      icon: () => h(NIcon, null, { default: () => h(BookOutline) }),
+    },
+    {
+      label: () => h(RouterLink, { to: '/workspace' }, { default: () => '工作台' }),
+      key: 'workspace',
+      icon: () => h(NIcon, null, { default: () => h(BriefcaseOutline) }),
+    },
+  ]
+
+  if (userStore.hasAnyRole(['ROLE_ADMIN'])) {
+    options.push({
+      label: () => h(RouterLink, { to: '/admin' }, { default: () => '管理' }),
+      key: 'admin',
+      icon: () => h(NIcon, null, { default: () => h(ShieldCheckmarkOutline) }),
+    })
   }
-]
+
+  return options
+})
 
 const userOptions = [
   {
@@ -119,8 +140,13 @@ function handleUserSelect(key: string) {
           </div>
 
           <!-- Mobile Toggle -->
-          <div class="mobile-only">
-            <n-button text style="font-size: 24px" @click="showMobileMenu = true">
+          <div class="mobile-only mobile-menu-trigger">
+            <n-button
+              text
+              aria-label="打开导航菜单"
+              class="mobile-menu-button"
+              @click="showMobileMenu = true"
+            >
               <n-icon :component="MenuOutline" />
             </n-button>
           </div>
@@ -129,9 +155,9 @@ function handleUserSelect(key: string) {
     </div>
 
     <!-- Mobile Drawer -->
-    <n-drawer v-model:show="showMobileMenu" :width="240" placement="right">
+    <n-drawer v-model:show="showMobileMenu" :width="280" placement="right">
       <n-drawer-content title="菜单">
-        <n-menu :options="menuOptions" />
+        <n-menu :options="menuOptions" :value="activeKey" @update:value="showMobileMenu = false" />
         <div class="mobile-user-actions">
            <div v-if="userStore.isAuthenticated">
              <div class="mobile-user-info" @click="handleUserSelect('profile')">
@@ -180,7 +206,7 @@ function handleUserSelect(key: string) {
 
 .logo-text {
   font-weight: bold;
-  background: linear-gradient(120deg, #bd34fe 30%, #41d1ff);
+  background: linear-gradient(120deg, #ff66c4 30%, #41d1ff);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -194,13 +220,67 @@ a {
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .desktop-only {
     display: none;
   }
   .mobile-only {
-    display: block;
+    display: flex;
   }
+
+  .nav-header {
+    padding: 0 12px;
+  }
+
+  .nav-content {
+    width: 100%;
+    max-width: none;
+    gap: 8px;
+  }
+
+  .left-section {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .logo {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .logo-text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1.55rem;
+  }
+
+  .actions {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .actions :deep(.n-space) {
+    gap: 6px !important;
+  }
+
+  .mobile-menu-trigger {
+    align-items: center;
+  }
+
+  .mobile-menu-button {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.mobile-menu-button {
+  font-size: 24px;
 }
 
 .mobile-user-actions {
@@ -215,5 +295,48 @@ a {
   gap: 10px;
   cursor: pointer;
   padding: 10px 0;
+}
+.nav-header {
+  height: 70px;
+  padding: 0 18px;
+  border-bottom: 1px dashed var(--line-color) !important;
+  background: var(--modal-bg) !important;
+}
+
+.nav-content {
+  max-width: 1120px;
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+}
+
+.logo-text {
+  font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
+  font-size: 2rem;
+  font-weight: 400;
+}
+
+:deep(.n-menu-item-content-header) {
+  font-size: 1.08rem;
+}
+
+:deep(.n-menu-item-content__tab) {
+  font-size: 1.08rem;
+}
+
+:deep(.n-button__content) {
+  font-size: 1.02rem;
+}
+
+:deep(.n-menu-item-content) {
+  border-radius: 999px;
+}
+
+:deep(.n-menu-item-content--selected) {
+  color: var(--accent-color) !important;
+  background: var(--card-hover);
+}
+
+:deep(.n-switch) {
+  --n-rail-color: var(--bg-secondary) !important;
+  --n-rail-color-active: var(--accent-color) !important;
 }
 </style>

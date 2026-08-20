@@ -5,7 +5,6 @@ import { useMessage, type FormInst, type FormRules, NForm, NFormItem, NInput, NI
 import { login } from '@/api/auth';
 import { useUserStore } from '@/stores/user';
 import { PersonOutline, LockClosedOutline, ArrowForwardOutline } from '@vicons/ionicons5';
-import ParaLogo from '@/assets/images/logo/ParaBBSLogo.png';
 
 // Fonts
 const fontLink = document.createElement('link')
@@ -151,7 +150,7 @@ const handleLogin = async () => {
         <div class="login-container animate-section" v-if="showForm">
             <div class="login-card animate-scale-in">
                 <div class="header-section">
-                    <img :src="ParaLogo" alt="Para BBS Logo" class="logo-image" />
+                    <img src="https://nobeta.cn/i/2026/08/20/eb0c6d.png" alt="Para BBS Logo" class="logo-image" />
                     <h1 class="title">SIGN IN</h1>
                     <div class="decorative-line"></div>
                     <p class="subtitle">Enter your credentials to access your account.</p>

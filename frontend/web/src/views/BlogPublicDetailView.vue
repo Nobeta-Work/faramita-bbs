@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, h, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import Vditor from 'vditor'
-import 'vditor/dist/index.css'
+import { VrindPreview } from '@nobeta/vrind'
 import {
   NAvatar,
   NButton,
@@ -32,7 +31,6 @@ import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 import type { BlogPublicDetailVO } from '@/types'
 import { DateUtils } from '@/types/date'
-import { decorateMarkdownContent } from '@/utils/markdown'
 import { resolveAvatarUrl } from '@/utils/avatar'
 import { storeToRefs } from 'pinia'
 
@@ -64,6 +62,7 @@ const {
 
 const blogId = computed(() => String(route.params.id || ''))
 const content = computed(() => blog.value?.content || '')
+const assetBaseUrl = import.meta.env.BASE_URL.replace(/\/+$/, '')
 const authorAvatarUrl = computed(() => resolveAvatarUrl(blog.value?.author.avatar))
 const canEdit = computed(() => {
   const authorId = String(blog.value?.author.id ?? '')
@@ -73,33 +72,10 @@ const canEdit = computed(() => {
 
 const renderDefaultAvatar = () => h(NIcon, null, { default: () => h(Person) })
 
-async function renderPreview(): Promise<void> {
-  if (!previewRef.value) {
-    return
-  }
-
-  previewRef.value.innerHTML = ''
-  await Vditor.preview(previewRef.value, content.value, {
-    mode: isDark.value ? 'dark' : 'light',
-    theme: {
-      current: isDark.value ? 'dark' : 'light',
-    },
-    hljs: {
-      style: isDark.value ? 'dracula' : 'github',
-    },
-    anchor: 0,
-    after: () => {
-      nextTick(() => {
-        if (!previewRef.value) {
-          return
-        }
-
-        decorateMarkdownContent(previewRef.value)
-        extractToc(previewRef.value)
-        setupScrollSpy(previewRef.value)
-      })
-    },
-  } as any)
+function handlePreviewReady(): void {
+  if (!previewRef.value) return
+  extractToc(previewRef.value)
+  setupScrollSpy(previewRef.value)
 }
 
 async function fetchBlog(): Promise<void> {
@@ -109,8 +85,6 @@ async function fetchBlog(): Promise<void> {
     const result = await getPublicBlog(blogId.value)
     blog.value = result
     document.title = `${result.title} | Para BBS`
-    await nextTick()
-    await renderPreview()
   } catch (error) {
     loadError.value = true
     message.error('博客加载失败')
@@ -240,7 +214,7 @@ function getPrintableHtml(): string {
         display: none !important;
       }
 
-      .vditor-preview-container {
+      .vrind-preview-container {
         max-width: 860px !important;
       }
 
@@ -363,10 +337,6 @@ function scrollToTop(): void {
   target.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-watch(isDark, () => {
-  renderPreview()
-})
-
 onMounted(() => {
   window.scrollTo(0, 0)
   scrollTarget = resolveScrollTarget()
@@ -440,7 +410,6 @@ onUnmounted(() => {
 
         <main class="article-card">
           <header class="article-header">
-            <div class="article-kicker">Para BBS</div>
             <h1>{{ blog.title }}</h1>
 
             <div class="author-row">
@@ -469,7 +438,14 @@ onUnmounted(() => {
 
           </header>
 
-          <div v-if="content" ref="previewRef" class="vditor-preview-container"></div>
+          <div v-if="content" ref="previewRef" class="vrind-preview-container">
+            <VrindPreview
+              :content="content"
+              :is-dark="isDark"
+              :asset-base-url="assetBaseUrl"
+              @ready="handlePreviewReady"
+            />
+          </div>
           <n-empty v-else class="empty-content" description="No content yet">
             <template #icon>
               <n-icon :component="DocumentTextOutline" />
@@ -679,16 +655,6 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--line-color);
 }
 
-.article-kicker {
-  color: var(--accent-color);
-  font-family: 'Lato', sans-serif;
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-bottom: 18px;
-}
-
 .article-header h1 {
   max-width: 900px;
   margin: 0 auto 22px;
@@ -741,25 +707,16 @@ onUnmounted(() => {
   border-top: 1px solid var(--line-color);
 }
 
-.vditor-preview-container {
+.vrind-preview-container {
   max-width: 860px;
   margin: 0 auto;
 }
 
-:deep(.vditor-reset) {
-  color: var(--text-primary) !important;
-  font-family: 'Lato', sans-serif !important;
-  font-size: 1.05rem !important;
-  line-height: 1.78 !important;
-}
-
-:deep(.vditor-reset h1),
-:deep(.vditor-reset h2),
-:deep(.vditor-reset h3),
-:deep(.vditor-reset h4),
-:deep(.vditor-reset h5),
-:deep(.vditor-reset h6) {
-  scroll-margin-top: 112px;
+.vrind-preview-container :deep(.md-preview),
+.vrind-preview-container :deep(.md-preview *),
+.vrind-preview-container :deep(.vditor-reset),
+.vrind-preview-container :deep(.vditor-reset *) {
+  font-family: var(--site-font-family);
 }
 
 .empty-content {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import { Search, ArrowForwardOutline } from '@vicons/ionicons5'
@@ -41,18 +41,10 @@ const fetchRecentBlogs = async () => {
 }
 
 onMounted(() => {
-  // Hide scrollbar on body for index page
-  document.body.style.overflow = 'hidden'
-  
   setTimeout(() => {
     showContent.value = true
   }, 100)
   fetchRecentBlogs()
-})
-
-onUnmounted(() => {
-  // Restore scrollbar
-  document.body.style.overflow = ''
 })
 </script>
 
@@ -155,15 +147,14 @@ onUnmounted(() => {
 }
 
 .index-page {
-  height: 100vh;
-  width: 100vw;
+  min-height: calc(100vh - 70px);
+  min-height: calc(100dvh - 70px);
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: fixed;
-  top: 0;
-  left: 0;
-  overflow: hidden;
+  position: relative;
+  overflow-x: hidden;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: 'Lato', sans-serif;
@@ -192,12 +183,12 @@ onUnmounted(() => {
   z-index: 10;
   width: 100%;
   max-width: 1200px;
-  padding: 0 40px;
+  min-height: calc(100dvh - 70px);
+  padding: 30px 40px 60px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* justify-content: center; */
-  height: 100%;
 }
 
 .hero-section {
@@ -230,16 +221,22 @@ onUnmounted(() => {
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
   line-height: 1;
 }
 
 .logo-text {
   font-family: 'Agbalumo', serif;
-  font-size: 8rem;
+  font-size: clamp(4rem, 10vw, 8rem);
   font-weight: 400;
   margin: 0;
   color: var(--text-primary);
   letter-spacing: -2px;
+  white-space: nowrap;
   text-shadow: 0 10px 30px rgba(0,0,0,0.05);
 }
 
@@ -250,7 +247,7 @@ html.dark .logo-text {
 .logo-text.italic {
   font-style: italic;
   color: var(--accent-color);
-  transform: translateX(30px);
+  transform: translateX(clamp(0px, 2vw, 30px));
   margin-top: -10px;
 }
 
@@ -279,6 +276,7 @@ html.dark .logo-text {
 .search-container {
   width: 100%;
   max-width: 600px;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(0, 0, 0, 0.1);
@@ -309,6 +307,7 @@ html.dark .search-container:focus-within {
   display: flex;
   align-items: center;
   width: 100%;
+  min-width: 0;
 }
 
 .search-icon {
@@ -324,6 +323,9 @@ html.dark .search-container:focus-within {
 
 .hero-input {
   flex: 1;
+  width: 0;
+  min-width: 0;
+  box-sizing: border-box;
   background: transparent;
   border: none;
   outline: none;
@@ -341,6 +343,9 @@ html.dark .search-container:focus-within {
 }
 
 .explore-btn {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  white-space: nowrap;
   background: var(--text-primary);
   border: none;
   display: flex;
@@ -479,20 +484,42 @@ html.dark .recent-card:hover {
 }
 
 @media (max-width: 768px) {
+  .index-page {
+    align-items: flex-start;
+  }
+
   .content-wrapper {
-    padding: 0 20px;
+    min-height: 0;
+    padding: 0 20px 48px;
+  }
+
+  .hero-section {
+    margin-top: 1.5rem;
+  }
+
+  .meta-line {
+    gap: 10px;
+    margin-bottom: 18px;
+    font-size: 0.68rem;
+    letter-spacing: 3px;
   }
 
   .logo-text {
-    font-size: 5rem;
+    font-size: clamp(3rem, 10vw, 5rem);
+    letter-spacing: -3px;
   }
   
   .logo-text.italic {
-    transform: translateX(15px);
+    transform: none;
+    margin-top: -6px;
   }
   
   .subtitle {
     font-size: 1.2rem;
+  }
+
+  .subtitle-wrapper {
+    margin-bottom: 28px;
   }
   
   .search-container {
@@ -505,16 +532,24 @@ html.dark .recent-card:hover {
   }
   
   .hero-input {
-    padding: 10px 15px;
+    padding: 10px 12px;
+    font-size: 1rem;
   }
   
   .explore-btn {
-    padding: 10px 20px;
+    gap: 4px;
+    padding: 10px 12px;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
   }
 
   .recent-grid {
     grid-template-columns: 1fr;
     gap: 15px;
+  }
+
+  .recent-section {
+    margin-top: 34px;
   }
   
   .recent-card:nth-child(2) {

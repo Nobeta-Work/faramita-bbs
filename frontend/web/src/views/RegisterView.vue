@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router';
 import { useMessage, type FormInst, type FormRules, NForm, NFormItem, NInput, NIcon, NRadioGroup, NRadio } from 'naive-ui';
 import { PersonOutline, LockClosedOutline, FlagOutline, GridOutline, ArrowForwardOutline } from '@vicons/ionicons5';
 import { register } from '@/api/user';
-import ParaLogo from '@/assets/images/logo/ParaBBSLogo.png';
 
 // Fonts
 const fontLink = document.createElement('link')
@@ -27,9 +26,26 @@ const registerForm = reactive({
 })
 
 const rules: FormRules = {
-    nickname: { required: true, message: 'Nickname is required', trigger: 'blur' },
-    username: { required: true, message: 'Username is required', trigger: 'blur' },
-    password: { required: true, message: 'Password is required', trigger: 'blur' },
+    nickname: [
+        { required: true, message: 'Nickname is required', trigger: 'blur' },
+        { min: 1, max: 10, message: 'Nickname must be 1–10 characters', trigger: 'blur' }
+    ],
+    username: [
+        { required: true, message: 'Username is required', trigger: 'blur' },
+        {
+            pattern: /^[a-zA-Z0-9!@#._-]{4,20}$/,
+            message: 'Use 4–20 letters, numbers, or ! @ # . _ -',
+            trigger: ['blur', 'input']
+        }
+    ],
+    password: [
+        { required: true, message: 'Password is required', trigger: 'blur' },
+        {
+            pattern: /^[a-zA-Z0-9!@#._-]{4,20}$/,
+            message: 'Use 4–20 letters, numbers, or ! @ # . _ -',
+            trigger: ['blur', 'input']
+        }
+    ],
     password2: {
         required: true,
         validator: (_, value) => {
@@ -37,8 +53,20 @@ const rules: FormRules = {
             if (value !== registerForm.password) return new Error('Passwords do not match')
             return true
         },
-        trigger: 'blur'
-    }
+        trigger: ['blur', 'input']
+    },
+    sex: {
+        required: true,
+        type: 'number',
+        min: 0,
+        max: 2,
+        message: 'Please choose an identity',
+        trigger: 'change'
+    },
+    race: [
+        { required: true, message: 'Race is required', trigger: 'blur' },
+        { min: 1, max: 10, message: 'Race must be 1–10 characters', trigger: 'blur' }
+    ]
 };
 
 const showForm = ref(false);
@@ -166,7 +194,7 @@ const handleRegister = () => {
         <div class="register-container animate-section" v-if="showForm">
             <div class="register-card animate-scale-in">
                 <div class="header-section">
-                    <img :src="ParaLogo" alt="Para BBS Logo" class="logo-image" />
+                    <img src="https://nobeta.cn/i/2026/08/20/eb0c6d.png" alt="Para BBS Logo" class="logo-image" />
                     <h1 class="title">JOIN US</h1>
                     <div class="decorative-line"></div>
                     <p class="subtitle">Create your persona to enter Para BBS.</p>
@@ -174,31 +202,46 @@ const handleRegister = () => {
                 
                 <n-form ref="formRef" :model="registerForm" :rules="rules" class="register-form" @keyup.enter="handleRegister">
                     <div class="fields-grid">
-                        <n-form-item label="NICKNAME" path="nickname">
-                            <n-input v-model:value="registerForm.nickname" placeholder="Your persona name" class="custom-input">
+                        <n-form-item path="nickname">
+                            <template #label>
+                                <span class="field-label"><span>NICKNAME</span><small>1–10 characters</small></span>
+                            </template>
+                            <n-input v-model:value="registerForm.nickname" maxlength="10" placeholder="Your persona name" class="custom-input">
                                 <template #prefix><n-icon :component="PersonOutline" /></template>
                             </n-input>
                         </n-form-item>
                         
-                        <n-form-item label="USERNAME" path="username">
-                            <n-input v-model:value="registerForm.username" placeholder="Your login ID" class="custom-input">
+                        <n-form-item path="username">
+                            <template #label>
+                                <span class="field-label"><span>USERNAME</span><small>4–20 · A–Z, 0–9, ! @ # . _ -</small></span>
+                            </template>
+                            <n-input v-model:value="registerForm.username" maxlength="20" placeholder="Your login ID" class="custom-input">
                                 <template #prefix><n-icon :component="GridOutline" /></template>
                             </n-input>
                         </n-form-item>
                         
-                        <n-form-item label="PASSWORD" path="password">
-                            <n-input type="password" show-password-on="click" v-model:value="registerForm.password" placeholder="Create password" class="custom-input">
+                        <n-form-item path="password">
+                            <template #label>
+                                <span class="field-label"><span>PASSWORD</span><small>4–20 · A–Z, 0–9, ! @ # . _ -</small></span>
+                            </template>
+                            <n-input type="password" show-password-on="click" v-model:value="registerForm.password" maxlength="20" placeholder="Create password" class="custom-input">
                                 <template #prefix><n-icon :component="LockClosedOutline" /></template>
                             </n-input>
                         </n-form-item>
                         
-                        <n-form-item label="CONFIRM PASSWORD" path="password2">
+                        <n-form-item path="password2">
+                            <template #label>
+                                <span class="field-label"><span>CONFIRM PASSWORD</span><small>Must match password</small></span>
+                            </template>
                             <n-input type="password" show-password-on="click" v-model:value="registerForm.password2" placeholder="Confirm password" class="custom-input">
                                 <template #prefix><n-icon :component="LockClosedOutline" /></template>
                             </n-input>
                         </n-form-item>
                         
-                        <n-form-item label="IDENTITY" path="sex" class="full-width">
+                        <n-form-item path="sex" class="full-width">
+                            <template #label>
+                                <span class="field-label"><span>IDENTITY</span><small>Choose one</small></span>
+                            </template>
                             <n-radio-group v-model:value="registerForm.sex" name="sex" class="custom-radio-group">
                                 <n-radio :value="1">MALE</n-radio>
                                 <n-radio :value="0">FEMALE</n-radio>
@@ -206,8 +249,11 @@ const handleRegister = () => {
                             </n-radio-group>
                         </n-form-item>
                         
-                        <n-form-item label="RACE" path="race" class="full-width">
-                            <n-input v-model:value="registerForm.race" placeholder="e.g. Human, Elf, Cyborg..." class="custom-input">
+                        <n-form-item path="race" class="full-width">
+                            <template #label>
+                                <span class="field-label"><span>RACE</span><small>1–10 characters</small></span>
+                            </template>
+                            <n-input v-model:value="registerForm.race" maxlength="10" placeholder="e.g. Human, Elf, Cyborg..." class="custom-input">
                                 <template #prefix><n-icon :component="FlagOutline" /></template>
                             </n-input>
                         </n-form-item>
@@ -352,6 +398,24 @@ const handleRegister = () => {
     letter-spacing: 2px;
     color: var(--text-tertiary);
     font-family: 'Lato', sans-serif;
+}
+
+.field-label {
+    display: flex;
+    width: 100%;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    line-height: 1.35;
+}
+
+.field-label small {
+    color: var(--text-tertiary);
+    font-size: 0.64rem;
+    font-weight: 400;
+    letter-spacing: 0.2px;
+    text-align: right;
+    text-transform: none;
 }
 
 .custom-input {

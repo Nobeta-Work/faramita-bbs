@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import Vditor from 'vditor'
-import 'vditor/dist/index.css'
+import { VrindEditor } from '@nobeta/vrind'
 import {
   NButton,
   NEmpty,
@@ -10,7 +9,6 @@ import {
   NFormItem,
   NIcon,
   NInput,
-  NModal,
   NSelect,
   NSpin,
   NSwitch,
@@ -24,6 +22,7 @@ import {
   ArrowUpOutline,
   CheckmarkCircleOutline,
   CloseCircleOutline,
+  EllipsisHorizontalOutline,
   FolderOpenOutline,
   PricetagOutline,
   SaveOutline,
@@ -37,7 +36,6 @@ import { useToc } from '@/composables/useToc'
 import { useThemeStore } from '@/stores/theme'
 import type { ApiId, BlogPrivateDetailVO, FolderTree, PublishStatus, TagBriefVO } from '@/types'
 import { ROOT_FOLDER_ID } from '@/types'
-import { decorateMarkdownContent } from '@/utils/markdown'
 import { storeToRefs } from 'pinia'
 
 interface SelectOption {
@@ -78,20 +76,15 @@ const dirty = ref(false)
 const autosaveEnabled = ref(false)
 const autosavePending = ref(false)
 const loadError = ref(false)
-const editorRef = ref<HTMLElement | null>(null)
-const editorSurfaceRef = ref<HTMLDivElement | null>(null)
-const vditor = ref<Vditor | null>(null)
-const showTableModal = ref(false)
-const hoverRows = ref(0)
-const hoverCols = ref(0)
 const tagOptions = ref<SelectOption[]>([])
 const folderTree = ref<FolderTree | null>(null)
-const editorCleanup = ref<(() => void) | null>(null)
 const showBackTop = ref(false)
-let tocTimer: number | undefined
+const mobileToolbarExpanded = ref(false)
 let autosaveTimer: number | undefined
+let tocTimer: number | undefined
 let contentInitialized = false
 let scrollTarget: HTMLElement | Window | null = null
+const editorRef = ref<HTMLElement | null>(null)
 
 const AUTOSAVE_DELAY = 60_000
 
@@ -104,14 +97,9 @@ const form = reactive({
   tagIds: [] as string[],
 })
 
-const tableHoverState = reactive({
-  visible: false,
-  left: 0,
-  top: 0,
-  cell: null as HTMLTableCellElement | null,
-})
+const assetBaseUrl = import.meta.env.BASE_URL.replace(/\/+$/, '')
+const editorCounter = Object.freeze({ enable: true, type: 'markdown' as const })
 
-const wordCount = computed(() => form.content.replace(/\s+/g, '').length)
 const saveStateText = computed(() => {
   if (saving.value) {
     return 'Saving'
@@ -180,23 +168,13 @@ async function loadPage(): Promise<void> {
     setFormFromBlog(blog)
     document.title = `${blog.title} | 编辑博客`
     await nextTick()
-    initEditor(form.content)
+    scheduleTocSync()
     await handleTagSearch('')
   } catch (error) {
     loadError.value = true
     message.error('编辑内容加载失败')
   } finally {
     loading.value = false
-  }
-}
-
-function destroyEditor(): void {
-  resetEditorToolbarPosition()
-  editorCleanup.value?.()
-  editorCleanup.value = null
-  if (vditor.value) {
-    vditor.value.destroy()
-    vditor.value = null
   }
 }
 
@@ -221,7 +199,7 @@ function scheduleAutosave(): void {
   }, AUTOSAVE_DELAY)
 }
 
-function getSaveSnapshot(content = vditor.value?.getValue() ?? form.content): string {
+function getSaveSnapshot(content = form.content): string {
   return JSON.stringify({
     title: form.title.trim(),
     summary: form.summary,
@@ -252,80 +230,14 @@ async function runAutosave(): Promise<void> {
   }
 }
 
-function initEditor(markdown: string): void {
-  if (!editorRef.value) {
-    return
+async function handleEditorUpload(file: File): Promise<string> {
+  try {
+    const result = await uploadImage(file)
+    return typeof result === 'string' ? result : result.data
+  } catch (error) {
+    message.error('图片上传失败')
+    throw error
   }
-
-  destroyEditor()
-  vditor.value = new Vditor(editorRef.value, {
-    height: 'auto',
-    mode: 'wysiwyg',
-    value: markdown,
-    theme: isDark.value ? 'dark' : 'classic',
-    toolbarConfig: {
-      pin: true,
-    },
-    cache: {
-      enable: false,
-    },
-    toolbar: [
-      'headings', 'bold', 'italic', 'strike', 'link', '|',
-      'list', 'ordered-list', 'check', 'quote', 'line', 'code', 'inline-code', '|',
-      'upload',
-      {
-        name: 'table-grid',
-        tip: 'Insert Table',
-        icon: '<svg viewBox="0 0 24 24"><path d="M3 3h18v18H3V3Zm2 2v4h4V5H5Zm6 0v4h8V5h-8ZM5 11v8h4v-8H5Zm6 0v8h8v-8h-8Z"/></svg>',
-        click: () => {
-          showTableModal.value = true
-        },
-      },
-      '|', 'undo', 'redo', '|', 'edit-mode', 'both', 'fullscreen',
-    ],
-    preview: {
-      mode: 'both',
-      theme: {
-        current: isDark.value ? 'dark' : 'light',
-      },
-      hljs: {
-        style: isDark.value ? 'dracula' : 'github',
-      },
-      parse: decorateMarkdownContent,
-    },
-    upload: {
-      accept: 'image/*',
-      multiple: false,
-      handler: async (files: File[]) => {
-        const file = files[0]
-        if (!file) {
-          return 'No file selected'
-        }
-        try {
-          const res = await uploadImage(file)
-          const url = typeof res === 'string' ? res : res.data
-          vditor.value?.insertValue(`![${file.name}](${url})`)
-          return ''
-        } catch (error) {
-          message.error('图片上传失败')
-          return 'Upload failed'
-        }
-      },
-    },
-    input: (value) => {
-      form.content = value
-      dirty.value = true
-      scheduleAutosave()
-      scheduleTocSync()
-    },
-    after: () => {
-      nextTick(() => {
-        bindEditorEnhancements()
-        scheduleTocSync()
-        syncEditorToolbarPosition()
-      })
-    },
-  })
 }
 
 function scheduleTocSync(): void {
@@ -337,176 +249,7 @@ function scheduleTocSync(): void {
 
     extractToc(editorRef.value)
     setupScrollSpy(editorRef.value)
-    decorateMarkdownContent(editorRef.value)
   }, 180)
-}
-
-function syncEditorContent(): void {
-  if (vditor.value) {
-    form.content = vditor.value.getValue()
-    dirty.value = true
-    scheduleAutosave()
-    scheduleTocSync()
-  }
-}
-
-function bindEditorEnhancements(): void {
-  const editor = editorRef.value
-  const surface = editorSurfaceRef.value
-  if (!editor || !surface) {
-    return
-  }
-
-  editorCleanup.value?.()
-
-  const keydown = (event: KeyboardEvent) => {
-    if (handleTabKey(event)) {
-      return
-    }
-    handlePairKey(event)
-  }
-  const mousemove = (event: MouseEvent) => {
-    updateTableHover(event)
-  }
-  const mouseleave = () => {
-    tableHoverState.visible = false
-    tableHoverState.cell = null
-  }
-  const click = (event: MouseEvent) => {
-    if ((event.target as HTMLElement | null)?.closest('.vditor-toolbar')) {
-      window.setTimeout(syncEditorToolbarPosition, 0)
-    }
-  }
-  const dblclick = (event: MouseEvent) => {
-    const heading = (event.target as HTMLElement | null)?.closest('h1, h2, h3, h4, h5, h6') as HTMLElement | null
-    if (heading && editor.contains(heading)) {
-      toggleHeadingFold(heading)
-    }
-  }
-
-  editor.addEventListener('keydown', keydown, true)
-  editor.addEventListener('click', click)
-  editor.addEventListener('dblclick', dblclick)
-  surface.addEventListener('mousemove', mousemove)
-  surface.addEventListener('mouseleave', mouseleave)
-
-  editorCleanup.value = () => {
-    editor.removeEventListener('keydown', keydown, true)
-    editor.removeEventListener('click', click)
-    editor.removeEventListener('dblclick', dblclick)
-    surface.removeEventListener('mousemove', mousemove)
-    surface.removeEventListener('mouseleave', mouseleave)
-  }
-}
-
-function handleTabKey(event: KeyboardEvent): boolean {
-  if (event.key !== 'Tab' || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) {
-    return false
-  }
-
-  const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0 || !editorRef.value?.contains(selection.anchorNode)) {
-    return false
-  }
-
-  event.preventDefault()
-  vditor.value?.insertValue('    ')
-  window.setTimeout(syncEditorContent, 0)
-  return true
-}
-
-function handlePairKey(event: KeyboardEvent): void {
-  if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) {
-    return
-  }
-
-  const pairs: Record<string, string> = {
-    '(': ')',
-    '[': ']',
-    '{': '}',
-    '`': '`',
-    '$': '$',
-  }
-  const closing = new Set(Object.values(pairs))
-  const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0 || !editorRef.value?.contains(selection.anchorNode)) {
-    return
-  }
-
-  const range = selection.getRangeAt(0)
-  if (closing.has(event.key) && shouldSkipClosingPair(event.key, range)) {
-    event.preventDefault()
-    moveRangePastNextCharacter(range)
-    selection.removeAllRanges()
-    selection.addRange(range)
-    return
-  }
-
-  const open = event.key
-  if (pairs[open]) {
-    event.preventDefault()
-    const selected = range.toString()
-    const text = `${open}${selected}${pairs[open]}`
-    range.deleteContents()
-    const node = document.createTextNode(text)
-    range.insertNode(node)
-    const nextRange = document.createRange()
-    const cursorOffset = selected ? text.length : 1
-    nextRange.setStart(node, cursorOffset)
-    nextRange.collapse(true)
-    selection.removeAllRanges()
-    selection.addRange(nextRange)
-    window.setTimeout(syncEditorContent, 0)
-    return
-  }
-
-  if (!closing.has(event.key) || !range.collapsed || range.startContainer.nodeType !== Node.TEXT_NODE) {
-    return
-  }
-
-  const text = range.startContainer.textContent || ''
-  if (text[range.startOffset] === event.key) {
-    event.preventDefault()
-    range.setStart(range.startContainer, range.startOffset + 1)
-    range.collapse(true)
-    selection.removeAllRanges()
-    selection.addRange(range)
-  }
-}
-
-function getNextTextCharacter(range: Range): string | null {
-  if (!range.collapsed) {
-    return null
-  }
-
-  if (range.startContainer.nodeType === Node.TEXT_NODE) {
-    return range.startContainer.textContent?.[range.startOffset] ?? null
-  }
-
-  const nextNode = range.startContainer.childNodes.item(range.startOffset)
-  if (nextNode?.nodeType === Node.TEXT_NODE) {
-    return nextNode.textContent?.[0] ?? null
-  }
-
-  return null
-}
-
-function shouldSkipClosingPair(key: string, range: Range): boolean {
-  return getNextTextCharacter(range) === key
-}
-
-function moveRangePastNextCharacter(range: Range): void {
-  if (range.startContainer.nodeType === Node.TEXT_NODE) {
-    range.setStart(range.startContainer, range.startOffset + 1)
-    range.collapse(true)
-    return
-  }
-
-  const nextNode = range.startContainer.childNodes.item(range.startOffset)
-  if (nextNode?.nodeType === Node.TEXT_NODE) {
-    range.setStart(nextNode, 1)
-    range.collapse(true)
-  }
 }
 
 function resolveScrollTarget(): HTMLElement | Window {
@@ -523,55 +266,8 @@ function updateBackTopVisibility(): void {
   showBackTop.value = getScrollTop() > 360
 }
 
-function getToolbarTopOffset(): number {
-  return window.matchMedia('(max-width: 720px)').matches ? 70 : 76
-}
-
-function resetEditorToolbarPosition(): void {
-  const toolbar = editorRef.value?.querySelector<HTMLElement>('.vditor-toolbar')
-  toolbar?.classList.remove('vditor-toolbar--page-fixed')
-  toolbar?.style.removeProperty('top')
-  toolbar?.style.removeProperty('left')
-  toolbar?.style.removeProperty('width')
-  editorSurfaceRef.value?.classList.remove('editor-card--toolbar-fixed')
-  editorSurfaceRef.value?.style.removeProperty('--editor-toolbar-height')
-}
-
-function syncEditorToolbarPosition(): void {
-  const surface = editorSurfaceRef.value
-  const editor = editorRef.value
-  const toolbar = editor?.querySelector<HTMLElement>('.vditor-toolbar')
-  if (!surface || !editor || !toolbar) {
-    resetEditorToolbarPosition()
-    return
-  }
-  if (editor.querySelector('.vditor--fullscreen')) {
-    resetEditorToolbarPosition()
-    return
-  }
-
-  const top = getToolbarTopOffset()
-  const editorRect = editor.getBoundingClientRect()
-  const surfaceRect = surface.getBoundingClientRect()
-  const toolbarHeight = toolbar.offsetHeight || 36
-  const shouldFix = editorRect.top <= top && surfaceRect.bottom > top + toolbarHeight + 24
-
-  if (!shouldFix) {
-    resetEditorToolbarPosition()
-    return
-  }
-
-  toolbar.classList.add('vditor-toolbar--page-fixed')
-  surface.classList.add('editor-card--toolbar-fixed')
-  surface.style.setProperty('--editor-toolbar-height', `${toolbarHeight}px`)
-  toolbar.style.top = `${top}px`
-  toolbar.style.left = `${editorRect.left}px`
-  toolbar.style.width = `${editorRect.width}px`
-}
-
 function updateScrollEffects(): void {
   updateBackTopVisibility()
-  syncEditorToolbarPosition()
 }
 
 function scrollToTop(): void {
@@ -579,113 +275,8 @@ function scrollToTop(): void {
   target.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-function updateTableHover(event: MouseEvent): void {
-  const surface = editorSurfaceRef.value
-  if (!surface) {
-    return
-  }
-
-  const target = event.target as HTMLElement | null
-  if (target?.closest('.table-action-popover')) {
-    return
-  }
-
-  const cell = target?.closest('td, th') as HTMLTableCellElement | null
-  if (!cell || !surface.contains(cell)) {
-    tableHoverState.visible = false
-    tableHoverState.cell = null
-    return
-  }
-
-  const cellRect = cell.getBoundingClientRect()
-  const surfaceRect = surface.getBoundingClientRect()
-  tableHoverState.visible = true
-  tableHoverState.cell = cell
-  tableHoverState.left = Math.min(surfaceRect.width - 120, Math.max(12, cellRect.right - surfaceRect.left - 92))
-  tableHoverState.top = Math.max(12, cellRect.top - surfaceRect.top - 42)
-}
-
-function insertTableColumn(): void {
-  const cell = tableHoverState.cell
-  const row = cell?.parentElement as HTMLTableRowElement | null
-  const table = cell?.closest('table')
-  if (!cell || !row || !table) {
-    return
-  }
-
-  const index = Array.from(row.children).indexOf(cell)
-  Array.from(table.rows).forEach((tableRow, rowIndex) => {
-    const targetCell = tableRow.cells[index]
-    targetCell?.insertAdjacentHTML('afterend', rowIndex === 0 ? '<th> </th>' : '<td> </td>')
-  })
-  syncEditorContent()
-}
-
-function insertTableRow(): void {
-  const cell = tableHoverState.cell
-  const row = cell?.parentElement as HTMLTableRowElement | null
-  if (!cell || !row) {
-    return
-  }
-
-  const rowHTML = Array.from({ length: row.children.length })
-    .map(() => (cell.tagName === 'TH' ? '<th> </th>' : '<td> </td>'))
-    .join('')
-  row.insertAdjacentHTML('afterend', `<tr>${rowHTML}</tr>`)
-  syncEditorContent()
-}
-
-function deleteTableColumn(): void {
-  const cell = tableHoverState.cell
-  const row = cell?.parentElement as HTMLTableRowElement | null
-  const table = cell?.closest('table')
-  if (!cell || !row || !table) {
-    return
-  }
-
-  const index = Array.from(row.children).indexOf(cell)
-  Array.from(table.rows).forEach((tableRow) => {
-    tableRow.cells[index]?.remove()
-  })
-  syncEditorContent()
-}
-
-function deleteTableRow(): void {
-  const row = tableHoverState.cell?.parentElement as HTMLTableRowElement | null
-  row?.remove()
-  syncEditorContent()
-}
-
-function toggleHeadingFold(heading: HTMLElement): void {
-  const level = Number(heading.tagName.substring(1))
-  const hidden = heading.dataset.folded !== 'true'
-  heading.dataset.folded = String(hidden)
-  heading.classList.toggle('heading-folded', hidden)
-
-  let sibling = heading.nextElementSibling as HTMLElement | null
-  while (sibling) {
-    if (/^H[1-6]$/.test(sibling.tagName) && Number(sibling.tagName.substring(1)) <= level) {
-      break
-    }
-
-    sibling.style.display = hidden ? 'none' : ''
-    sibling = sibling.nextElementSibling as HTMLElement | null
-  }
-}
-
-function insertCustomTable(rows: number, cols: number): void {
-  let markdown = '\n'
-  markdown += `| ${Array(cols).fill(' ').join(' | ')} |\n`
-  markdown += `| ${Array(cols).fill('---').join(' | ')} |\n`
-  for (let index = 1; index < rows; index += 1) {
-    markdown += `| ${Array(cols).fill(' ').join(' | ')} |\n`
-  }
-  markdown += '\n'
-  vditor.value?.insertValue(markdown)
-  showTableModal.value = false
-  hoverRows.value = 0
-  hoverCols.value = 0
-  window.setTimeout(syncEditorContent, 0)
+function toggleMobileToolbar(): void {
+  mobileToolbarExpanded.value = !mobileToolbarExpanded.value
 }
 
 async function handleTagSearch(keyword: string): Promise<void> {
@@ -741,7 +332,7 @@ async function handleSave(options: { silent?: boolean } = {}): Promise<boolean> 
   }
 
   saving.value = true
-  const content = vditor.value?.getValue() ?? form.content
+  const content = form.content
   const snapshot = getSaveSnapshot(content)
   try {
     const tagIds = await resolveTagIds()
@@ -791,17 +382,18 @@ function handleDelete(): void {
   })
 }
 
-watch(isDark, () => {
-  const current = vditor.value?.getValue() ?? form.content
-  nextTick(() => initEditor(current))
-})
-
 watch(form, () => {
   if (contentInitialized) {
     dirty.value = true
     scheduleAutosave()
   }
 }, { deep: true })
+
+watch(() => form.content, () => {
+  if (contentInitialized) {
+    scheduleTocSync()
+  }
+})
 
 watch(autosaveEnabled, () => {
   scheduleAutosave()
@@ -818,13 +410,12 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  window.clearTimeout(tocTimer)
   clearAutosaveTimer()
+  window.clearTimeout(tocTimer)
+  cleanupToc()
   scrollTarget?.removeEventListener('scroll', updateScrollEffects)
   window.removeEventListener('resize', updateScrollEffects)
   scrollTarget = null
-  cleanupToc()
-  destroyEditor()
 })
 </script>
 
@@ -865,103 +456,112 @@ onUnmounted(() => {
           </div>
         </header>
 
-        <section class="meta-panel">
-          <n-form label-placement="top" class="meta-form">
-            <n-form-item label="Title">
-              <n-input v-model:value="form.title" size="large" :maxlength="20" show-count class="custom-input" />
-            </n-form-item>
-            <n-form-item label="Summary">
-              <n-input
-                v-model:value="form.summary"
-                type="textarea"
-                :maxlength="200"
-                show-count
-                :autosize="{ minRows: 2, maxRows: 4 }"
-                class="custom-input"
-              />
-            </n-form-item>
-            <n-form-item label="Status">
-              <div class="switch-row">
-                <span>{{ form.isPublished === 1 ? 'Public' : 'Private' }}</span>
-                <n-switch v-model:value="form.isPublished" :checked-value="1" :unchecked-value="0" />
-              </div>
-            </n-form-item>
-            <n-form-item label="Folder">
-              <n-tree-select
-                v-model:value="form.folderId"
-                :options="folderOptions"
-                default-expand-all
-                class="custom-select"
-              >
-                <template #arrow>
-                  <n-icon :component="FolderOpenOutline" />
-                </template>
-              </n-tree-select>
-            </n-form-item>
-            <n-form-item label="Tags">
-              <n-select
-                v-model:value="form.tagIds"
-                :options="tagOptions"
-                multiple
-                filterable
-                tag
-                clearable
-                class="custom-select"
-                :on-create="createTagOption"
-                @search="handleTagSearch"
-              >
-                <template #arrow>
-                  <n-icon :component="PricetagOutline" />
-                </template>
-              </n-select>
-            </n-form-item>
-          </n-form>
-        </section>
-
         <div class="workbench">
-          <aside class="toc-panel">
-            <div class="toc-title">Contents</div>
-            <div v-if="tocItems.length" class="toc-list">
-              <button
-                v-for="item in visibleTocItems"
-                :key="item.id"
-                type="button"
-                class="toc-item"
-                :class="[`toc-level-${item.level}`, { 'toc-active': activeTocId === item.id }]"
-                @click="scrollToHeading(editorRef, item.id)"
-              >
-                <span>{{ item.text }}</span>
-                <span
-                  v-if="item.hasChildren"
-                  class="toc-toggle"
-                  @click="toggleTocExpand(item.id, $event)"
+          <aside class="metadata-column">
+            <section class="meta-panel">
+              <n-form label-placement="top" class="meta-form">
+                <n-form-item label="Title">
+                  <n-input v-model:value="form.title" size="large" :maxlength="20" show-count class="custom-input" />
+                </n-form-item>
+                <n-form-item label="Summary">
+                  <n-input
+                    v-model:value="form.summary"
+                    type="textarea"
+                    :maxlength="200"
+                    show-count
+                    :autosize="{ minRows: 2, maxRows: 4 }"
+                    class="custom-input"
+                  />
+                </n-form-item>
+                <n-form-item label="Status">
+                  <div class="switch-row">
+                    <span>{{ form.isPublished === 1 ? 'Public' : 'Private' }}</span>
+                    <n-switch v-model:value="form.isPublished" :checked-value="1" :unchecked-value="0" />
+                  </div>
+                </n-form-item>
+                <n-form-item label="Folder">
+                  <n-tree-select
+                    v-model:value="form.folderId"
+                    :options="folderOptions"
+                    default-expand-all
+                    class="custom-select"
+                  >
+                    <template #arrow>
+                      <n-icon :component="FolderOpenOutline" />
+                    </template>
+                  </n-tree-select>
+                </n-form-item>
+                <n-form-item label="Tags">
+                  <n-select
+                    v-model:value="form.tagIds"
+                    :options="tagOptions"
+                    multiple
+                    filterable
+                    tag
+                    clearable
+                    class="custom-select"
+                    :on-create="createTagOption"
+                    @search="handleTagSearch"
+                  >
+                    <template #arrow>
+                      <n-icon :component="PricetagOutline" />
+                    </template>
+                  </n-select>
+                </n-form-item>
+              </n-form>
+            </section>
+
+            <aside class="toc-panel">
+              <div class="toc-title">Contents</div>
+              <div v-if="tocItems.length" class="toc-list">
+                <button
+                  v-for="item in visibleTocItems"
+                  :key="item.id"
+                  type="button"
+                  class="toc-item"
+                  :class="[`toc-level-${item.level}`, { 'toc-active': activeTocId === item.id }]"
+                  @click="scrollToHeading(editorRef, item.id)"
                 >
-                  {{ expandedTocIds.has(item.id) ? '-' : '+' }}
-                </span>
-              </button>
-            </div>
-            <n-empty v-else size="small" description="No contents" />
+                  <span>{{ item.text }}</span>
+                  <span
+                    v-if="item.hasChildren"
+                    class="toc-toggle"
+                    @click="toggleTocExpand(item.id, $event)"
+                  >
+                    {{ expandedTocIds.has(item.id) ? '-' : '+' }}
+                  </span>
+                </button>
+              </div>
+              <n-empty v-else size="small" description="No contents" />
+            </aside>
           </aside>
 
-          <main ref="editorSurfaceRef" class="editor-card">
-            <div ref="editorRef" class="vditor-edit-container"></div>
-
-            <div class="editor-footer">
-              <div class="word-count">
-                {{ wordCount }} chars
-              </div>
-            </div>
-
+          <main class="editor-card">
             <div
-              v-if="tableHoverState.visible"
-              class="table-action-popover"
-              :style="{ left: `${tableHoverState.left}px`, top: `${tableHoverState.top}px` }"
+              ref="editorRef"
+              class="vrind-edit-container"
+              :class="{ 'mobile-toolbar-expanded': mobileToolbarExpanded }"
             >
-              <button type="button" @mousedown.prevent @click="insertTableColumn">+ Col</button>
-              <button type="button" @mousedown.prevent @click="insertTableRow">+ Row</button>
-              <button type="button" @mousedown.prevent @click="deleteTableColumn">- Col</button>
-              <button type="button" @mousedown.prevent @click="deleteTableRow">- Row</button>
+              <VrindEditor
+                v-model="form.content"
+                :is-dark="isDark"
+                :asset-base-url="assetBaseUrl"
+                :toolbar-offset="64"
+                :counter="editorCounter"
+                :upload-image="handleEditorUpload"
+              />
+              <button
+                class="mobile-toolbar-toggle"
+                type="button"
+                :aria-expanded="mobileToolbarExpanded"
+                aria-label="切换更多编辑工具"
+                @click="toggleMobileToolbar"
+              >
+                <n-icon :component="EllipsisHorizontalOutline" />
+                <span>{{ mobileToolbarExpanded ? '收起' : '更多' }}</span>
+              </button>
             </div>
+
           </main>
         </div>
       </div>
@@ -978,33 +578,6 @@ onUnmounted(() => {
       <n-icon :component="ArrowUpOutline" />
     </button>
 
-    <n-modal
-      v-model:show="showTableModal"
-      preset="card"
-      title="Insert Table"
-      style="width: 320px"
-      :bordered="false"
-      class="table-grid-modal"
-    >
-      <div class="table-grid-container">
-        <div class="table-grid-info">
-          {{ hoverRows > 0 ? `${hoverRows} x ${hoverCols}` : 'Select size' }}
-        </div>
-        <div class="table-grid-cells" @mouseleave="hoverRows = 0; hoverCols = 0">
-          <div v-for="row in 10" :key="row" class="grid-row">
-            <button
-              v-for="col in 10"
-              :key="col"
-              type="button"
-              class="grid-cell"
-              :class="{ active: row <= hoverRows && col <= hoverCols }"
-              @mouseenter="hoverRows = row; hoverCols = col"
-              @click="insertCustomTable(row, col)"
-            />
-          </div>
-        </div>
-      </div>
-    </n-modal>
   </div>
 </template>
 
@@ -1037,7 +610,7 @@ onUnmounted(() => {
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  font-family: 'Lato', sans-serif;
+  font-family: inherit;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -1062,7 +635,7 @@ onUnmounted(() => {
   padding: 0 12px;
   border: 1px solid var(--line-color);
   color: var(--text-secondary);
-  font-family: 'Lato', sans-serif;
+  font-family: inherit;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 1px;
@@ -1075,25 +648,23 @@ onUnmounted(() => {
 }
 
 .meta-panel,
-.editor-card,
-.toc-panel {
+.editor-card {
   border: 1px solid var(--line-color);
   background: var(--bg-primary);
 }
 
 .meta-panel {
-  padding: 22px 24px 4px;
-  margin-bottom: 22px;
+  padding: 20px;
 }
 
 .meta-form {
   display: grid;
-  grid-template-columns: minmax(280px, 2fr) minmax(260px, 1.2fr) minmax(140px, 0.6fr) minmax(210px, 1fr) minmax(240px, 1fr);
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 14px;
 }
 
 .meta-form :deep(.n-form-item-label) {
-  font-family: 'Lato', sans-serif;
+  font-family: inherit;
   color: var(--text-tertiary);
   font-size: 0.74rem;
   font-weight: 700;
@@ -1113,91 +684,43 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 12px;
   color: var(--text-primary);
-  font-family: 'Lato', sans-serif;
+  font-family: inherit;
 }
 
 .workbench {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
   gap: 22px;
   align-items: start;
 }
 
-.toc-panel {
+.metadata-column {
   position: sticky;
   top: 92px;
-  padding: 22px;
   max-height: calc(100vh - 120px);
   overflow: auto;
-}
-
-.toc-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.2rem;
-  font-weight: 700;
-  padding-bottom: 14px;
-  margin-bottom: 14px;
-  border-bottom: 1px solid var(--line-color);
-}
-
-.toc-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 18px;
 }
-
-.toc-item {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 0;
-  cursor: pointer;
-  text-align: left;
-  font-family: 'Lato', sans-serif;
-}
-
-.toc-item:hover,
-.toc-active {
-  color: var(--text-primary);
-  transform: translateX(4px);
-}
-
-.toc-active {
-  font-weight: 700;
-}
-
-.toc-toggle {
-  color: var(--accent-color);
-  flex: 0 0 auto;
-}
-
-.toc-level-2 { padding-left: 14px; }
-.toc-level-3 { padding-left: 28px; }
-.toc-level-4 { padding-left: 42px; }
-.toc-level-5 { padding-left: 56px; }
-.toc-level-6 { padding-left: 70px; }
 
 .editor-card {
   min-width: 0;
   position: relative;
-  padding: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
-.vditor-edit-container {
+.vrind-edit-container {
   min-height: 720px;
+  position: relative;
+  padding-bottom: 52px;
 }
 
-.editor-footer {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 12px;
-  margin-top: 12px;
-  border-top: 1px solid var(--line-color);
+.mobile-toolbar-toggle {
+  display: none;
 }
 
 .back-top-button {
@@ -1225,104 +748,6 @@ onUnmounted(() => {
   color: var(--accent-color);
 }
 
-.word-count {
-  padding: 7px 12px;
-  border: 1px solid var(--line-color);
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: 'Lato', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.table-action-popover {
-  position: absolute;
-  z-index: 90;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-  padding: 6px;
-  border: 1px solid var(--line-color);
-  background: var(--modal-bg);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
-}
-
-.table-action-popover button {
-  border: 1px solid var(--line-color);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  padding: 5px 8px;
-  cursor: pointer;
-  font-family: 'Lato', sans-serif;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.table-action-popover button:hover {
-  border-color: var(--accent-color);
-  color: var(--accent-color);
-}
-
-:deep(.vditor) {
-  border: 0 !important;
-  background: transparent !important;
-  min-height: 720px !important;
-}
-
-:deep(.vditor-toolbar) {
-  border-bottom: 1px solid var(--line-color) !important;
-  background: var(--bg-primary) !important;
-}
-
-:deep(.vditor-toolbar--pin) {
-  position: sticky !important;
-  top: 76px !important;
-  z-index: 220 !important;
-  background: var(--modal-bg) !important;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
-}
-
-:deep(.vditor-toolbar--page-fixed) {
-  position: fixed !important;
-  box-sizing: border-box;
-}
-
-.editor-card--toolbar-fixed :deep(.vditor-content) {
-  margin-top: var(--editor-toolbar-height, 36px);
-}
-
-:deep(.vditor-content) {
-  background: transparent !important;
-  min-height: 680px !important;
-  height: auto !important;
-  overflow: visible !important;
-}
-
-:deep(.vditor-ir),
-:deep(.vditor-sv),
-:deep(.vditor-wysiwyg) {
-  min-height: 680px !important;
-  height: auto !important;
-  overflow: visible !important;
-}
-
-:deep(.vditor-reset) {
-  color: var(--text-primary) !important;
-  font-family: 'Lato', sans-serif !important;
-  font-size: 1.02rem !important;
-  line-height: 1.68 !important;
-  min-height: 640px !important;
-}
-
-:deep(.heading-folded)::after {
-  content: ' ...';
-  color: var(--accent-color);
-}
-
 .load-error {
   min-height: 420px;
   display: flex;
@@ -1332,51 +757,13 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-.table-grid-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 10px 0;
-}
-
-.table-grid-info {
-  margin-bottom: 15px;
-  color: var(--text-secondary);
-  font-family: 'Lato', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.table-grid-cells {
-  border: 1px solid var(--line-color);
-  padding: 2px;
-}
-
-.grid-row {
-  display: flex;
-}
-
-.grid-cell {
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--line-color);
-  margin: 1px;
-  background: transparent;
-  cursor: pointer;
-}
-
-.grid-cell.active {
-  background: var(--text-primary);
-  border-color: var(--text-primary);
-}
-
 @media (max-width: 1180px) {
   .meta-form,
   .workbench {
     grid-template-columns: 1fr;
   }
 
-  .toc-panel {
+  .metadata-column {
     position: static;
     max-height: none;
   }
@@ -1393,14 +780,242 @@ onUnmounted(() => {
     justify-content: space-between;
   }
 
-  .meta-panel,
-  .editor-card,
+  .meta-panel {
+    padding: 16px;
+  }
+}
+
+.private-detail-page {
+  padding: 2rem 20px calc(6rem + 48px);
+  background:
+    radial-gradient(circle at 90% 8%, color-mix(in srgb, var(--accent-mint) 18%, transparent), transparent 24rem),
+    var(--bg-primary);
+}
+
+.text-link {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.meta-panel,
+.toc-panel {
+  border-color: var(--line-color);
+  border-radius: 22px;
+  background: var(--bg-primary);
+  box-shadow: 0 16px 34px color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+.toc-panel {
+  padding: 18px;
+}
+
+.toc-title {
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line-color);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.toc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.toc-item {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1.5;
+  text-align: left;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.toc-item:hover,
+.toc-item.toc-active {
+  color: var(--accent-color);
+  transform: translateX(4px);
+}
+
+.toc-item.toc-active {
+  font-weight: 700;
+}
+
+.toc-toggle {
+  flex: 0 0 auto;
+  color: var(--accent-color);
+}
+
+.toc-level-2 { padding-left: 14px; }
+.toc-level-3 { padding-left: 28px; }
+.toc-level-4 { padding-left: 42px; }
+.toc-level-5 { padding-left: 56px; }
+.toc-level-6 { padding-left: 70px; }
+
+.editor-card {
+  min-width: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.metadata-column {
+  font-family: inherit;
+}
+
+.editor-card :deep(.md-editor__footer) {
+  display: none;
+}
+
+.editor-card :deep(.md-editor),
+.editor-card :deep(.vditor),
+.editor-card :deep(.vditor-content),
+.editor-card :deep(.vditor-preview),
+.editor-card :deep(.vditor-preview__content),
+.editor-card :deep(.vditor-wysiwyg),
+.editor-card :deep(.vditor-ir),
+.editor-card :deep(.vditor-sv),
+.editor-card :deep(.vditor-reset) {
+  background-color: transparent;
+}
+
+.editor-card :deep(.vditor) {
+  --panel-background-color: transparent;
+  --toolbar-background-color: transparent;
+  --textarea-background-color: transparent;
+  --textarea-text-color: var(--text-primary);
+  --count-background-color: transparent;
+  --border-color: var(--line-color);
+  --second-color: var(--text-tertiary);
+  --toolbar-icon-color: var(--text-secondary);
+  --toolbar-icon-hover-color: var(--accent-color);
+  --blockquote-color: var(--text-secondary);
+  --ir-heading-color: var(--accent-color);
+  --ir-link-color: var(--accent-color);
+  --ir-bracket-color: var(--accent-color);
+  border-color: var(--line-color);
+  font-family: inherit;
+}
+
+.editor-card :deep(.md-editor),
+.editor-card :deep(.md-editor *),
+.editor-card :deep(.vditor-preview),
+.editor-card :deep(.vditor-preview *),
+.editor-card :deep(.vditor-reset),
+.editor-card :deep(.vditor-reset *) {
+  font-family: var(--site-font-family);
+}
+
+.editor-card :deep(.vditor-toolbar) {
+  position: fixed !important;
+  top: auto !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  z-index: 600 !important;
+  width: 100vw !important;
+  box-sizing: border-box;
+  border-top: 1px solid var(--line-color);
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  background: var(--modal-bg);
+  box-shadow: 0 -12px 28px color-mix(in srgb, var(--text-primary) 10%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.editor-card :deep(.vditor-content),
+.editor-card :deep(.vditor-wysiwyg),
+.editor-card :deep(.vditor-ir),
+.editor-card :deep(.vditor-sv) {
+  min-height: var(--vrind-editor-min-height, 720px);
+  overflow: visible;
+}
+
+.editor-card :deep(.vditor *),
+.editor-card :deep(.vditor-toolbar),
+.editor-card :deep(.vditor-counter) {
+  font-family: var(--site-font-family);
+}
+
+.editor-card :deep(.vditor-counter) {
+  border: 1px solid var(--line-color);
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+@media (max-width: 720px) {
+  .private-detail-page {
+    padding-inline: 12px;
+  }
+
   .toc-panel {
     padding: 16px;
   }
 
-  :deep(.vditor-toolbar--pin) {
-    top: 70px !important;
+  .editor-card :deep(.vditor-toolbar) {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    max-height: 38px;
+    overflow: hidden;
+    padding: 0 58px 0 4px;
+  }
+
+  .editor-card :deep(.vditor-toolbar > *) {
+    float: none;
+  }
+
+  .editor-card :deep(.vditor-toolbar__item) {
+    padding: 0 3px;
+  }
+
+  .editor-card :deep(.vditor-toolbar > :nth-child(n + 9)) {
+    display: none;
+  }
+
+  .mobile-toolbar-expanded :deep(.vditor-toolbar) {
+    max-height: 132px;
+    overflow-y: auto;
+  }
+
+  .mobile-toolbar-expanded :deep(.vditor-toolbar > :nth-child(n + 9)) {
+    display: block;
+  }
+
+  .mobile-toolbar-toggle {
+    position: fixed;
+    right: 8px;
+    bottom: 4px;
+    z-index: 601;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    min-height: 30px;
+    padding: 0 8px;
+    border: 1px solid var(--line-color);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .mobile-toolbar-toggle:active {
+    transform: translateY(1px);
   }
 }
 </style>

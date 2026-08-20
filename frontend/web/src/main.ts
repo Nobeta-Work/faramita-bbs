@@ -3,9 +3,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
-// Fonts
-import 'vfonts/Lato.css'
-import 'vfonts/FiraCode.css'
+import '@nobeta/vrind/style.css'
 import '@/styles/global.scss'
 
 const app = createApp(App)
