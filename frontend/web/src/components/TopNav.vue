@@ -14,6 +14,12 @@ const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
 
+// Fonts
+const fontLink = document.createElement('link')
+fontLink.href = 'https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe:wght@400&display=swap'
+fontLink.rel = 'stylesheet'
+document.head.appendChild(fontLink)
+
 const showMobileMenu = ref(false)
 const userAvatarUrl = computed(() => resolveAvatarUrl(userStore.userInfo?.avatar))
 
@@ -169,10 +175,10 @@ function handleUserSelect(key: string) {
   max-width: 95%;
   width: 1200px;
   margin: 0 auto;
+  font-family: 'ZCOOL KuaiLe', sans-serif;
 }
 
 .logo-text {
-  font-size: 1.5rem;
   font-weight: bold;
   background: linear-gradient(120deg, #bd34fe 30%, #41d1ff);
   -webkit-background-clip: text;

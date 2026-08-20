@@ -126,7 +126,6 @@ onMounted(() => {
         <h1 class="hero-title">
           The <span class="highlight">Chronicles</span>
         </h1>
-        <p class="hero-subtitle">Explore thoughts, stories, and ideas.</p>
         
         <div class="search-bar-wrapper">
           <n-input 
@@ -312,14 +311,6 @@ onMounted(() => {
   color: var(--accent-color);
 }
 
-.hero-subtitle {
-  font-family: 'Lato', sans-serif;
-  font-size: 1.2rem;
-  color: var(--text-secondary);
-  margin-bottom: 40px;
-  letter-spacing: 1px;
-}
-
 .search-bar-wrapper {
   display: flex;
   gap: 0;
@@ -386,7 +377,7 @@ onMounted(() => {
   justify-content: space-between;
   width: 100%;
   max-width: 1200px;
-  margin: 0 auto;
+  margin: -4% auto;
   padding: 0 24px;
   border-bottom: 1px solid var(--line-color);
   padding-bottom: 20px;

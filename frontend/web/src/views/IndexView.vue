@@ -9,7 +9,7 @@ import ParticleBackground from '@/components/ParticleBackground.vue'
 
 // Fonts
 const fontLink = document.createElement('link')
-fontLink.href = 'https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap'
+fontLink.href = 'https://fonts.googleapis.com/css2?family=Agbalumo:wght@400&display=swap'
 fontLink.rel = 'stylesheet'
 document.head.appendChild(fontLink)
 
@@ -65,12 +65,12 @@ onUnmounted(() => {
         <div class="meta-line animate-fade-in" style="animation-delay: 0.1s">
           <span class="date">EST. 2025</span>
           <span class="divider">/</span>
-          <span class="issue">Version 0.3.0</span>
+          <span class="issue">Version 0.4.1</span>
         </div>
 
         <div class="title-wrapper animate-slide-in" style="animation-delay: 0.2s">
-          <h1 class="logo-text">Para</h1>
-          <h1 class="logo-text italic">BBS</h1>
+          <span class="logo-text">Para</span>
+          <span class="logo-text italic">BBS</span>
         </div>
         
         <div class="subtitle-wrapper animate-fade-in" style="animation-delay: 0.3s">
@@ -196,7 +196,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* justify-content: center; */
   height: 100%;
 }
 
@@ -206,7 +206,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 60px;
+  margin-top: 10%;
 }
 
 .meta-line {
@@ -228,13 +228,13 @@ onUnmounted(() => {
 .title-wrapper {
   margin-bottom: 20px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   line-height: 1;
 }
 
 .logo-text {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Agbalumo', serif;
   font-size: 8rem;
   font-weight: 400;
   margin: 0;
