@@ -1,15 +1,14 @@
-<p align="center">
-    <img src="https://nobeta.cn/gallery/files/2026/06/11/6b527c296c394582bf664c2d58a7f574.webp" alt="Para BBS" width="100%">
-</p>
+<div align="center">
+
+<img src="https://nobeta.cn/i/2026/08/20/eb0c6d.png" alt="Para BBS" width="50%">
 
 # 彼记 / Para BBS
 
-<p align="center">
-    <a href="https://nobeta.cn/bbs"><img src="https://nobeta.cn/gallery/files/2026/06/11/78a9d681b8354b3ba316343e4e3c6261.webp" width="30%"/></a>
-    <br>
-    <a href="https://nobeta.cn/bbs">Para BBS</a> | <a href="https://nobeta.cn/bbs/blog/40"><em>v0.3.1</em></a>
-</p>
+<a href="https://nobeta.cn/bbs"><img src="https://nobeta.cn/i/2026/08/21/721751.webp" width="30%"/></a>
+<br>
+<a href="https://nobeta.cn/bbs">Para BBS</a> | <a href="https://nobeta.cn/bbs/blog/2090582785885470720"><em>v0.4.1</em></a>
 
+</div>
 彼记（Para BBS）是一个基于 Java 后端开发学习链路，不断更新、迭代、维护的云笔记/论坛项目。
 
 以 "实现为先，迭代最佳"、"框架优先，复用轮子" 为代码开发标准，尽可能保持项目代码的质量。
@@ -39,6 +38,8 @@
 - `tag`：全局标签与检索
 - `like`：博客点赞、Redis Lua 原子切换、Redis Stream 异步落盘
 - `file`：头像与内容图片上传
+- `agent`: Agent MCP
+- `admin`: 后台管理系统
 
 ## 本地运行
 
@@ -56,7 +57,10 @@ cd backend/bbs
 
 *支持 Docker 容器化部署，详情参考 [Docker 部署](docs/DOCKER.md) 。*
 
----
+## 页面展示
+
+![Index 前端页面](https://raw.githubusercontent.com/Nobeta-Work/faramita-bbs-file/main/img/b66debed-51a2-4514-84e8-3eee5acdae2f.png)
+![Index 前端页面 (暗主题)](https://raw.githubusercontent.com/Nobeta-Work/faramita-bbs-file/main/img/b0c9c1aa-9814-4765-aea0-8b79ee9d824e.png)
 
 ## 贡献
 

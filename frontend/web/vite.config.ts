@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         // 代理所有/api开头的请求到后端/bbs/api
         [env.VITE_API_BASE_URL || '/api']: {
-          target: "http://localhost:8080",
+          target: "http://localhost:8081",
           changeOrigin: true,
         }
       },
