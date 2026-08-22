@@ -18,7 +18,7 @@
     <select id="selectAgentTokenPage" parameterType="cn.nobeta.bbs.module.agent.dto.AgentTokenPageQuery"
     resultType="cn.nobeta.bbs.module.agent.vo.AgentTokenVO">
         SELECT
-            <include refid="AgentColumns"></include>
+            token, name, expire
         FROM agent_token
         WHERE user_id = #{userId} AND is_deleted = 0
         ORDER BY

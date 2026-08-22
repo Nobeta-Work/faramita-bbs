@@ -3,6 +3,7 @@ package cn.nobeta.bbs.module.agent.controller;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,7 +39,7 @@ public class AgentController {
     @GetMapping("/page")
     public Result<PageResult<AgentTokenVO>> getAgentTokenPage(
         @AuthenticationPrincipal UserAuthInfo loginUser,
-        AgentTokenPageQuery query
+        @ModelAttribute AgentTokenPageQuery query
     ) {
         Long userId = loginUser.getUser().getId();
         query.setUserId(userId);
