@@ -314,6 +314,7 @@ public class FolderServiceImpl implements FolderService {
                     .summary(blog.getSummary())
                     .isPublished(blog.getIsPublished())
                     .likeCount(blog.getLikeCount())
+                    .commentsCount(blog.getCommentsCount())
                     .createTime(blog.getCreateTime())
                     .updateTime(blog.getUpdateTime())
                     .author(authorMap.get(blog.getAuthorId()))

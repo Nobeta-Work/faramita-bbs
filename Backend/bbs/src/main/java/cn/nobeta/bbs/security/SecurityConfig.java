@@ -71,6 +71,12 @@ public class SecurityConfig {
                     "/api/blogs/me/**"
                 ).hasAuthority(NameConstant.PERM_BLOG_MANAGE_SELF)
                 .requestMatchers(
+                    HttpMethod.GET, "/api/blogs/comments/*"
+                ).permitAll()
+                .requestMatchers(
+                    "/api/blogs/comments", "/api/blogs/comments/**"
+                ).hasAnyRole(NameConstant.USER_ROLE, NameConstant.ADMIN_ROLE)
+                .requestMatchers(
                     "/api/blogs/page", "/api/blogs/*"
                 ).permitAll()
                 // 6. 点赞接口

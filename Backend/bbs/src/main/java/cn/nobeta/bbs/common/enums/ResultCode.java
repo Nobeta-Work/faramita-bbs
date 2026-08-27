@@ -30,6 +30,8 @@ public enum ResultCode {
     
     // =========== 博客模块 ===========
     BLOG_TITLE_DUPLICATE(400, "同目录下存在同名博客"), 
+    COMMENT_NOT_FOUND(404, "评论不存在"),
+    COMMENT_PARENT_INVALID(400, "父评论信息异常"),
     
     // =========== 目录模块 ===========
     FOLDER_NOT_FOUND(404, "目录不存在"), 

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.nobeta.bbs.module.blog.mapper.CommentMapper">
+
+    <sql id="CommentColumns">
+        id,
+        blog_id,
+        user_id,
+        parent_id,
+        root_id,
+        content,
+        like_count,
+        status,
+        create_time,
+        update_time
+    </sql>
+
+    <insert id="insertComment"
+            parameterType="cn.nobeta.bbs.module.blog.entity.Comment">
+        INSERT INTO `comment` (
+            id,
+            blog_id,
+            user_id,
+            parent_id,
+            root_id,
+            content,
+            like_count,
+            status
+        ) VALUES (
+            #{id},
+            #{blogId},
+            #{userId},
+            #{parentId},
+            #{rootId},
+            #{content},
+            #{likeCount},
+            #{status}
+        )
+    </insert>
+
+    <select id="selectCommentById"
+            resultType="cn.nobeta.bbs.module.blog.entity.Comment">
+        SELECT
+            <include refid="CommentColumns" />
+        FROM `comment`
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectRootCommentPage"
+            resultType="cn.nobeta.bbs.module.blog.entity.Comment">
+        SELECT
+            <include refid="CommentColumns" />
+        FROM `comment`
+        WHERE blog_id = #{blogId}
+          AND parent_id = 0
+          AND status IN (1, -1)
+        ORDER BY create_time
+        <choose>
+            <when test="sortOrder != null and sortOrder.toLowerCase() == 'asc'">
+                ASC
+            </when>
+            <otherwise>
+                DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectRepliesByRootIds"
+            resultType="cn.nobeta.bbs.module.blog.entity.Comment">
+        SELECT
+            <include refid="CommentColumns" />
+        FROM `comment`
+        WHERE blog_id = #{blogId}
+          AND root_id IN
+            <foreach collection="rootIds" item="rootId" open="(" separator="," close=")">
+                #{rootId}
+            </foreach>
+          AND parent_id != 0
+          AND status IN (1, -1)
+        ORDER BY create_time ASC
+    </select>
+
+    <update id="softDeleteCommentByIdAndUserId">
+        UPDATE `comment`
+        SET status = -1
+        WHERE id = #{id}
+          AND user_id = #{userId}
+          AND status = 1
+    </update>
+
+    <delete id="deleteCommentsByBlogId">
+        DELETE FROM `comment`
+        WHERE blog_id = #{blogId}
+    </delete>
+
+</mapper>

@@ -31,6 +31,7 @@ import cn.nobeta.bbs.module.blog.dto.BlogSaveDTO;
 import cn.nobeta.bbs.module.blog.dto.BlogTagBriefRelations;
 import cn.nobeta.bbs.module.blog.entity.Blog;
 import cn.nobeta.bbs.module.blog.mapper.BlogMapper;
+import cn.nobeta.bbs.module.blog.mapper.CommentMapper;
 import cn.nobeta.bbs.module.blog.service.BlogService;
 import cn.nobeta.bbs.module.blog.vo.BlogPrivateDetailVO;
 import cn.nobeta.bbs.module.blog.vo.BlogPublicBriefVO;
@@ -50,6 +51,7 @@ import cn.nobeta.bbs.security.util.SecurityUtil;
 public class BlogServiceImpl implements BlogService{
     
     private final BlogMapper blogMapper;
+    private final CommentMapper commentMapper;
     private final UserMapper userMapper;
     private final TagMapper tagMapper;
     private final FolderMapper folderMapper;
@@ -111,6 +113,7 @@ public class BlogServiceImpl implements BlogService{
                     .summary(blog.getSummary())
                     .isPublished(blog.getIsPublished())
                     .likeCount(blog.getLikeCount())
+                    .commentsCount(blog.getCommentsCount())
                     .createTime(blog.getCreateTime())
                     .updateTime(blog.getUpdateTime())
                     .author(authorMap.get(blog.getAuthorId()))
@@ -234,6 +237,7 @@ public class BlogServiceImpl implements BlogService{
                 .author(author)
                 .tags(tags)
                 .likeCount(likeCount)
+                .commentsCount(blog.getCommentsCount())
                 .createTime(blog.getCreateTime())
                 .updateTime(blog.getUpdateTime())
                 .content(blog.getContent())
@@ -276,6 +280,7 @@ public class BlogServiceImpl implements BlogService{
                 .author(author)
                 .tags(tags)
                 .likeCount(blog.getLikeCount())
+                .commentsCount(blog.getCommentsCount())
                 .createTime(blog.getCreateTime())
                 .updateTime(blog.getUpdateTime())
                 .folderId(blog.getFolderId())
@@ -303,6 +308,7 @@ public class BlogServiceImpl implements BlogService{
         }
 
         // 3. 删除数据
+        commentMapper.deleteCommentsByBlogId(blogId);
         blogMapper.deleteBlogById(blogId);
 
         // 4. 删除 blog_tag 关系

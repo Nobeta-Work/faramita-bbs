@@ -2,23 +2,21 @@ package cn.nobeta.bbs.module.blog.entity;
 
 import java.time.LocalDateTime;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
 
 @Data
 @Builder
-@Schema(description = "Blog")
-public class Blog {
+public class Comment {
+
     private Long id;
-    private String title;
+    private Long blogId;
+    private Long userId;
+    private Long parentId;
+    private Long rootId;
     private String content;
-    private String summary;
-    private Long authorId;
-    private Long folderId;
-    private Integer isPublished;
     private Integer likeCount;
-    private Integer commentsCount;
+    private Integer status;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

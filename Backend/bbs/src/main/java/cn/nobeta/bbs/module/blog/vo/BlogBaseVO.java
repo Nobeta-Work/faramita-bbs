@@ -21,6 +21,7 @@ public abstract class BlogBaseVO {
     private String summary;
     private Integer isPublished;
     private Integer likeCount;
+    private Integer commentsCount;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 

@@ -11,6 +11,7 @@
         folder_id,
         is_published,
         like_count,
+        comments_count,
         create_time,
         update_time
     </sql>
@@ -126,6 +127,18 @@
         DELETE FROM blog
         WHERE id = #{blogId}
     </delete>
+
+    <update id="incrementCommentsCount">
+        UPDATE blog
+        SET comments_count = comments_count + 1
+        WHERE id = #{blogId}
+    </update>
+
+    <update id="decrementCommentsCount">
+        UPDATE blog
+        SET comments_count = GREATEST(comments_count - 1, 0)
+        WHERE id = #{blogId}
+    </update>
 
     <!-- batchResetBlogFolderByAuthorIdAndFolderIds --> 
 

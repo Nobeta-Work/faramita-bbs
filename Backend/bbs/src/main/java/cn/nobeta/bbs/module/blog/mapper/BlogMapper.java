@@ -51,6 +51,10 @@ public interface BlogMapper {
      */
     void deleteBlogById(@Param("blogId") Long blogId);
 
+    void incrementCommentsCount(@Param("blogId") Long blogId);
+
+    void decrementCommentsCount(@Param("blogId") Long blogId);
+
     /**
      * 重置博客目录到根目录
      * @param userId

@@ -25,10 +25,14 @@ import cn.nobeta.bbs.module.auth.dto.UserAuthInfo;
 import cn.nobeta.bbs.module.blog.dto.BlogEditDTO;
 import cn.nobeta.bbs.module.blog.dto.BlogPageQuery;
 import cn.nobeta.bbs.module.blog.dto.BlogSaveDTO;
+import cn.nobeta.bbs.module.blog.dto.CommentPageQuery;
+import cn.nobeta.bbs.module.blog.dto.CommentSaveDTO;
 import cn.nobeta.bbs.module.blog.service.BlogService;
+import cn.nobeta.bbs.module.blog.service.CommentService;
 import cn.nobeta.bbs.module.blog.vo.BlogPrivateDetailVO;
 import cn.nobeta.bbs.module.blog.vo.BlogPublicBriefVO;
 import cn.nobeta.bbs.module.blog.vo.BlogPublicDetailVO;
+import cn.nobeta.bbs.module.blog.vo.CommentVO;
 
 /**
  * 博客相关接口
@@ -42,6 +46,7 @@ import cn.nobeta.bbs.module.blog.vo.BlogPublicDetailVO;
 public class BlogController {
 
     private final BlogService blogService;
+    private final CommentService commentService;
 
     /**
      * 分页查询公开 Blog (简要)
@@ -154,6 +159,46 @@ public class BlogController {
 
         blogService.deleteBlogById(id);
 
+        return Result.success();
+    }
+
+    /**
+     * 分页查询公开博客评论。
+     */
+    @RateLimit(scene = Scene.READ)
+    @AuditLog(message = "请求获取博客评论", data = "{'blogId': #p0}")
+    @GetMapping("/comments/{blogId}")
+    public Result<PageResult<CommentVO>> getCommentPage(
+        @PathVariable Long blogId,
+        @Valid @ModelAttribute CommentPageQuery query
+    ) {
+        return Result.success(commentService.queryCommentPage(blogId, query));
+    }
+
+    /**
+     * 创建评论或回复。
+     */
+    @RateLimit(scene = Scene.WRITE)
+    @AuditLog(message = "创建博客评论", data = "{'blogId': #p1.blogId, 'parentId': #p1.parentId}")
+    @PostMapping("/comments")
+    public Result<Long> saveComment(
+        @AuthenticationPrincipal UserAuthInfo loginUser,
+        @Valid @RequestBody CommentSaveDTO dto
+    ) {
+        return Result.success(commentService.addComment(loginUser.getUser().getId(), dto));
+    }
+
+    /**
+     * 删除当前用户的评论。
+     */
+    @RateLimit(scene = Scene.WRITE)
+    @AuditLog(message = "删除博客评论", data = "{'commentId': #p1}")
+    @DeleteMapping("/comments/{id}")
+    public Result<Void> deleteComment(
+        @AuthenticationPrincipal UserAuthInfo loginUser,
+        @PathVariable Long id
+    ) {
+        commentService.deleteComment(loginUser.getUser().getId(), id);
         return Result.success();
     }
 }
