@@ -55,10 +55,29 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
+  # ==========================
+  # RabbitMQ | 消息队列
+  # ==========================
+  rabbitmq:
+    image: rabbitmq:4.2-management
+    container_name: parabbs-rabbitmq
+    hostname: parabbs-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+      RABBITMQ_DEFAULT_VHOST: /parabbs
+    ports:
+      - "5672:5672" # Broker 服务端口
+      - "15672:15672" # 面板端口
+    volumes:
+      -rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
 volumes:
   avatar_data:
   mysql_data:
   redis_data:
+  rabbitmq_data:
 
 # # 部署流程
 # 1. 构建前端 (在 frontend/web/ 目录) :
