@@ -295,7 +295,12 @@ html.dark .glass {
 
 .vrind-theme :is(.vditor-wysiwyg__preview, .vditor-ir__preview)[data-vrind-code-preview='true'] > code {
   color: inherit;
-  font-family: inherit;
+  font-family: mononoki, Consolas, 'Liberation Mono', Menlo, Courier, monospace, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI Symbol', 'Android Emoji', 'EmojiSymbols' !important;
+}
+
+.vrind-theme.vditor-reset pre > code,
+.vrind-theme :is(.vditor-reset, .vditor-preview__content, .vditor-wysiwyg, .vditor-ir) pre > code {
+  font-family: mononoki, Consolas, 'Liberation Mono', Menlo, Courier, monospace, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI Symbol', 'Android Emoji', 'EmojiSymbols' !important;
 }
 
 .vrind-theme.vditor-reset blockquote,

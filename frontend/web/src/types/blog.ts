@@ -10,6 +10,7 @@ export interface BlogBaseVO {
     summary: string | null
     isPublished: PublishStatus
     likeCount: number
+    commentsCount: number
     createTime: string
     updateTime: string
     author: UserBriefVO

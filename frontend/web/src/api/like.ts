@@ -7,3 +7,10 @@ export function toggleBlogLike(id: ApiId): Promise<number> {
         method: 'post',
     })
 }
+
+export function toggleCommentLike(id: ApiId): Promise<number> {
+    return request<number>({
+        url: `/like/comments/${id}`,
+        method: 'post',
+    })
+}

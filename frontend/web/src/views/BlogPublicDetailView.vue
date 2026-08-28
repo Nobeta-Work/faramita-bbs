@@ -7,6 +7,8 @@ import {
   NButton,
   NEmpty,
   NIcon,
+  NInput,
+  NPagination,
   NResult,
   NSpace,
   NSpin,
@@ -15,6 +17,7 @@ import {
 } from 'naive-ui'
 import {
   ArrowUpOutline,
+  ChatbubbleOutline,
   CreateOutline,
   DocumentTextOutline,
   DownloadOutline,
@@ -23,13 +26,16 @@ import {
   ListOutline,
   Person,
   PrintOutline,
+  ReturnUpBackOutline,
+  TrashOutline,
 } from '@vicons/ionicons5'
 import { getPublicBlog } from '@/api/blog'
-import { toggleBlogLike } from '@/api/like'
+import { createComment, deleteComment, getCommentPage } from '@/api/comment'
+import { toggleBlogLike, toggleCommentLike } from '@/api/like'
 import { useToc } from '@/composables/useToc'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
-import type { BlogPublicDetailVO } from '@/types'
+import type { BlogPublicDetailVO, CommentVO } from '@/types'
 import { DateUtils } from '@/types/date'
 import { resolveAvatarUrl } from '@/utils/avatar'
 import { storeToRefs } from 'pinia'
@@ -45,6 +51,14 @@ const blog = ref<BlogPublicDetailVO | null>(null)
 const loading = ref(false)
 const loadError = ref(false)
 const liking = ref(false)
+const comments = ref<CommentVO[]>([])
+const commentsLoading = ref(false)
+const commentPage = ref(1)
+const commentPages = ref(0)
+const commentContent = ref('')
+const commentSubmitting = ref(false)
+const replyTarget = ref<CommentVO | null>(null)
+const changingCommentIds = ref(new Set<string>())
 const previewRef = ref<HTMLDivElement | null>(null)
 const showBackTop = ref(false)
 let scrollTarget: HTMLElement | Window | null = null
@@ -85,12 +99,121 @@ async function fetchBlog(): Promise<void> {
     const result = await getPublicBlog(blogId.value)
     blog.value = result
     document.title = `${result.title} | Para BBS`
+    await fetchComments(1)
   } catch (error) {
     loadError.value = true
     message.error('博客加载失败')
   } finally {
     loading.value = false
   }
+}
+
+async function fetchComments(page = commentPage.value): Promise<void> {
+  commentsLoading.value = true
+  try {
+    const result = await getCommentPage(blogId.value, {
+      pageNum: page,
+      pageSize: 20,
+      sortOrder: 'desc',
+    })
+    comments.value = result.records
+    commentPage.value = result.pageNum
+    commentPages.value = result.pages
+  } catch (error) {
+    message.error('评论加载失败')
+  } finally {
+    commentsLoading.value = false
+  }
+}
+
+function requireLogin(): boolean {
+  if (userStore.isAuthenticated) {
+    return true
+  }
+  router.push({ path: '/login', query: { redirect: route.fullPath } })
+  return false
+}
+
+function startReply(comment: CommentVO): void {
+  if (!requireLogin()) return
+  replyTarget.value = comment
+}
+
+function cancelReply(): void {
+  replyTarget.value = null
+}
+
+async function submitComment(): Promise<void> {
+  if (!blog.value || commentSubmitting.value || !requireLogin()) return
+  const content = commentContent.value.trim()
+  if (!content) {
+    message.warning('请输入评论内容')
+    return
+  }
+
+  commentSubmitting.value = true
+  try {
+    const replying = Boolean(replyTarget.value)
+    await createComment({
+      blogId: blog.value.id,
+      parentId: replyTarget.value?.id ?? 0,
+      content,
+    })
+    blog.value.commentsCount += 1
+    commentContent.value = ''
+    replyTarget.value = null
+    await fetchComments(replying ? commentPage.value : 1)
+    message.success(replying ? '回复成功' : '评论成功')
+  } catch (error) {
+    message.error('评论发布失败')
+  } finally {
+    commentSubmitting.value = false
+  }
+}
+
+function canDeleteComment(comment: CommentVO): boolean {
+  return comment.status === 1
+    && String(comment.author.id) === String(userStore.userInfo?.id ?? '')
+}
+
+async function removeComment(comment: CommentVO): Promise<void> {
+  if (!window.confirm('确认删除这条评论？')) return
+  try {
+    await deleteComment(comment.id)
+    if (blog.value) {
+      blog.value.commentsCount = Math.max(0, blog.value.commentsCount - 1)
+    }
+    await fetchComments(commentPage.value)
+    message.success('评论已删除')
+  } catch (error) {
+    message.error('评论删除失败')
+  }
+}
+
+async function handleCommentLike(comment: CommentVO): Promise<void> {
+  if (!requireLogin()) return
+  const key = String(comment.id)
+  if (changingCommentIds.value.has(key)) return
+  changingCommentIds.value = new Set(changingCommentIds.value).add(key)
+  try {
+    comment.likeCount = await toggleCommentLike(comment.id)
+  } catch (error) {
+    message.error('评论点赞失败')
+  } finally {
+    const next = new Set(changingCommentIds.value)
+    next.delete(key)
+    changingCommentIds.value = next
+  }
+}
+
+function formatCommentTime(value: string): string {
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
 }
 
 async function handleLike(): Promise<void> {
@@ -472,6 +595,143 @@ onUnmounted(() => {
               Edit
             </n-button>
           </n-space>
+
+          <section class="comments-section">
+            <header class="comments-header">
+              <div>
+                <span class="comments-eyebrow">Discussion</span>
+                <h2>评论 <small>{{ blog.commentsCount || 0 }}</small></h2>
+              </div>
+            </header>
+
+            <div class="comment-composer">
+              <div v-if="replyTarget" class="reply-context">
+                <span>回复 {{ replyTarget.author.nickname }}</span>
+                <button type="button" @click="cancelReply">取消</button>
+              </div>
+              <n-input
+                v-model:value="commentContent"
+                type="textarea"
+                :maxlength="2000"
+                show-count
+                :autosize="{ minRows: 3, maxRows: 8 }"
+                :placeholder="replyTarget ? `回复 ${replyTarget.author.nickname}` : '写下你的评论…'"
+                @focus="requireLogin"
+              />
+              <div class="composer-actions">
+                <span>{{ userStore.isAuthenticated ? '保持友善，认真交流。' : '登录后参与讨论。' }}</span>
+                <n-button type="primary" :loading="commentSubmitting" @click="submitComment">
+                  {{ replyTarget ? '发布回复' : '发布评论' }}
+                </n-button>
+              </div>
+            </div>
+
+            <n-spin :show="commentsLoading">
+              <div v-if="comments.length" class="comment-list">
+                <article v-for="comment in comments" :key="comment.id" class="comment-thread">
+                  <div class="comment-row">
+                    <n-avatar
+                      round
+                      :size="38"
+                      :src="resolveAvatarUrl(comment.author.avatar)"
+                      :render-icon="renderDefaultAvatar"
+                    />
+                    <div class="comment-body">
+                      <div class="comment-meta">
+                        <strong>{{ comment.author.nickname }}</strong>
+                        <time>{{ formatCommentTime(comment.createTime) }}</time>
+                      </div>
+                      <p :class="{ 'deleted-comment': comment.status === -1 }">
+                        {{ comment.status === -1 ? '该评论已删除' : comment.content }}
+                      </p>
+                      <div v-if="comment.status === 1" class="comment-actions">
+                        <n-button
+                          text
+                          size="small"
+                          :loading="changingCommentIds.has(String(comment.id))"
+                          @click="handleCommentLike(comment)"
+                        >
+                          <template #icon><n-icon :component="HeartOutline" /></template>
+                          {{ comment.likeCount || 0 }}
+                        </n-button>
+                        <n-button text size="small" @click="startReply(comment)">
+                          <template #icon><n-icon :component="ReturnUpBackOutline" /></template>
+                          回复
+                        </n-button>
+                        <n-button
+                          v-if="canDeleteComment(comment)"
+                          text
+                          size="small"
+                          type="error"
+                          @click="removeComment(comment)"
+                        >
+                          <template #icon><n-icon :component="TrashOutline" /></template>
+                          删除
+                        </n-button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-if="comment.replies?.length" class="reply-list">
+                    <div v-for="reply in comment.replies" :key="reply.id" class="comment-row reply-row">
+                      <n-avatar
+                        round
+                        :size="32"
+                        :src="resolveAvatarUrl(reply.author.avatar)"
+                        :render-icon="renderDefaultAvatar"
+                      />
+                      <div class="comment-body">
+                        <div class="comment-meta">
+                          <strong>{{ reply.author.nickname }}</strong>
+                          <span v-if="reply.replyTo">回复 {{ reply.replyTo.nickname }}</span>
+                          <time>{{ formatCommentTime(reply.createTime) }}</time>
+                        </div>
+                        <p :class="{ 'deleted-comment': reply.status === -1 }">
+                          {{ reply.status === -1 ? '该回复已删除' : reply.content }}
+                        </p>
+                        <div v-if="reply.status === 1" class="comment-actions">
+                          <n-button
+                            text
+                            size="small"
+                            :loading="changingCommentIds.has(String(reply.id))"
+                            @click="handleCommentLike(reply)"
+                          >
+                            <template #icon><n-icon :component="HeartOutline" /></template>
+                            {{ reply.likeCount || 0 }}
+                          </n-button>
+                          <n-button text size="small" @click="startReply(reply)">
+                            <template #icon><n-icon :component="ReturnUpBackOutline" /></template>
+                            回复
+                          </n-button>
+                          <n-button
+                            v-if="canDeleteComment(reply)"
+                            text
+                            size="small"
+                            type="error"
+                            @click="removeComment(reply)"
+                          >
+                            <template #icon><n-icon :component="TrashOutline" /></template>
+                            删除
+                          </n-button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+              <n-empty v-else class="comments-empty" description="还没有评论，来写下第一条吧。">
+                <template #icon><n-icon :component="ChatbubbleOutline" /></template>
+              </n-empty>
+            </n-spin>
+
+            <n-pagination
+              v-if="commentPages > 1"
+              v-model:page="commentPage"
+              class="comments-pagination"
+              :page-count="commentPages"
+              @update:page="fetchComments"
+            />
+          </section>
         </main>
       </div>
     </n-spin>
@@ -705,6 +965,143 @@ onUnmounted(() => {
   margin: 36px auto 0;
   padding-top: 24px;
   border-top: 1px solid var(--line-color);
+}
+
+.comments-section {
+  max-width: 860px;
+  margin: 56px auto 0;
+  padding-top: 34px;
+  border-top: 1px solid var(--line-color);
+}
+
+.comments-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.comments-eyebrow {
+  color: var(--accent-color);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.comments-header h2 {
+  margin: 5px 0 0;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+}
+
+.comments-header small {
+  color: var(--text-tertiary);
+  font-size: 0.8em;
+}
+
+.comment-composer {
+  margin-bottom: 28px;
+  padding: 16px;
+  border: 1px solid var(--line-color);
+  background: color-mix(in srgb, var(--bg-primary) 88%, var(--accent-color) 12%);
+}
+
+.reply-context,
+.composer-actions,
+.comment-meta,
+.comment-actions {
+  display: flex;
+  align-items: center;
+}
+
+.reply-context {
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.reply-context button {
+  border: 0;
+  background: transparent;
+  color: var(--accent-color);
+  cursor: pointer;
+}
+
+.composer-actions {
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+  color: var(--text-tertiary);
+  font-size: 0.82rem;
+}
+
+.comment-list,
+.reply-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-thread {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line-color);
+}
+
+.comment-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 13px;
+}
+
+.comment-body {
+  min-width: 0;
+}
+
+.comment-meta {
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+}
+
+.comment-meta strong {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.comment-body p {
+  margin: 8px 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-body .deleted-comment {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.comment-actions {
+  gap: 14px;
+}
+
+.reply-list {
+  gap: 18px;
+  margin: 18px 0 0 50px;
+  padding: 18px;
+  border-left: 2px solid var(--line-color);
+  background: color-mix(in srgb, var(--bg-primary) 94%, var(--accent-color) 6%);
+}
+
+.comments-empty {
+  padding: 46px 0;
+}
+
+.comments-pagination {
+  justify-content: center;
+  margin-top: 24px;
 }
 
 .vrind-preview-container {

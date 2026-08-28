@@ -546,7 +546,6 @@ onUnmounted(() => {
                 v-model="form.content"
                 :is-dark="isDark"
                 :asset-base-url="assetBaseUrl"
-                :toolbar-offset="64"
                 :counter="editorCounter"
                 :upload-image="handleEditorUpload"
               />
@@ -716,7 +715,6 @@ onUnmounted(() => {
 .vrind-edit-container {
   min-height: 720px;
   position: relative;
-  padding-bottom: 52px;
 }
 
 .mobile-toolbar-toggle {
@@ -917,20 +915,17 @@ onUnmounted(() => {
 }
 
 .editor-card :deep(.vditor-toolbar) {
-  position: fixed !important;
-  top: auto !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  z-index: 600 !important;
-  width: 100vw !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 20 !important;
+  width: 100% !important;
   box-sizing: border-box;
-  border-top: 1px solid var(--line-color);
+  border-top: 0;
   border-right: 0;
-  border-bottom: 0;
+  border-bottom: 1px solid var(--line-color);
   border-left: 0;
   background: var(--modal-bg);
-  box-shadow: 0 -12px 28px color-mix(in srgb, var(--text-primary) 10%, transparent);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--text-primary) 8%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -995,10 +990,10 @@ onUnmounted(() => {
   }
 
   .mobile-toolbar-toggle {
-    position: fixed;
+    position: absolute;
     right: 8px;
-    bottom: 4px;
-    z-index: 601;
+    top: 4px;
+    z-index: 21;
     display: inline-flex;
     align-items: center;
     gap: 3px;

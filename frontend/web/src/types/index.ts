@@ -6,6 +6,9 @@ export * from './user'
 // 博客相关
 export * from './blog'
 
+// 评论相关
+export * from './comment'
+
 // api相关
 export * from './api'
 

@@ -5,7 +5,7 @@ import {
   NInput, NSelect, NPagination, NModal,
   NForm, NFormItem, NIcon, NEmpty, NSpin, useMessage, useDialog, NAvatar
 } from 'naive-ui'
-import { Search, Add, GridOutline, Person, HeartOutline } from '@vicons/ionicons5'
+import { Search, Add, ChatbubbleOutline, GridOutline, Person, HeartOutline } from '@vicons/ionicons5'
 import { createPrivateBlog, getPublicBlogPage } from '@/api/blog'
 import { resolveAvatarUrl } from '@/utils/avatar'
 import type { BlogPageQuery, BlogPublicBriefVO } from '@/types'
@@ -186,6 +186,10 @@ onMounted(() => {
                     <span class="like-count">
                       <n-icon :component="HeartOutline" />
                       {{ blog.likeCount || 0 }}
+                    </span>
+                    <span class="like-count">
+                      <n-icon :component="ChatbubbleOutline" />
+                      {{ blog.commentsCount || 0 }}
                     </span>
                   </div>
                   <p class="card-summary">{{ blog.summary || 'No summary available...' }}</p>
@@ -834,7 +838,7 @@ onMounted(() => {
 
 .card-main-line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 0.7rem;
   min-width: 0;
