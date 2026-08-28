@@ -93,3 +93,22 @@ CREATE TABLE IF NOT EXISTS `outbox_event` (
     KEY `idx_outbox_pending` (`status`, `next_retry_time`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='领域事件发件箱';
+
+CREATE TABLE IF NOT EXISTS `inbox_event` (
+    `consumer_group` VARCHAR(64) NOT NULL COMMENT '消费组',
+    `event_id` BIGINT NOT NULL COMMENT '事件主键',
+    `consumed_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '消费时间',
+    PRIMARY KEY (`consumer_group`, `event_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='领域事件收件箱';
+
+CREATE TABLE IF NOT EXISTS `like_comment` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `comment_id` BIGINT NOT NULL COMMENT '评论主键',
+    `user_id` BIGINT NOT NULL COMMENT '用户主键',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_comment_user` (`comment_id`, `user_id`),
+    KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='评论点赞记录表';

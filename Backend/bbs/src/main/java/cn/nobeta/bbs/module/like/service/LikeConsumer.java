@@ -1,4 +1,4 @@
-package cn.nobeta.bbs.module.blog.service;
+package cn.nobeta.bbs.module.like.service;
 
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
@@ -9,15 +9,12 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-public class BlogSearchConsumer {
-    
-    private final BlogSearchIndexer blogSearchIndexer;
+public class LikeConsumer {
 
-    @RabbitListener(
-        queues = RabbitTopologyConfig.BLOG_SEARCH_QUEUE,
-        concurrency = "1"
-    )
+    private final LikeService likeService;
+
+    @RabbitListener(queues = RabbitTopologyConfig.LIKE_PERSIST_QUEUE)
     public void consume(DomainEvent event) {
-        blogSearchIndexer.consume(event);
+        likeService.consumeLikeEvent(event);
     }
 }

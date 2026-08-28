@@ -171,6 +171,16 @@ CREATE TABLE `like_blog` (
     KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='博客点赞记录表';
 
+CREATE TABLE `like_comment` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `comment_id` BIGINT NOT NULL COMMENT '评论主键',
+    `user_id` BIGINT NOT NULL COMMENT '用户主键',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_comment_user` (`comment_id`, `user_id`),
+    KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论点赞记录表';
+
 CREATE TABLE `avatar_info` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
     `file_uuid` VARCHAR(255) NOT NULL COMMENT '存储文件唯一标识',

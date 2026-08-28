@@ -1,13 +1,12 @@
 package cn.nobeta.bbs.module.like.service;
 
-import java.util.List;
-
-import cn.nobeta.bbs.module.like.entity.LikeBlogChangelog;
+import cn.nobeta.bbs.common.event.DomainEvent;
 
 public interface LikeService {
 
     Integer toggleBlogLike(Long userId, Long blogId);
 
-    void flushLikeBlogChangelog(List<LikeBlogChangelog> logs);
+    Integer toggleCommentLike(Long userId, Long commentId);
 
+    void consumeLikeEvent(DomainEvent event);
 }

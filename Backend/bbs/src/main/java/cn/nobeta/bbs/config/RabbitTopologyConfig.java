@@ -42,7 +42,7 @@ public class RabbitTopologyConfig {
         LIKE_PERSIST_DLQ = "parabbs.like.persist.dlq.v1";
 
     public static final String
-        BLOG_LIKE_CHANGED_ROUTING_KEY = "like.blog.changed";
+        LIKE_CHANGED_ROUTING_PATTERN = "*.like.changed";
 
     @Bean
     TopicExchange domainExchange() {
@@ -127,7 +127,7 @@ public class RabbitTopologyConfig {
     ) {
         return BindingBuilder.bind(queue)
             .to(exchange)
-            .with(BLOG_LIKE_CHANGED_ROUTING_KEY);
+            .with(LIKE_CHANGED_ROUTING_PATTERN);
     }
 
     @Bean

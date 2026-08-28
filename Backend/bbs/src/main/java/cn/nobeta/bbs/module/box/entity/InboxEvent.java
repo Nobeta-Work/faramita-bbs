@@ -9,6 +9,6 @@ import lombok.Data;
 @Builder
 public class InboxEvent {
     private String consumerGroup;
-    private Long id;
+    private Long eventId;
     private LocalDateTime consumedTime;
 }

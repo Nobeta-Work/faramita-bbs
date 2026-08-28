@@ -40,11 +40,11 @@ public enum RedisKeys {
         86400L,
         "博客的点赞状态Set集合 like:blog:{blogId} : userId"
     ),
-    LIKE_CHANGELOG_BLOG(
-        "like:changelog:blog",
-        -1L,
-        "点赞变更消息List队列 like:change:blog : likeBlogChangelog"
-    ), 
+    LIKE_COMMENT(
+        "like:comment:",
+        86400L,
+        "评论的点赞状态 Set 集合 like:comment:{commentId} : userId"
+    ),
     LIKE_OUTBOX_EVENT(
         "like:outbox:event:",
         86400L,

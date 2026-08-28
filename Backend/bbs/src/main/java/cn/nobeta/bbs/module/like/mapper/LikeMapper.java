@@ -1,11 +1,10 @@
 package cn.nobeta.bbs.module.like.mapper;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-
-import cn.nobeta.bbs.module.like.entity.LikeBlogChangelog;
 
 @Mapper
 public interface LikeMapper {
@@ -17,22 +16,31 @@ public interface LikeMapper {
      */
     List<Long> selectLikerIdsByBlogId(@Param("blogId") Long blogId);
 
-    /**
-     * 根据日志批量新增点赞数据
-     * @param likeList
-     */
-    void batchInsertBlogLikeByChanges(@Param("logs") List<LikeBlogChangelog> logs);
+    List<Long> selectLikerIdsByCommentId(@Param("commentId") Long commentId);
 
-    /**
-     * 根据日志批量删除点赞数据
-     * @param likeList
-     */
-    void batchDeleteBlogLikeByChanges(@Param("logs") List<LikeBlogChangelog> logs);
+    int insertBlogLike(
+        @Param("blogId") Long blogId,
+        @Param("userId") Long userId,
+        @Param("createTime") LocalDateTime createTime
+    );
 
-    /**
-     * 刷新 ids 指定博客的点赞数
-     * @param blogIds
-     */
-    void refreshBlogLikeCountByBlogIds(@Param("blogIds") List<Long> blogIds);
+    int deleteBlogLike(
+        @Param("blogId") Long blogId,
+        @Param("userId") Long userId
+    );
 
+    void refreshBlogLikeCount(@Param("blogId") Long blogId);
+
+    int insertCommentLike(
+        @Param("commentId") Long commentId,
+        @Param("userId") Long userId,
+        @Param("createTime") LocalDateTime createTime
+    );
+
+    int deleteCommentLike(
+        @Param("commentId") Long commentId,
+        @Param("userId") Long userId
+    );
+
+    void refreshCommentLikeCount(@Param("commentId") Long commentId);
 }

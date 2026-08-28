@@ -42,4 +42,19 @@ public class LikeController {
         return Result.success(likeCount);
 
     }
+
+    /**
+     * 点赞评论 (toggle 设计)
+     */
+    @RateLimit(scene = Scene.WRITE)
+    @AuditLog(message = "切换评论点赞状态", data = "{'commentId': #p1}")
+    @PostMapping("/comments/{id}")
+    public Result<Integer> toggleCommentLike(
+        @AuthenticationPrincipal UserAuthInfo loginUser,
+        @PathVariable Long id
+    ) {
+        Long userId = loginUser.getUser().getId();
+        Integer likeCount = likeService.toggleCommentLike(userId, id);
+        return Result.success(likeCount);
+    }
 }

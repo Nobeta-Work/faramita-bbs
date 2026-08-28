@@ -35,6 +35,7 @@ import cn.nobeta.bbs.module.blog.dto.BlogTagBriefRelations;
 import cn.nobeta.bbs.module.blog.entity.Blog;
 import cn.nobeta.bbs.module.blog.mapper.BlogMapper;
 import cn.nobeta.bbs.module.blog.mapper.CommentMapper;
+import cn.nobeta.bbs.module.blog.service.BlogSearchService;
 import cn.nobeta.bbs.module.blog.service.BlogService;
 import cn.nobeta.bbs.module.blog.vo.BlogPrivateDetailVO;
 import cn.nobeta.bbs.module.blog.vo.BlogPublicBriefVO;
@@ -62,6 +63,7 @@ public class BlogServiceImpl implements BlogService{
     private final LikeMapper likeMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final OutboxDomainEventPublisher eventPublisher;
+    private final BlogSearchService blogSearchService;
 
     /**
      * 分页查询
@@ -70,6 +72,15 @@ public class BlogServiceImpl implements BlogService{
      */
     @Override
     public PageResult<BlogPublicBriefVO> queryPublicBlogPage(BlogPageQuery query) {
+        try {
+            return blogSearchService.queryPublicBlogPage(query);
+        } catch (RuntimeException e) {
+            log.warn("Elasticsearch 查询博客失败，降级到 MySQL", e);
+            return queryPublicBlogPageFromDatabase(query);
+        }
+    }
+
+    private PageResult<BlogPublicBriefVO> queryPublicBlogPageFromDatabase(BlogPageQuery query) {
         // 1.提取分页参数
         Integer pageNum = query.getPageNum();
         Integer pageSize = query.getPageSize();
