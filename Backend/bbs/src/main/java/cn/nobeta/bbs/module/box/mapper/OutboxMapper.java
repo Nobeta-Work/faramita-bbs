@@ -34,4 +34,9 @@ public interface OutboxMapper {
     void markFailed(
         @Param("id") Long id
     );
+
+    int deletePublishedBefore(
+        @Param("before") LocalDateTime before,
+        @Param("limit") int limit
+    );
 }

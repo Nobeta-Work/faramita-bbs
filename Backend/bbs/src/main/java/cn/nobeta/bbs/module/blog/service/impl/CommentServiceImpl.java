@@ -15,6 +15,8 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 
 import cn.nobeta.bbs.common.enums.ResultCode;
+import cn.nobeta.bbs.common.event.DomainEvent;
+import cn.nobeta.bbs.common.event.EventTypes;
 import cn.nobeta.bbs.common.exception.BusinessException;
 import cn.nobeta.bbs.common.result.PageResult;
 import cn.nobeta.bbs.common.util.SnowflakeUtil;
@@ -26,6 +28,7 @@ import cn.nobeta.bbs.module.blog.mapper.BlogMapper;
 import cn.nobeta.bbs.module.blog.mapper.CommentMapper;
 import cn.nobeta.bbs.module.blog.service.CommentService;
 import cn.nobeta.bbs.module.blog.vo.CommentVO;
+import cn.nobeta.bbs.module.box.OutboxDomainEventPublisher;
 import cn.nobeta.bbs.module.user.mapper.UserMapper;
 import cn.nobeta.bbs.module.user.vo.UserBriefVO;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +43,7 @@ public class CommentServiceImpl implements CommentService {
     private final CommentMapper commentMapper;
     private final BlogMapper blogMapper;
     private final UserMapper userMapper;
+    private final OutboxDomainEventPublisher eventPublisher;
 
     /**
      * 评论列表
@@ -125,6 +129,7 @@ public class CommentServiceImpl implements CommentService {
 
         commentMapper.insertComment(comment);
         blogMapper.incrementCommentsCount(dto.getBlogId());
+        publishBlogUpdated(dto.getBlogId(), "comment-created");
         return commentId;
     }
 
@@ -142,7 +147,21 @@ public class CommentServiceImpl implements CommentService {
         int affected = commentMapper.softDeleteCommentByIdAndUserId(commentId, userId);
         if (affected > 0) {
             blogMapper.decrementCommentsCount(comment.getBlogId());
+            publishBlogUpdated(comment.getBlogId(), "comment-deleted");
         }
+    }
+
+    private void publishBlogUpdated(Long blogId, String reason) {
+        eventPublisher.publish(
+            DomainEvent.builder()
+                .eventId(SnowflakeUtil.nextId())
+                .eventType(EventTypes.BLOG_UPDATED)
+                .aggregateType("blog")
+                .aggregateId(blogId)
+                .createTime(java.time.LocalDateTime.now())
+                .payload(Map.of("reason", reason))
+                .build()
+        );
     }
 
     private Blog requirePublishedBlog(Long blogId) {

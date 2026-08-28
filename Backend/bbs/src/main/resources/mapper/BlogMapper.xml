@@ -196,11 +196,65 @@
 
     <!-- selectSearchDocumentById --> 
 
-    <select id="selectSearchDocumentById">
-        SELECT ...
+    <resultMap id="BlogSearchDocumentMap"
+               type="cn.nobeta.bbs.module.blog.entity.BlogSearchDocument">
+        <id property="id" column="id" />
+        <result property="authorId" column="author_id" />
+        <result property="authorNickname" column="author_nickname" />
+        <result property="title" column="title" />
+        <result property="summary" column="summary" />
+        <result property="content" column="content" />
+        <result property="likeCount" column="like_count" />
+        <result property="commentsCount" column="comments_count" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <collection property="tagIds" ofType="java.lang.Long">
+            <result column="tag_id" />
+        </collection>
+        <collection property="tagNames" ofType="java.lang.String">
+            <result column="tag_name" />
+        </collection>
+    </resultMap>
+
+    <select id="selectSearchDocumentById"
+            resultMap="BlogSearchDocumentMap">
+        SELECT
+            b.id,
+            b.author_id,
+            u.nickname AS author_nickname,
+            b.title,
+            b.summary,
+            b.content,
+            b.like_count,
+            b.comments_count,
+            b.create_time,
+            b.update_time,
+            bt.tag_id,
+            t.name AS tag_name
         FROM blog b
         JOIN sys_user u ON u.id = b.author_id
+        LEFT JOIN blog_tag bt ON bt.blog_id = b.id
+        LEFT JOIN tag t ON t.id = bt.tag_id
         WHERE b.id = #{blogId}
             AND b.is_published = 1
     </select>
+
+    <select id="selectPublishedBlogIds" resultType="long">
+        SELECT id
+        FROM blog
+        WHERE is_published = 1
+        ORDER BY id ASC
+    </select>
+
+    <update id="reconcileCommentsCount">
+        UPDATE blog b
+        LEFT JOIN (
+            SELECT blog_id, COUNT(*) AS comments_count
+            FROM `comment`
+            WHERE status = 1
+            GROUP BY blog_id
+        ) c ON c.blog_id = b.id
+        SET b.comments_count = COALESCE(c.comments_count, 0)
+        WHERE b.comments_count != COALESCE(c.comments_count, 0)
+    </update>
 </mapper>

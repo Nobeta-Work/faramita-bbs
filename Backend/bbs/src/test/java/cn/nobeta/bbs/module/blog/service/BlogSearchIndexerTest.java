@@ -39,7 +39,7 @@ class BlogSearchIndexerTest {
     @Test
     void shouldSkipDuplicatedEvent() {
         DomainEvent event = event();
-        when(inboxMapper.insertIgnore(any(InboxEvent.class))).thenReturn(0);
+        when(inboxMapper.insertIfLatest(any(InboxEvent.class))).thenReturn(0);
 
         indexer.consume(event);
 
@@ -53,7 +53,7 @@ class BlogSearchIndexerTest {
         BlogSearchDocument document = BlogSearchDocument.builder()
             .id(event.getAggregateId())
             .build();
-        when(inboxMapper.insertIgnore(any(InboxEvent.class))).thenReturn(1);
+        when(inboxMapper.insertIfLatest(any(InboxEvent.class))).thenReturn(1);
         when(blogMapper.selectSearchDocumentById(event.getAggregateId()))
             .thenReturn(document);
 

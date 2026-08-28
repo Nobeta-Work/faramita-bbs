@@ -64,7 +64,7 @@ public class LikeServiceTest {
     @Test
     void whenEventAlreadyConsumed_skipBusinessWrite() {
         DomainEvent event = event("blog-like", true);
-        when(inboxMapper.insertIgnore(any(InboxEvent.class))).thenReturn(0);
+        when(inboxMapper.insertIfLatest(any(InboxEvent.class))).thenReturn(0);
 
         likeService.consumeLikeEvent(event);
 
@@ -75,7 +75,7 @@ public class LikeServiceTest {
     @Test
     void whenBlogLikeEvent_persistAndPublishBlogUpdate() {
         DomainEvent event = event("blog-like", true);
-        when(inboxMapper.insertIgnore(any(InboxEvent.class))).thenReturn(1);
+        when(inboxMapper.insertIfLatest(any(InboxEvent.class))).thenReturn(1);
 
         likeService.consumeLikeEvent(event);
 
@@ -92,7 +92,7 @@ public class LikeServiceTest {
     @Test
     void whenCommentUnlikeEvent_deleteAndRefreshCount() {
         DomainEvent event = event("comment-like", false);
-        when(inboxMapper.insertIgnore(any(InboxEvent.class))).thenReturn(1);
+        when(inboxMapper.insertIfLatest(any(InboxEvent.class))).thenReturn(1);
 
         likeService.consumeLikeEvent(event);
 

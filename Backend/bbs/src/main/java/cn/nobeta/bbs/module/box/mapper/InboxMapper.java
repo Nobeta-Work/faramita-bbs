@@ -7,5 +7,5 @@ import cn.nobeta.bbs.module.box.entity.InboxEvent;
 @Mapper
 public interface InboxMapper {
 
-    int insertIgnore(InboxEvent event);
+    int insertIfLatest(InboxEvent event);
 }

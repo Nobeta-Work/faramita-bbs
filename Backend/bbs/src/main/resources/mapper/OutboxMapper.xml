@@ -2,4 +2,100 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="cn.nobeta.bbs.module.box.mapper.OutboxMapper">
 
+    <insert id="insertEvent"
+            parameterType="cn.nobeta.bbs.module.box.entity.OutboxEvent">
+        INSERT INTO outbox_event (
+            id,
+            event_type,
+            aggregate_type,
+            aggregate_id,
+            payload,
+            status,
+            retry_count
+        ) VALUES (
+            #{id},
+            #{eventType},
+            #{aggregateType},
+            #{aggregateId},
+            #{payload},
+            #{status},
+            #{retryCount}
+        )
+    </insert>
+
+    <select id="selectPendingEvents"
+            resultType="cn.nobeta.bbs.module.box.entity.OutboxEvent">
+        SELECT
+            id,
+            event_type,
+            aggregate_type,
+            aggregate_id,
+            payload,
+            status,
+            retry_count,
+            next_retry_time,
+            create_time,
+            published_time
+        FROM outbox_event
+        WHERE (
+            status = 0
+            AND (next_retry_time IS NULL OR next_retry_time &lt;= NOW())
+        ) OR (
+            status = 1
+            AND next_retry_time &lt;= NOW()
+        )
+        ORDER BY create_time ASC
+        LIMIT #{limit}
+    </select>
+
+    <update id="claimEvent">
+        UPDATE outbox_event
+        SET status = 1,
+            next_retry_time = DATE_ADD(NOW(), INTERVAL #{waitTime} SECOND)
+        WHERE id = #{id}
+          AND (
+            (
+                status = 0
+                AND (next_retry_time IS NULL OR next_retry_time &lt;= NOW())
+            ) OR (
+                status = 1
+                AND next_retry_time &lt;= NOW()
+            )
+          )
+    </update>
+
+    <update id="markPublished">
+        UPDATE outbox_event
+        SET status = 2,
+            next_retry_time = NULL,
+            published_time = NOW()
+        WHERE id = #{id}
+          AND status = 1
+    </update>
+
+    <update id="markRetry">
+        UPDATE outbox_event
+        SET status = 0,
+            retry_count = retry_count + 1,
+            next_retry_time = #{nextRetryTime}
+        WHERE id = #{id}
+          AND status = 1
+    </update>
+
+    <update id="markFailed">
+        UPDATE outbox_event
+        SET status = 3,
+            retry_count = retry_count + 1,
+            next_retry_time = NULL
+        WHERE id = #{id}
+          AND status = 1
+    </update>
+
+    <delete id="deletePublishedBefore">
+        DELETE FROM outbox_event
+        WHERE status = 2
+          AND published_time &lt; #{before}
+        ORDER BY published_time ASC
+        LIMIT #{limit}
+    </delete>
 </mapper>

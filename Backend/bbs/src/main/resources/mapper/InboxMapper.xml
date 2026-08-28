@@ -2,16 +2,23 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="cn.nobeta.bbs.module.box.mapper.InboxMapper">
 
-    <insert id="insertIgnore"
+    <insert id="insertIfLatest"
             parameterType="cn.nobeta.bbs.module.box.entity.InboxEvent">
-        INSERT IGNORE INTO inbox_event (
+        INSERT INTO inbox_event (
             consumer_group,
             event_id,
             consumed_time
-        ) VALUES (
+        )
+        SELECT
             #{consumerGroup},
             #{eventId},
             #{consumedTime}
+        FROM DUAL
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM inbox_event
+            WHERE consumer_group = #{consumerGroup}
+              AND event_id &gt;= #{eventId}
         )
     </insert>
 </mapper>

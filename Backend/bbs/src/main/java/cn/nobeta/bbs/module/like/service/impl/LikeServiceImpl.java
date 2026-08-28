@@ -142,13 +142,17 @@ public class LikeServiceImpl implements LikeService {
     @Override
     @Transactional
     public void consumeLikeEvent(DomainEvent event) {
-        if (event == null || event.getEventId() == null) {
-            throw new IllegalArgumentException("点赞事件ID不能为空");
+        if (event == null || event.getEventId() == null
+            || event.getAggregateType() == null
+            || event.getAggregateId() == null) {
+            throw new IllegalArgumentException("点赞事件内容不完整");
         }
-        // 1. 插入 inbox 记录
-        int inserted = inboxMapper.insertIgnore(
+        // 1. 同一聚合只接受更大的事件 ID，兼顾幂等与乱序保护
+        int inserted = inboxMapper.insertIfLatest(
             InboxEvent.builder()
-                .consumerGroup(CONSUMER_GROUP)
+                .consumerGroup(CONSUMER_GROUP
+                    + ":" + event.getAggregateType()
+                    + ":" + event.getAggregateId())
                 .eventId(event.getEventId())
                 .consumedTime(LocalDateTime.now())
                 .build()
@@ -161,8 +165,7 @@ public class LikeServiceImpl implements LikeService {
             event.getPayload(),
             LikeChangedPayload.class
         );
-        if (event.getAggregateId() == null
-            || payload.getUserId() == null
+        if (payload.getUserId() == null
             || payload.getLiked() == null) {
             throw new IllegalArgumentException("点赞事件内容不完整");
         }

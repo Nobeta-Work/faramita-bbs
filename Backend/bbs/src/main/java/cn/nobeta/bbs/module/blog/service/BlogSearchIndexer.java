@@ -26,13 +26,16 @@ public class BlogSearchIndexer {
     @Transactional
     public void consume(DomainEvent event) {
         if (event == null || event.getEventId() == null
+            || event.getAggregateType() == null
             || event.getAggregateId() == null) {
             throw new IllegalArgumentException("博客搜索事件内容不完整");
         }
 
-        int inserted = inboxMapper.insertIgnore(
+        int inserted = inboxMapper.insertIfLatest(
             InboxEvent.builder()
-                .consumerGroup(CONSUMER_GROUP)
+                .consumerGroup(CONSUMER_GROUP
+                    + ":" + event.getAggregateType()
+                    + ":" + event.getAggregateId())
                 .eventId(event.getEventId())
                 .consumedTime(LocalDateTime.now())
                 .build()

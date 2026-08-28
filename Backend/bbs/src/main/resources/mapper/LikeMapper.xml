@@ -74,4 +74,26 @@
         )
         WHERE id = #{commentId}
     </update>
+
+    <update id="reconcileBlogLikeCount">
+        UPDATE blog b
+        LEFT JOIN (
+            SELECT blog_id, COUNT(*) AS like_count
+            FROM like_blog
+            GROUP BY blog_id
+        ) l ON l.blog_id = b.id
+        SET b.like_count = COALESCE(l.like_count, 0)
+        WHERE b.like_count != COALESCE(l.like_count, 0)
+    </update>
+
+    <update id="reconcileCommentLikeCount">
+        UPDATE `comment` c
+        LEFT JOIN (
+            SELECT comment_id, COUNT(*) AS like_count
+            FROM like_comment
+            GROUP BY comment_id
+        ) l ON l.comment_id = c.id
+        SET c.like_count = COALESCE(l.like_count, 0)
+        WHERE c.like_count != COALESCE(l.like_count, 0)
+    </update>
 </mapper>

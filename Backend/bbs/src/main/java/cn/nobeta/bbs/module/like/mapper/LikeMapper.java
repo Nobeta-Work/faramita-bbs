@@ -43,4 +43,8 @@ public interface LikeMapper {
     );
 
     void refreshCommentLikeCount(@Param("commentId") Long commentId);
+
+    void reconcileBlogLikeCount();
+
+    void reconcileCommentLikeCount();
 }

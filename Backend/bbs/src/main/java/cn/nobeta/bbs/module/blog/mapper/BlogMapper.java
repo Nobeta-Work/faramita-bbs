@@ -56,6 +56,10 @@ public interface BlogMapper {
 
     void decrementCommentsCount(@Param("blogId") Long blogId);
 
+    void reconcileCommentsCount();
+
+    List<Long> selectPublishedBlogIds();
+
     /**
      * 重置博客目录到根目录
      * @param userId
@@ -95,5 +99,5 @@ public interface BlogMapper {
      * @param blogId
      * @return
      */
-    BlogSearchDocument selectSearchDocumentById(Long blogId);    
+    BlogSearchDocument selectSearchDocumentById(@Param("blogId") Long blogId);
 }

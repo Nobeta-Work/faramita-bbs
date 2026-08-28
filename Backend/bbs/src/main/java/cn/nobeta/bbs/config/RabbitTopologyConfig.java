@@ -72,6 +72,7 @@ public class RabbitTopologyConfig {
     Queue blogSearchQueue() {
         return QueueBuilder
             .durable(BLOG_SEARCH_QUEUE)
+            .singleActiveConsumer()
             .deadLetterExchange(DEAD_LETTER_EXCHANGE)
             .deadLetterRoutingKey(BLOG_SEARCH_DLQ)
             .build();
@@ -88,6 +89,7 @@ public class RabbitTopologyConfig {
     Queue likePersistQueue() {
         return QueueBuilder
             .durable(LIKE_PERSIST_QUEUE)
+            .singleActiveConsumer()
             .deadLetterExchange(DEAD_LETTER_EXCHANGE)
             .deadLetterRoutingKey(LIKE_PERSIST_DLQ)
             .build();

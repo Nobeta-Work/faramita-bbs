@@ -1,6 +1,7 @@
 package cn.nobeta.bbs.module.blog.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,6 +18,7 @@ import cn.nobeta.bbs.module.blog.entity.Comment;
 import cn.nobeta.bbs.module.blog.mapper.BlogMapper;
 import cn.nobeta.bbs.module.blog.mapper.CommentMapper;
 import cn.nobeta.bbs.module.blog.service.impl.CommentServiceImpl;
+import cn.nobeta.bbs.module.box.OutboxDomainEventPublisher;
 import cn.nobeta.bbs.module.user.mapper.UserMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,6 +35,9 @@ public class CommentServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private OutboxDomainEventPublisher eventPublisher;
 
     @Test
     void whenReplyingToReply_useSameRootComment() {
@@ -61,6 +66,7 @@ public class CommentServiceTest {
         assertEquals(30L, captor.getValue().getParentId());
         assertEquals("reply", captor.getValue().getContent());
         verify(blogMapper).incrementCommentsCount(10L);
+        verify(eventPublisher).publish(any());
     }
 
     @Test
@@ -73,5 +79,6 @@ public class CommentServiceTest {
 
         verify(commentMapper).softDeleteCommentByIdAndUserId(30L, 1L);
         verify(blogMapper).decrementCommentsCount(10L);
+        verify(eventPublisher).publish(any());
     }
 }
