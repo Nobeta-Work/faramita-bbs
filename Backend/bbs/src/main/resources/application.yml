@@ -38,6 +38,36 @@ spring:
           max-idle: ${para.redis.lettuce.pool.max-idle} # 最大空闲连接
           min-idle: ${para.redis.lettuce.pool.min-idle} # 最小空闲连接
           max-wait: ${para.redis.lettuce.pool.max-wait} # 最大等待时间，超时报错
+  # Elastic Search
+  elasticsearch:
+    uris: ${para.elasticsearch.uris}
+    connection-timeout: 3s
+    socket-timeout: 5s
+  # RabbitMQ
+  rabbitmq:
+    host: ${para.rabbitmq.host}
+    port: ${para.rabbitmq.port}
+    username: ${para.rabbitmq.username}
+    password: ${para.rabbitmq.password}
+    virtual-host: ${para.rabbitmq.virtual-host}
+
+    publisher-confirm-type: correlated
+    publisher-returns: true
+
+    template:
+      mandatory: true
+
+    listener:
+      simple:
+        acknowledge-mode: auto
+        prefetch: 20
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 5
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 10s
 
 
 # MyBatis配置

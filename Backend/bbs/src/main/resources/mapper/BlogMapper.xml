@@ -193,4 +193,14 @@
                 #{blogId}
             </foreach>
     </update>
+
+    <!-- selectSearchDocumentById --> 
+
+    <select id="selectSearchDocumentById">
+        SELECT ...
+        FROM blog b
+        JOIN sys_user u ON u.id = b.author_id
+        WHERE b.id = #{blogId}
+            AND b.is_published = 1
+    </select>
 </mapper>

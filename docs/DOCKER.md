@@ -11,6 +11,7 @@ Para BBS 支持通过 Docker 容器化部署，提供三种编排模式，覆盖
 - [快速开始（全栈部署）](#快速开始全栈部署)
 - [场景一：仅部署后端](#场景一仅部署后端)
 - [场景二：部署前端 + 后端](#场景二部署前端--后端)
+- [场景三：只编排中间件](#场景三启动中间件)
 - [环境变量说明](#环境变量说明)
 - [注意事项](#注意事项)
 - [常用命令](#常用命令)
@@ -222,6 +223,28 @@ docker compose -f infra/docker/docker-compose.frontend.yml up -d
 启动后访问 `http://localhost/bbs`。
 
 ---
+## 场景三：启动中间件
+
+启动 Redis
+
+```bash
+docker compose -f infra/docker/docker-compose.yml up -d redis
+```
+
+访问面板 `http://localhost:15672`
+
+启动 Elasticsearch + Kibana
+
+```bash
+docker compose -f infra/docker/docker-compose.yml up -d elasticsearch kibana
+```
+
+启动 RabbitMQ
+
+```bash
+docker compose -f infra/docker/docker-compose.yml up -d rabbitmq
+```
+
 
 ## 环境变量说明
 

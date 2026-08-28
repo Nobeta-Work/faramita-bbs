@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import cn.nobeta.bbs.common.enums.RedisKeys;
 import cn.nobeta.bbs.common.enums.ResultCode;
 import cn.nobeta.bbs.common.exception.BusinessException;
+import cn.nobeta.bbs.common.util.SnowflakeUtil;
+import cn.nobeta.bbs.config.RabbitTopologyConfig;
 import cn.nobeta.bbs.config.RedisScriptConfig;
 import cn.nobeta.bbs.module.blog.entity.Blog;
 import cn.nobeta.bbs.module.blog.mapper.BlogMapper;
@@ -28,6 +30,7 @@ public class LikeServiceImpl implements LikeService {
     private final LikeMapper likeMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final BlogMapper blogMapper;
+    private final RedisScriptConfig redisScriptConfig;
 
     /**
      * 点赞博客 (toggle 设计)
@@ -61,15 +64,24 @@ public class LikeServiceImpl implements LikeService {
         }
 
         // 2. 缓存存在，读取用户是否点赞
-        String logKey = RedisKeys.LIKE_CHANGELOG_BLOG.getPrefix();
-        List<String> keys = List.of(key, logKey);
+        long eventId = SnowflakeUtil.nextId();
+        LocalDateTime createTime = LocalDateTime.now();
+        List<String> keys = List.of(
+            key,
+            RedisKeys.LIKE_OUTBOX_PENDING.getPrefix(),
+            RedisKeys.LIKE_OUTBOX_EVENT.getFullKey(eventId)
+        );
         Long count = stringRedisTemplate.execute(
-            RedisScriptConfig.likeToggleScript(),
+            redisScriptConfig.likeToggleScript(),
             keys,
             userId.toString(),
             blogId.toString(),
-            LocalDateTime.now().toString(),
-            RedisKeys.LIKE_BLOG.getDefaultTtl().toString()
+            createTime.toString(),
+            RedisKeys.LIKE_BLOG.getDefaultTtl().toString(),
+            Long.toString(eventId),
+            RabbitTopologyConfig.BLOG_LIKE_CHANGED_ROUTING_KEY,
+            "blog-like",
+            Long.toString(System.currentTimeMillis())
         );
 
         // 3. 返回当前点赞数量

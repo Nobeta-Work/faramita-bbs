@@ -1,6 +1,7 @@
 package cn.nobeta.bbs.module.blog.service.impl;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import cn.nobeta.bbs.common.enums.RedisKeys;
 import cn.nobeta.bbs.common.enums.ResultCode;
+import cn.nobeta.bbs.common.event.DomainEvent;
+import cn.nobeta.bbs.common.event.EventTypes;
 import cn.nobeta.bbs.common.exception.BusinessException;
 import cn.nobeta.bbs.common.result.PageResult;
 import cn.nobeta.bbs.common.util.SnowflakeUtil;
@@ -36,6 +39,7 @@ import cn.nobeta.bbs.module.blog.service.BlogService;
 import cn.nobeta.bbs.module.blog.vo.BlogPrivateDetailVO;
 import cn.nobeta.bbs.module.blog.vo.BlogPublicBriefVO;
 import cn.nobeta.bbs.module.blog.vo.BlogPublicDetailVO;
+import cn.nobeta.bbs.module.box.OutboxDomainEventPublisher;
 import cn.nobeta.bbs.module.folder.entity.Folder;
 import cn.nobeta.bbs.module.folder.mapper.FolderMapper;
 import cn.nobeta.bbs.module.like.mapper.LikeMapper;
@@ -57,6 +61,7 @@ public class BlogServiceImpl implements BlogService{
     private final FolderMapper folderMapper;
     private final LikeMapper likeMapper;
     private final StringRedisTemplate stringRedisTemplate;
+    private final OutboxDomainEventPublisher eventPublisher;
 
     /**
      * 分页查询
@@ -289,7 +294,7 @@ public class BlogServiceImpl implements BlogService{
     }
 
     /**
-     * 根据bloguid删除博客
+     * 根据blogid删除博客
      * @param blogId
      */
     @Override
@@ -313,6 +318,19 @@ public class BlogServiceImpl implements BlogService{
 
         // 4. 删除 blog_tag 关系
         tagMapper.deleteBlogTagRelationsByBlogId(blogId);
+
+        // 5. 变更消息记录
+        DomainEvent event = DomainEvent.builder()
+                .eventId(SnowflakeUtil.nextId())
+                .eventType(EventTypes.BLOG_DELETED)
+                .aggregateType("blog")
+                .aggregateId(blogId)
+                .payload(Map.of(
+                    "blogId", blogId
+                ))
+                .createTime(LocalDateTime.now())
+                .build();
+        eventPublisher.publish(event);
     }
 
     /**
@@ -352,12 +370,22 @@ public class BlogServiceImpl implements BlogService{
 
         tagMapper.deleteBlogTagRelationsByBlogId(blogId);
 
-        if (tagIds == null || tagIds.isEmpty()) {
-            return;
+        if (tagIds != null && !tagIds.isEmpty()) {
+            tagMapper.batchInsertBlogTagReliations(blogId, tagIds);
         }
 
-        
-        tagMapper.batchInsertBlogTagReliations(blogId, tagIds);
+        // 6. 变更消息记录
+        DomainEvent event = DomainEvent.builder()
+                .eventId(SnowflakeUtil.nextId())
+                .eventType(EventTypes.BLOG_UPDATED)
+                .aggregateType("blog")
+                .aggregateId(blogId)
+                .payload(Map.of(
+                    "blogId", blogId
+                ))
+                .createTime(LocalDateTime.now())
+                .build();
+        eventPublisher.publish(event);
     }
 
 

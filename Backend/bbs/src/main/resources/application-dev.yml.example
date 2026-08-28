@@ -33,6 +33,14 @@ para:
         max-idle: 8 # 最大空闲连接
         min-idle: 4 # 最小空闲连接
         max-wait: 1000ms # 最大等待时间，超时报错
+  elasticsearch:
+    uris: http://localhost:9200
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: parabbs
+    password: 123456
+    virtual-host: /parabbs
 
 springdoc:
   api-docs:

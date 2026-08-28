@@ -135,6 +135,13 @@ CREATE TABLE `outbox_event` (
     KEY `idx_outbox_pending` (`status`, `next_retry_time`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='领域事件发件箱';
 
+CREATE TABLE `inbox_event` (
+    `consumer_group` VARCHAR(64) NOT NULL COMMENT '消费组',
+    `event_id` BIGINT NOT NULL COMMENT '事件主键',
+    `consumed_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '消费时间',
+    PRIMARY KEY (`consumer_group`, `event_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='领域事件收件箱';
+
 CREATE TABLE `tag` (
     `id` BIGINT NOT NULL COMMENT '标签主键（应用层雪花 ID）',
     `name` VARCHAR(20) NOT NULL COMMENT '标签名',

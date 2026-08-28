@@ -29,7 +29,11 @@ public enum RedisKeys {
         604800L,
         "AgentToken 缓存 agent_token:{agent_token} userAuthInfo"
     ),
-    
+    RATE_LIMIT(
+        "rate_limit:",
+        3600L,
+        "限流桶Hash表 rate_limit:{userId/IP} {tokens:tokens} {last_time:last_time}"
+    ),
     /** =========== 点赞模块 =========== */
     LIKE_BLOG(
         "like:blog:",
@@ -38,13 +42,28 @@ public enum RedisKeys {
     ),
     LIKE_CHANGELOG_BLOG(
         "like:changelog:blog",
-        0L,
+        -1L,
         "点赞变更消息List队列 like:change:blog : likeBlogChangelog"
-    ), RATE_LIMIT(
-        "rate_limit:",
-        3600L,
-        "限流桶Hash表 rate_limit:{userId/IP} {tokens:tokens} {last_time:last_time}"
-    );
+    ), 
+    LIKE_OUTBOX_EVENT(
+        "like:outbox:event:",
+        86400L,
+        "点赞事件内容和状态 Hash 表 like:outbox:event:{eventId}"
+    ),
+    LIKE_OUTBOX_PENDING(
+        "like:outbox:pending",
+        -1L,
+        "点赞待发布事件 ZSet，member: eventId，score: 下次发布时间"
+    ),
+    LIKE_OUTBOX_FAILED(
+        "like:outbox:failed",
+        -1L,
+        "点赞发布失败事件 ZSet，member: eventId，score: 失败时间"
+    )
+    
+    
+    
+    ;
 
 
 

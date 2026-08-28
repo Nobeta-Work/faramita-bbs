@@ -26,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class RateLimitAspact {
 
     private final StringRedisTemplate redisTemplate;
+    private final RedisScriptConfig redisScriptConfig;
 
     @Around("@annotation(rateLimit)")
     public Object around(
@@ -61,7 +62,7 @@ public class RateLimitAspact {
 
         // 3. Lua 脚本
         Long result = redisTemplate.execute(
-            RedisScriptConfig.rateLimitScript(),
+            redisScriptConfig.rateLimitScript(),
             List.of(key),
             String.valueOf(capacity),
             String.valueOf(refill),

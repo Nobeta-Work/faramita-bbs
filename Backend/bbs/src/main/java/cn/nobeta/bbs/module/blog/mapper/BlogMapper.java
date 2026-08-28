@@ -12,6 +12,7 @@ import cn.nobeta.bbs.common.dto.PageQuery;
 import cn.nobeta.bbs.module.blog.dto.BlogEditDTO;
 import cn.nobeta.bbs.module.blog.dto.BlogPageQuery;
 import cn.nobeta.bbs.module.blog.entity.Blog;
+import cn.nobeta.bbs.module.blog.entity.BlogSearchDocument;
 
 @Mapper
 public interface BlogMapper {
@@ -86,5 +87,13 @@ public interface BlogMapper {
     int updateBlogFolderByAuthorIdAndIds(
             @Param("userId") Long userId,
             @Param("blogIds") List<Long> blogIds,
-            @Param("targetId") Long targetId);    
+            @Param("targetId") Long targetId);
+
+
+    /**
+     * 查询博客 Doucment
+     * @param blogId
+     * @return
+     */
+    BlogSearchDocument selectSearchDocumentById(Long blogId);    
 }
