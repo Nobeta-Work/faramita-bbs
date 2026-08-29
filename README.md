@@ -4,9 +4,9 @@
 <h1>彼记 / Para BBS</h1>
 <a href="https://nobeta.cn/bbs"><img src="https://nobeta.cn/i/2026/08/21/721751.webp" width="30%"/></a>
 <br>
-<a href="https://nobeta.cn/bbs"><img src="https://img.shields.io/badge/BBS-Website-f5576c?logo=mdbook"></a>
-<a href="https://nobeta.cn/bbs/blog/2090582785885470720"><img src="https://img.shields.io/badge/version-v0.5.0-blue"></a>
-<a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
+<a href="https://nobeta.cn/bbs"><img src="https://img.shields.io/badge/BBS-ParaBBS-f5576c?logo=mdbook" alt="ParaBBS"></a>
+<a href="https://nobeta.cn/bbs/blog/2090582785885470720"><img src="https://img.shields.io/badge/version-0.5.0-blue" alt="Version 0.5.0"></a>
+<a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License-MIT"></a>
 <a href="https://www.java.com/zh-CN/"><img src="https://img.shields.io/badge/Java-17%2B-orange" alt="Java 17+"/></a>
 </div>
 
@@ -65,6 +65,7 @@ cd backend/bbs
 
 ![Index 前端页面](https://raw.githubusercontent.com/Nobeta-Work/faramita-bbs-file/main/img/b66debed-51a2-4514-84e8-3eee5acdae2f.png)
 ![Index 前端页面 (暗主题)](https://raw.githubusercontent.com/Nobeta-Work/faramita-bbs-file/main/img/b0c9c1aa-9814-4765-aea0-8b79ee9d824e.png)
+![Public 博客评论页面](https://raw.githubusercontent.com/Nobeta-Work/faramita-bbs-file/main/img/0406ddc5-d9a3-4d0f-b32e-a8b3ba79a5ad.png)
 
 ## 贡献
 
@@ -84,3 +85,4 @@ cd backend/bbs
 MIT — 允许任意 fork，自由使用。
 
 Built by [Para@Nobeta](https://nobeta.cn/bbs/1) | [Github@Nobeta-Work](https://github.com/Nobeta-Work) .
+
