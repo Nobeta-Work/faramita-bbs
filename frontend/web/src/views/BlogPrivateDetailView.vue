@@ -268,6 +268,10 @@ function updateBackTopVisibility(): void {
 
 function updateScrollEffects(): void {
   updateBackTopVisibility()
+
+  if (scrollTarget && !(scrollTarget instanceof Window)) {
+    window.dispatchEvent(new Event('scroll'))
+  }
 }
 
 function scrollToTop(): void {
@@ -547,6 +551,8 @@ onUnmounted(() => {
                 :is-dark="isDark"
                 :asset-base-url="assetBaseUrl"
                 :counter="editorCounter"
+                toolbar-fixed
+                :toolbar-offset="78"
                 :upload-image="handleEditorUpload"
               />
               <button
@@ -715,6 +721,7 @@ onUnmounted(() => {
 .vrind-edit-container {
   min-height: 720px;
   position: relative;
+  border: 1px solid var(--line-color);
 }
 
 .mobile-toolbar-toggle {
@@ -785,9 +792,6 @@ onUnmounted(() => {
 
 .private-detail-page {
   padding: 2rem 20px calc(6rem + 48px);
-  background:
-    radial-gradient(circle at 90% 8%, color-mix(in srgb, var(--accent-mint) 18%, transparent), transparent 24rem),
-    var(--bg-primary);
 }
 
 .text-link {
@@ -876,6 +880,7 @@ onUnmounted(() => {
 }
 
 .editor-card :deep(.md-editor),
+.editor-card :deep(.md-editor__container),
 .editor-card :deep(.vditor),
 .editor-card :deep(.vditor-content),
 .editor-card :deep(.vditor-preview),
@@ -885,6 +890,12 @@ onUnmounted(() => {
 .editor-card :deep(.vditor-sv),
 .editor-card :deep(.vditor-reset) {
   background-color: transparent;
+}
+
+.editor-card :deep(.md-editor),
+.editor-card :deep(.md-editor__container),
+.editor-card :deep(.vditor) {
+  overflow: visible !important;
 }
 
 .editor-card :deep(.vditor) {
@@ -915,13 +926,8 @@ onUnmounted(() => {
 }
 
 .editor-card :deep(.vditor-toolbar) {
-  position: sticky !important;
-  top: 0 !important;
   z-index: 20 !important;
-  width: 100% !important;
   box-sizing: border-box;
-  border-top: 0;
-  border-right: 0;
   border-bottom: 1px solid var(--line-color);
   border-left: 0;
   background: var(--modal-bg);
@@ -963,9 +969,7 @@ onUnmounted(() => {
     display: flex;
     flex-wrap: wrap;
     align-content: flex-start;
-    max-height: 38px;
     overflow: hidden;
-    padding: 0 58px 0 4px;
   }
 
   .editor-card :deep(.vditor-toolbar > *) {

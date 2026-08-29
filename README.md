@@ -1,29 +1,31 @@
 <div align="center">
-
 <img src="https://nobeta.cn/i/2026/08/20/eb0c6d.png" alt="Para BBS" width="50%">
-
-# 彼记 / Para BBS
-
+<br>
+<h1>彼记 / Para BBS</h1>
 <a href="https://nobeta.cn/bbs"><img src="https://nobeta.cn/i/2026/08/21/721751.webp" width="30%"/></a>
 <br>
-<a href="https://nobeta.cn/bbs">Para BBS</a> | <a href="https://nobeta.cn/bbs/blog/2090582785885470720"><em>v0.4.1</em></a>
-
+<a href="https://nobeta.cn/bbs"><img src="https://img.shields.io/badge/BBS-Website-f5576c?logo=mdbook"></a>
+<a href="https://nobeta.cn/bbs/blog/2090582785885470720"><img src="https://img.shields.io/badge/version-v0.5.0-blue"></a>
+<a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
+<a href="https://www.java.com/zh-CN/"><img src="https://img.shields.io/badge/Java-17%2B-orange" alt="Java 17+"/></a>
 </div>
+
 彼记（Para BBS）是一个基于 Java 后端开发学习链路，不断更新、迭代、维护的云笔记/论坛项目。
 
 以 "实现为先，迭代最佳"、"框架优先，复用轮子" 为代码开发标准，尽可能保持项目代码的质量。
 
 可以使用 [parabbs-agent](./skills/parabbs-agent) SKILL 让你的 Agent 拥有访问 Para BBS 的能力。
 
-
-| 后端技术栈                       | 作用                   |
-| ---------------------------- | ---------------------- |
-| **Spring Boot / Spring MVC** | Web 开发的后端基本框架 |
-| **MySQL**                    | 数据库                 |
-| **MyBatis**                  | 服务端与数据库的中间件 |
-| **Spring Security**          | 认证授权系统           |
-| **Redis**                    | 缓存                   |
-| **Docker**                   | 打包部署               |
+| 后端技术栈                         | 作用                         |
+| ---------------------------------- | ---------------------------- |
+| **Spring Boot / Spring MVC** | Web 开发的后端基本框架       |
+| **MySQL**                    | 数据库                       |
+| **MyBatis**                  | 服务端与数据库的中间件       |
+| **Spring Security**          | 认证授权系统                 |
+| **Redis**                    | 缓存                         |
+| **Docker**                   | 打包部署                     |
+| **Elasticsearch**            | 搜索引擎                     |
+| **RabbitMQ**                 | 异步最终一致性、消息队列削峰 |
 
 ---
 
@@ -40,6 +42,8 @@
 - `file`：头像与内容图片上传
 - `agent`: Agent MCP
 - `admin`: 后台管理系统
+- `box`: Outbox/Inbox 最终一致性方案
+- `comment`: 评论系统
 
 ## 本地运行
 

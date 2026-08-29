@@ -57,7 +57,7 @@ onMounted(() => {
         <div class="meta-line animate-fade-in" style="animation-delay: 0.1s">
           <span class="date">EST. 2025</span>
           <span class="divider">/</span>
-          <span class="issue">Version 0.4.1</span>
+          <span class="issue">Version 0.5.0</span>
         </div>
 
         <div class="title-wrapper animate-slide-in" style="animation-delay: 0.2s">

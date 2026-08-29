@@ -424,14 +424,14 @@ onUnmounted(() => {
               </div>
 
               <div class="journey-card">
-                <div class="journey-card-head">
+                <!-- <div class="journey-card-head">
                   <span class="cat-tag">{{ stop.blog.tags?.[0]?.name || 'Article' }}</span>
                   <span class="time">{{ stop.date.time }} 发布</span>
-                </div>
+                </div> -->
                 <h3 class="card-title">{{ stop.blog.title }}</h3>
-                <p class="card-summary">{{ stop.blog.summary || '这篇博客暂时没有摘要。' }}</p>
+                <!-- <p class="card-summary">{{ stop.blog.summary || '这篇博客暂时没有摘要。' }}</p> -->
                 <div class="card-footer">
-                  <span>{{ stop.blog.likeCount || 0 }} likes</span>
+                  <!-- <span>{{ stop.blog.likeCount || 0 }} likes</span> -->
                   <span class="read-more">
                     READ ENTRY
                     <n-icon><ArrowForwardOutline /></n-icon>
@@ -949,9 +949,8 @@ onUnmounted(() => {
 }
 
 .journey-stop {
-  display: grid;
-  grid-template-columns: 86px 42px minmax(0, 1fr);
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
   cursor: pointer;
   position: relative;
 }
@@ -962,7 +961,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  padding-top: 18px;
   text-align: right;
 }
 
@@ -1022,12 +1020,10 @@ onUnmounted(() => {
 }
 
 .journey-card {
-  background:
-    linear-gradient(135deg, var(--card-hover), transparent 58%),
-    var(--bg-primary);
+  display: flex;
   border: 1px solid var(--line-color);
   min-width: 0;
-  padding: 22px 24px;
+  padding: 0 24px;
   position: relative;
   transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
@@ -1054,17 +1050,13 @@ onUnmounted(() => {
 
 .journey-card-head,
 .card-footer {
-  align-items: center;
   display: flex;
-  justify-content: space-between;
-  gap: 14px;
+  margin-left: auto;
 }
 
 .journey-card-head {
   color: var(--text-tertiary);
   font-size: 0.72rem;
-  letter-spacing: 1px;
-  margin-bottom: 14px;
 }
 
 .cat-tag {
@@ -1080,13 +1072,7 @@ onUnmounted(() => {
 .card-title {
   font-family: 'Playfair Display', serif;
   font-size: 1.5rem;
-  margin: 0 0 15px;
   font-weight: 400;
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
   transition: all 0.3s;
   position: relative;
@@ -1362,6 +1348,7 @@ onUnmounted(() => {
   }
 
   .journey-head {
+    display: flex;
     align-items: stretch;
     flex-direction: column;
   }
@@ -1394,16 +1381,6 @@ onUnmounted(() => {
     width: 24px;
   }
 
-  .journey-card {
-    padding: 18px;
-  }
-
-  .journey-card-head,
-  .card-footer {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .journey-note {
     margin-left: 0;
   }
@@ -1429,13 +1406,13 @@ onUnmounted(() => {
   max-width: none;
   min-height: calc(100vh - 64px);
   overflow: visible;
-  background:
-    radial-gradient(circle at 15% 8%, color-mix(in srgb, var(--accent-highlight) 22%, transparent), transparent 24rem),
-    var(--bg-primary);
+  background: transparent;
+  border-left: 1px solid var(--text-primary);
+  border-right: 1px solid var(--text-primary);
+  border-radius: 5%;
 }
 
 .container {
-  width: min(960px, 100%);
   padding: 4rem 24px 6rem;
 }
 
@@ -1453,7 +1430,7 @@ onUnmounted(() => {
 
 .nickname {
   max-width: 11ch;
-  margin: 0.5rem 0 1.1rem;
+  margin: 0.5rem 1.1rem;
   font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
   font-size: clamp(3rem, 9vw, 6.5rem);
   line-height: 0.95;
@@ -1463,13 +1440,11 @@ onUnmounted(() => {
 
 .signature {
   max-width: 36rem;
-  padding: 1rem 1.2rem;
-  border-left: 4px solid var(--accent-color);
-  border-radius: 0 16px 16px 0;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
+  padding: 1rem 1rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 1.05rem;
-  line-height: 1.7;
+  line-height: 1.5;
 }
 
 .avatar-wrapper,
@@ -1529,7 +1504,6 @@ onUnmounted(() => {
 }
 
 .journey-head {
-  align-items: flex-end;
   margin-bottom: 1.5rem;
 }
 
@@ -1548,9 +1522,8 @@ onUnmounted(() => {
 
 .journey-stats {
   gap: 1px;
-  min-width: 250px;
+  max-width: 90%;
   border: 1px solid var(--line-color);
-  border-radius: 18px;
   overflow: hidden;
   background: var(--line-color);
 }
@@ -1593,9 +1566,7 @@ onUnmounted(() => {
 }
 
 .journey-card {
-  padding: 1.25rem 1.4rem;
   border: 1px solid var(--line-color);
-  border-radius: 20px;
   background: var(--bg-secondary);
   box-shadow: none;
   transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease;
@@ -1614,7 +1585,7 @@ onUnmounted(() => {
 
 .journey-card .card-title {
   font-family: 'Agbalumo', 'ZCOOL KuaiLe', sans-serif;
-  font-size: 1.6rem;
+  font-size: 1.5rem;
 }
 
 .journey-card .card-summary {

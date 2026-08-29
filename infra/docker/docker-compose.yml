@@ -63,8 +63,6 @@ services:
     image: rabbitmq:4.2-management
     container_name: parabbs-rabbitmq
     hostname: parabbs-rabbitmq
-    env_file:
-      - ./.env
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
@@ -86,8 +84,6 @@ services:
       dockerfile: infra/docker/middleware/elasticsearch.Dockerfile
     image: parabbs-elasticsearch:8.18.6
     container_name: parabbs-elasticsearch
-    env_file:
-      - ./.env
     environment:
       discovery.type: single-node
       cluster.name: parabbs
@@ -109,8 +105,6 @@ services:
     container_name: parabbs-kibana
     profiles:
       - tools
-    env_file:
-      - ./.env
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     ports:

@@ -256,7 +256,7 @@ html.dark .glass {
   background-position: left bottom;
   background-repeat: repeat;
   background-size: 3px 3px;
-  font-family: 'Microsoft YaHei', sans-serif;
+  font-family: monospace;
 }
 
 .vrind-theme.vditor-reset pre[data-md-language],
@@ -285,7 +285,7 @@ html.dark .glass {
   color: var(--bbs-vrind-code-text);
   background: transparent;
   background-image: none;
-  font-family: inherit;
+  font-family: monospace;
   white-space: pre-wrap;
 }
 
@@ -295,12 +295,31 @@ html.dark .glass {
 
 .vrind-theme :is(.vditor-wysiwyg__preview, .vditor-ir__preview)[data-vrind-code-preview='true'] > code {
   color: inherit;
-  font-family: mononoki, Consolas, 'Liberation Mono', Menlo, Courier, monospace, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI Symbol', 'Android Emoji', 'EmojiSymbols' !important;
+  font-family: monospace !important;
+}
+
+.vrind-theme :is([data-vrind-code-editor='true'], [data-vrind-code-preview='true']) {
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+}
+
+.vrind-theme :is([data-vrind-code-editor='true'], [data-vrind-code-preview='true']) > code {
+  padding: 0 !important;
+  font-family: monospace !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  letter-spacing: normal !important;
+}
+
+.vrind-theme :is(.vditor-wysiwyg__preview, .vditor-ir__preview)[data-vrind-code-preview='true'] > code *,
+.vrind-theme.vditor-reset pre > code *,
+.vrind-theme :is(.vditor-reset, .vditor-preview__content, .vditor-wysiwyg, .vditor-ir) pre > code * {
+  font-family: monospace !important;
 }
 
 .vrind-theme.vditor-reset pre > code,
 .vrind-theme :is(.vditor-reset, .vditor-preview__content, .vditor-wysiwyg, .vditor-ir) pre > code {
-  font-family: mononoki, Consolas, 'Liberation Mono', Menlo, Courier, monospace, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI Symbol', 'Android Emoji', 'EmojiSymbols' !important;
+  font-family: monospace !important;
 }
 
 .vrind-theme.vditor-reset blockquote,

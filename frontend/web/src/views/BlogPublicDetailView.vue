@@ -531,9 +531,10 @@ onUnmounted(() => {
           </section>
         </aside>
 
-        <main class="article-card">
-          <header class="article-header">
-            <h1>{{ blog.title }}</h1>
+        <div class="detail-content">
+          <main class="article-card">
+            <header class="article-header">
+              <h1>{{ blog.title }}</h1>
 
             <div class="author-row">
               <n-avatar
@@ -559,23 +560,23 @@ onUnmounted(() => {
               </n-tag>
             </div>
 
-          </header>
+            </header>
 
-          <div v-if="content" ref="previewRef" class="vrind-preview-container">
-            <VrindPreview
-              :content="content"
-              :is-dark="isDark"
-              :asset-base-url="assetBaseUrl"
-              @ready="handlePreviewReady"
-            />
-          </div>
-          <n-empty v-else class="empty-content" description="No content yet">
-            <template #icon>
-              <n-icon :component="DocumentTextOutline" />
-            </template>
-          </n-empty>
+            <div v-if="content" ref="previewRef" class="vrind-preview-container">
+              <VrindPreview
+                :content="content"
+                :is-dark="isDark"
+                :asset-base-url="assetBaseUrl"
+                @ready="handlePreviewReady"
+              />
+            </div>
+            <n-empty v-else class="empty-content" description="No content yet">
+              <template #icon>
+                <n-icon :component="DocumentTextOutline" />
+              </template>
+            </n-empty>
 
-          <n-space class="action-row" :size="10" wrap>
+            <n-space class="action-row" :size="10" wrap>
             <n-button secondary :loading="liking" @click="handleLike">
               <template #icon>
                 <n-icon :component="blog.isLiked ? Heart : HeartOutline" />
@@ -594,7 +595,9 @@ onUnmounted(() => {
               <template #icon><n-icon :component="CreateOutline" /></template>
               Edit
             </n-button>
-          </n-space>
+            </n-space>
+
+          </main>
 
           <section class="comments-section">
             <header class="comments-header">
@@ -732,7 +735,7 @@ onUnmounted(() => {
               @update:page="fetchComments"
             />
           </section>
-        </main>
+        </div>
       </div>
     </n-spin>
 
@@ -799,9 +802,14 @@ onUnmounted(() => {
   gap: 20px;
 }
 
+.detail-content {
+  min-width: 0;
+}
+
 .author-card,
 .toc-card,
-.article-card {
+.article-card,
+.comments-section {
   background: var(--bg-primary);
   border: 1px solid var(--line-color);
 }
@@ -968,10 +976,8 @@ onUnmounted(() => {
 }
 
 .comments-section {
-  max-width: 860px;
-  margin: 56px auto 0;
-  padding-top: 34px;
-  border-top: 1px solid var(--line-color);
+  margin-top: 24px;
+  padding: 34px 58px 46px;
 }
 
 .comments-header {
@@ -1123,6 +1129,7 @@ onUnmounted(() => {
 @media print {
   .detail-sidebar,
   .action-row,
+  .comments-section,
   .back-top-button {
     display: none;
   }
@@ -1157,6 +1164,10 @@ onUnmounted(() => {
 
   .article-card {
     padding: 32px 22px 44px;
+  }
+
+  .comments-section {
+    padding: 28px 22px 36px;
   }
 }
 </style>

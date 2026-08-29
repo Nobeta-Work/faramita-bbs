@@ -449,8 +449,6 @@ onMounted(loadAll)
       <header class="admin-header">
         <div>
           <p class="eyebrow">Para BBS / Control Room</p>
-          <h1>后台管理</h1>
-          <p class="admin-description">维护社区成员、内容与访问控制。</p>
         </div>
         <n-space align="center">
           <n-tag type="success" round>ROLE_ADMIN</n-tag>
@@ -636,14 +634,9 @@ h2 {
   font-size: 1.65rem;
 }
 
-.admin-description,
 .panel-hint,
 .modal-subtitle {
   color: var(--text-secondary);
-}
-
-.admin-description {
-  margin: 12px 0 0;
 }
 
 .admin-layout {
