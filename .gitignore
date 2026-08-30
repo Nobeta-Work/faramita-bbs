@@ -5,6 +5,7 @@ secret.txt
 *.env
 *.env.*
 !.env.example
+tmp/
 
 # 系统/编辑器/ AI
 .DS_Store
