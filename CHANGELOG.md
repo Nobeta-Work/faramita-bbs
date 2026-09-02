@@ -2,9 +2,13 @@
 
 该文档记录 Para BBS 过往版本与未来的不定计划，格式遵循 [Keey a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 。
 
-## [Unreleased]
+## [Expect]
 
 - AI 辅助博客编辑。
+- 长文本博客切片存储。
+- [Add] 补充 MCP Server
+
+## [Unreleased]
 
 ## [0.5.0] - 2026-08-30
 
