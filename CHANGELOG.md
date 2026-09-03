@@ -4,7 +4,7 @@
 
 ## [Expect]
 
-- AI 辅助博客编辑。
+- [Add] Langchain Agent —— 博客编辑辅助 AI Copilot (Agent)。
 - 长文本博客切片存储。
 - [Add] 补充 MCP Server
 
